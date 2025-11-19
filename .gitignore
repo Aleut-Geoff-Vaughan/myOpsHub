@@ -14,6 +14,13 @@
 
 # Environment files
 /.env
+.env
+*.env
+
+# .NET appsettings with secrets
+appsettings.Development.json
+appsettings.*.json
+!appsettings.json
 
 # Angular CLI and build artefacts
 /.angular-cli.json
