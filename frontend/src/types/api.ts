@@ -116,12 +116,52 @@ export interface Tenant {
   updatedAt: string;
 }
 
+export enum AppRole {
+  // Tenant-Level Roles
+  Employee = 0,
+  ViewOnly = 1,
+  TeamLead = 2,
+  ProjectManager = 3,
+  ResourceManager = 4,
+  OfficeManager = 5,
+  TenantAdmin = 6,
+  Executive = 7,
+  OverrideApprover = 8,
+  // System-Level Roles
+  SystemAdmin = 9,
+  Support = 10,
+  Auditor = 11,
+}
+
+export interface TenantMembership {
+  id: string;
+  userId: string;
+  tenantId: string;
+  tenant?: Tenant;
+  roles: AppRole[];
+  isActive: boolean;
+  joinedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface User {
   id: string;
-  tenantId: string;
   email: string;
   displayName: string;
-  entraObjectId?: string;
+  entraObjectId: string;
+  isSystemAdmin: boolean;
+  isActive: boolean;
+  lastLoginAt?: string;
+  deactivatedAt?: string;
+  deactivatedByUserId?: string;
+  // Profile fields
+  phoneNumber?: string;
+  jobTitle?: string;
+  department?: string;
+  profilePhotoUrl?: string;
+  // Navigation properties
+  tenantMemberships: TenantMembership[];
   createdAt: string;
   updatedAt: string;
 }

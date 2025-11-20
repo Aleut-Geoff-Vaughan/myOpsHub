@@ -44,4 +44,12 @@ export const usersService = {
   async delete(id: string): Promise<void> {
     return api.delete<void>(`/users/${id}`);
   },
+
+  async deactivate(id: string, deactivatedByUserId?: string): Promise<void> {
+    return api.post<void>(`/users/${id}/deactivate`, { deactivatedByUserId });
+  },
+
+  async reactivate(id: string): Promise<void> {
+    return api.post<void>(`/users/${id}/reactivate`);
+  },
 };

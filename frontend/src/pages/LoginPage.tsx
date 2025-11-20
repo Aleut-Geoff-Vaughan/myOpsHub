@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import { useAuthStore } from '../stores/authStore';
 
 interface HealthStatus {
@@ -52,10 +53,13 @@ export function LoginPage() {
 
     try {
       await login(email, password);
+      toast.success('Login successful!');
       // After login, redirect to workspace selector
       navigate('/select-workspace');
     } catch (err) {
-      setError('Invalid credentials. Please try again.');
+      const errorMessage = 'Invalid credentials. Please try again.';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -74,7 +78,7 @@ export function LoginPage() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
               </svg>
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">Aleut Staffing</h1>
+            <h1 className="text-3xl font-bold text-gray-900">myScheduling</h1>
             <p className="text-gray-600 mt-2">Project Scheduling & Resource Management</p>
           </div>
 
@@ -177,7 +181,7 @@ export function LoginPage() {
 
         {/* Footer */}
         <div className="text-center mt-6 text-sm text-gray-600">
-          <p>© 2025 Aleut Federal. All rights reserved.</p>
+          <p>© 2025 myScheduling. All rights reserved.</p>
         </div>
       </div>
     </div>

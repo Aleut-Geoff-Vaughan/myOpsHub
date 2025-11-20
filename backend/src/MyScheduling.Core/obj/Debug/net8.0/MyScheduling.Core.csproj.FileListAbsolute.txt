@@ -1,0 +1,12 @@
+/workspaces/myScheduling/backend/src/MyScheduling.Core/bin/Debug/net8.0/MyScheduling.Core.deps.json
+/workspaces/myScheduling/backend/src/MyScheduling.Core/bin/Debug/net8.0/MyScheduling.Core.dll
+/workspaces/myScheduling/backend/src/MyScheduling.Core/bin/Debug/net8.0/MyScheduling.Core.pdb
+/workspaces/myScheduling/backend/src/MyScheduling.Core/obj/Debug/net8.0/MyScheduling.Core.GeneratedMSBuildEditorConfig.editorconfig
+/workspaces/myScheduling/backend/src/MyScheduling.Core/obj/Debug/net8.0/MyScheduling.Core.AssemblyInfoInputs.cache
+/workspaces/myScheduling/backend/src/MyScheduling.Core/obj/Debug/net8.0/MyScheduling.Core.AssemblyInfo.cs
+/workspaces/myScheduling/backend/src/MyScheduling.Core/obj/Debug/net8.0/MyScheduling.Core.csproj.CoreCompileInputs.cache
+/workspaces/myScheduling/backend/src/MyScheduling.Core/obj/Debug/net8.0/MyScheduling.Core.sourcelink.json
+/workspaces/myScheduling/backend/src/MyScheduling.Core/obj/Debug/net8.0/MyScheduling.Core.dll
+/workspaces/myScheduling/backend/src/MyScheduling.Core/obj/Debug/net8.0/refint/MyScheduling.Core.dll
+/workspaces/myScheduling/backend/src/MyScheduling.Core/obj/Debug/net8.0/MyScheduling.Core.pdb
+/workspaces/myScheduling/backend/src/MyScheduling.Core/obj/Debug/net8.0/ref/MyScheduling.Core.dll

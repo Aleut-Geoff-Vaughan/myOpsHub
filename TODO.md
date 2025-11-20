@@ -6,7 +6,7 @@
 
 ```bash
 # Start Backend API (port 5000)
-cd /workspaces/myScheduling/backend/src/AleutStaffing.Api
+cd /workspaces/myScheduling/backend/src/MyScheduling.Api
 dotnet run --urls "http://0.0.0.0:5000"
 
 # Start Frontend (port 5173) - in another terminal
@@ -35,14 +35,81 @@ npm run dev -- --host 0.0.0.0
 - [ ] Implement proper role-based access control (RBAC)
 
 
-### 10. Reports Page (NEW)
+### 10. User Management Enhancements (HIGH PRIORITY) 🔴
+**Goal**: Implement two-tiered administration with enhanced user management and role hierarchy
+
+**Current Phase**: Phase 3 - User Lifecycle & Advanced Features
+
+#### Phase 2: Role Management & Permissions ✅ **COMPLETED 2025-11-20**
+- [x] Created separate Admin Portal (not embedded in main app) ✅ **COMPLETED 2025-11-19**
+  - Created AdminLayout component with purple branding
+  - Separate routing for `/admin` path
+  - WorkspaceSelectorPage redirects admins to admin portal
+  - Removed Admin nav item from main DashboardLayout
+- [x] Define comprehensive role permission matrix ✅ **COMPLETED 2025-11-20**
+  - Created ROLES_PERMISSIONS.md with detailed permission matrix
+  - Documented 12 roles across system and tenant levels
+  - Defined CRUD permissions for all features
+  - Included role assignment rules and valid combinations
+- [x] Create role management API endpoints ✅ **COMPLETED 2025-11-20**
+  - POST `/api/tenant-memberships` - Add user to tenant with roles
+  - PUT `/api/tenant-memberships/{id}/roles` - Update user roles
+  - PUT `/api/tenant-memberships/{id}/status` - Update membership status
+  - DELETE `/api/tenant-memberships/{id}` - Remove user from tenant
+  - GET `/api/tenant-memberships/roles` - Get available roles with descriptions
+  - Created TenantMembershipsController with full CRUD operations
+- [x] Add inline role editing in AdminPage ✅ **COMPLETED 2025-11-20**
+  - Edit button on each tenant membership row
+  - Multi-select RoleSelector component with descriptions
+  - Save/Cancel buttons for inline editing
+  - Role validation (must have at least one role)
+  - Toast notifications for success/error feedback
+- [x] Implement Tenant Admin Panel view ✅ **COMPLETED 2025-11-20**
+  - Scope selector: "System Admin (All Tenants)" vs "Tenant Admin"
+  - Filter users by current workspace tenant
+  - Only visible to System Admins
+  - Maintains context when switching views
+- [x] Add role templates/presets ✅ **COMPLETED 2025-11-20**
+  - Created RoleTemplates component with 9 preset templates
+  - Templates: Employee, View Only, Team Lead, Project Manager, Resource Manager, Office Manager, Department Manager, Executive, Tenant Admin
+  - Visual template cards with icons and descriptions
+  - Integrated into inline role editing workflow
+  - "or customize" divider for manual role selection
+
+#### Phase 3: User Lifecycle & Advanced Features (IN PROGRESS)
+- [x] User invitation flow ✅ **COMPLETED 2025-11-20**
+  - Created UserInvitation entity with token-based invitations
+  - UserInvitationsController with full CRUD endpoints
+  - InviteUserModal component with role selection
+  - PendingInvitations component for managing invitations
+  - 7-day expiration with resend/cancel functionality
+  - Role templates for quick invitation setup
+  - TODO: Email sending implementation
+- [x] User deactivation/reactivation ✅ **COMPLETED 2025-11-20**
+  - Added IsActive, DeactivatedAt, DeactivatedByUserId to User entity
+  - Soft delete pattern with audit trail
+  - Deactivate endpoint with cascading tenant membership deactivation
+  - Reactivate endpoint (memberships require manual reactivation)
+  - Prevention of system admin deactivation
+  - AdminPage UI with deactivate/reactivate buttons
+  - Status badges showing deactivation state
+- [ ] User profile management
+  - Users can update their own profile
+  - Profile photo upload
+  - Skills and certifications management
+- [ ] User activity tracking
+  - Track login history
+  - Track user actions (audit trail)
+  - Last active timestamp display
+
+### 11. Reports Page (NEW)
 - [ ] Create Reports page component (currently just placeholder text)
   - Staffing utilization reports
   - Project status reports
   - Hoteling usage reports
   - Export capabilities (PDF, Excel)
 
-### 11. Backend Enhancements
+### 12. Backend Enhancements
 - [ ] Add audit trail user context in DbContext SaveChangesAsync
   - Capture current user ID
   - Auto-populate CreatedBy/UpdatedBy fields
@@ -51,7 +118,7 @@ npm run dev -- --host 0.0.0.0
 - [ ] Add logging throughout the API
 - [ ] Implement filtering, sorting, pagination on all list endpoints
 
-### 12. Documentation (Optional)
+### 13. Documentation (Optional)
 - [] Update README.md with current implementation status
 - [] Update START-HERE.md (fix database user mismatch, remove Azure AD references)
 - [] Remove exposed passwords from SECURITY-FIXES.md and DATABASE-MIGRATION-SUCCESS.md
@@ -64,28 +131,24 @@ npm run dev -- --host 0.0.0.0
 ### Security
 - [ ] Implement row-level security for multi-tenancy
 - [ ] Add HTTPS/SSL configuration for production
-- [ ] Implement rate limiting
-- [ ] Add CORS configuration for production
 
 ### Testing
-- [ ] Add unit tests for backend services
-- [ ] Add integration tests for API endpoints
-- [ ] Add frontend component tests
+- [ ] Add unit tests for backend services (DEFERRED)
+- [ ] Add integration tests for API endpoints (DEFERRED)
+- [ ] Add frontend component tests (DEFERRED)
 - [ ] Add end-to-end tests
 
 ### Performance
-- [ ] Implement caching (Redis)
-- [ ] Add database indexes for common queries
 - [ ] Optimize N+1 query issues
-- [ ] Implement pagination on all list endpoints
 
 ### UI/UX
-- [ ] Add loading states throughout the app
-- [ ] Implement error boundaries
-- [ ] Add toast notifications for success/error messages
-- [ ] Improve mobile responsiveness
 - [ ] Add keyboard shortcuts
 - [ ] Implement dark mode
+
+### NEW FEATURES
+- [ ] Add Master Data Management for Projects / WBS.   This should have attributes of owners for workflows eventually.    I also want easy way to Validity dates + WBS types (billable / Billable / B&P / OH / G&A)
+- [ ] Add Master Data Management for Facilities.  Make it role based too.
+- [ ] Create a framework for non-hardcoded validation of main transaction objects.   I would want to have the ability to do Sudo Code and its stored dynamically without hardcoding
 
 ### Features
 - [ ] Email notifications for assignments, bookings
@@ -102,9 +165,9 @@ npm run dev -- --host 0.0.0.0
 ## Architecture Overview
 
 ### Backend (.NET 8)
-- **AleutStaffing.Api** - REST API controllers
-- **AleutStaffing.Core** - Domain entities and interfaces
-- **AleutStaffing.Infrastructure** - EF Core, repositories, data access
+- **MyScheduling.Api** - REST API controllers with rate limiting and caching
+- **MyScheduling.Core** - Domain entities, interfaces, and pagination helpers
+- **MyScheduling.Infrastructure** - EF Core, repositories, data access with optimized indexes
 
 ### Frontend (React + TypeScript)
 - **Vite** - Build tool
@@ -240,6 +303,87 @@ npm run dev -- --host 0.0.0.0
   - Slack integration handler (placeholder alert)
   - API management handler (placeholder alert)
   - Ready for future modal implementations
+
+### 10. Security Enhancements ✅ **COMPLETED 2025-11-19**
+- [x] Implement rate limiting ✅
+  - Added AspNetCoreRateLimit package
+  - Configured IP-based rate limiting (100 req/min general, 10 req/min for auth)
+  - Rate limit middleware integrated into pipeline
+- [x] Add CORS configuration for production ✅
+  - Environment-specific CORS policy
+  - Development: Allow all origins
+  - Production: Restrict to configured origins
+
+### 11. Performance Optimizations ✅ **COMPLETED 2025-11-19**
+- [x] Implement caching ✅
+  - Added in-memory caching services
+  - Response caching middleware configured
+  - Ready for Redis upgrade if needed
+- [x] Add database indexes for common queries ✅
+  - Comprehensive indexes already configured in DbContext
+  - Indexes on tenant queries, email lookups, status filters
+  - Composite indexes for common query patterns
+- [x] Implement pagination helper classes ✅
+  - Created PagedResult<T> generic class
+  - Created PaginationParams with max page size enforcement
+  - Ready for integration into controllers
+
+### 12. UI/UX Improvements ✅ **COMPLETED 2025-11-19**
+- [x] Add loading states throughout the app ✅
+  - TanStack Query provides isLoading states
+  - Loading indicators in all data-fetching components
+- [x] Implement error boundaries ✅
+  - ErrorBoundary component wrapping entire app
+  - Catches and displays React errors gracefully
+- [x] Add toast notifications for success/error messages ✅
+  - Integrated react-hot-toast library
+  - Configured with custom styling
+  - Added to login flow as example
+- [x] Improve mobile responsiveness ✅
+  - All UI components use responsive Tailwind classes
+  - Dashboard layout has mobile-friendly sidebar toggle
+  - Tables and cards responsive across breakpoints
+
+### 10. User Management Enhancements - Phase 1 ✅ **COMPLETED 2025-11-19**
+- [x] Update User entity with additional fields ✅
+  - Added PhoneNumber (string, optional)
+  - Added JobTitle (string, optional)
+  - Added Department (string, optional)
+  - Added LastLoginAt (DateTime?, nullable)
+  - Added ProfilePhotoUrl (string, optional)
+- [x] Create database migration for new User fields ✅
+  - Migration `AddUserProfileFields` created and applied successfully
+- [x] Add TenantAdmin role to AppRole enum ✅
+  - Added comprehensive two-tiered role hierarchy
+  - Tenant-Level: Employee, ViewOnly, TeamLead, ProjectManager, ResourceManager, OfficeManager, TenantAdmin, Executive, OverrideApprover
+  - System-Level: SystemAdmin, Support, Auditor
+- [x] Build enhanced user table component ✅
+  - Shows: Display Name, Email, Phone, Job Title, Department
+  - Shows: Status (System Admin badge, Tenant count), Last Login, Created Date
+  - Expandable rows showing tenant memberships with roles
+  - Role badges with color-coded display
+  - Expand/collapse functionality with animated chevron
+- [x] Update UsersController to support filtered queries ✅
+  - System-wide query (no tenantId parameter - returns all users)
+  - Tenant-specific query (with tenantId parameter - returns users in that tenant)
+  - Includes TenantMemberships with related Tenant data
+  - Search by name or email
+  - Filter to include/exclude inactive memberships
+- [x] Update TypeScript types to match backend ✅
+  - Added AppRole enum matching backend values
+  - Created TenantMembership interface with roles array
+  - Updated User interface with new profile fields and tenantMemberships
+- [x] Enhanced User Detail Modal ✅
+  - Shows all new profile fields (phone, job title, department)
+  - Displays System Admin status badge
+  - Shows Last Login timestamp
+  - Lists all tenant memberships with roles
+  - Role badges for each membership
+- [x] Created separate Admin Portal ✅
+  - Created AdminLayout component with purple branding
+  - Separate routing for `/admin` path
+  - WorkspaceSelectorPage redirects admins to admin portal
+  - Removed Admin nav item from main DashboardLayout
 
 ---
 

@@ -1,8 +1,11 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from 'react-hot-toast';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoginPage } from './pages/LoginPage';
 import { WorkspaceSelectorPage } from './pages/WorkspaceSelectorPage';
 import { DashboardLayout } from './components/layout/DashboardLayout';
+import { AdminLayout } from './components/layout/AdminLayout';
 import { DashboardPage } from './pages/DashboardPage';
 import { PeoplePage } from './pages/PeoplePage';
 import { ProjectsPage } from './pages/ProjectsPage';
@@ -39,31 +42,73 @@ function App() {
   const { isAuthenticated } = useAuthStore();
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/select-workspace" element={<WorkspaceSelectorPage />} />
-          <Route
-            path="/"
-            element={
-              <ProtectedRoute>
-                <DashboardLayout />
-              </ProtectedRoute>
-            }
-          >
-            <Route index element={<DashboardPage />} />
-            <Route path="people" element={<PeoplePage />} />
-            <Route path="projects" element={<ProjectsPage />} />
-            <Route path="staffing" element={<StaffingPage />} />
-            <Route path="hoteling" element={<HotelingPage />} />
-            <Route path="reports" element={<div className="p-6">Reports Module (Coming Soon)</div>} />
-            <Route path="admin" element={<AdminPage />} />
-          </Route>
-          <Route path="*" element={<Navigate to={isAuthenticated ? "/" : "/login"} replace />} />
-        </Routes>
-      </BrowserRouter>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              duration: 4000,
+              style: {
+                background: '#363636',
+                color: '#fff',
+              },
+              success: {
+                duration: 3000,
+                iconTheme: {
+                  primary: '#10b981',
+                  secondary: '#fff',
+                },
+              },
+              error: {
+                duration: 5000,
+                iconTheme: {
+                  primary: '#ef4444',
+                  secondary: '#fff',
+                },
+              },
+            }}
+          />
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/select-workspace" element={<WorkspaceSelectorPage />} />
+
+            {/* Admin Portal Routes */}
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute>
+                  <AdminLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<AdminPage />} />
+              <Route path="users" element={<AdminPage viewOverride="users" />} />
+              <Route path="tenants" element={<AdminPage viewOverride="tenants" />} />
+              <Route path="settings" element={<AdminPage viewOverride="settings" />} />
+            </Route>
+
+            {/* Main Application Routes */}
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <DashboardLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<DashboardPage />} />
+              <Route path="people" element={<PeoplePage />} />
+              <Route path="projects" element={<ProjectsPage />} />
+              <Route path="staffing" element={<StaffingPage />} />
+              <Route path="hoteling" element={<HotelingPage />} />
+              <Route path="reports" element={<div className="p-6">Reports Module (Coming Soon)</div>} />
+            </Route>
+            <Route path="*" element={<Navigate to={isAuthenticated ? "/" : "/login"} replace />} />
+          </Routes>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 
