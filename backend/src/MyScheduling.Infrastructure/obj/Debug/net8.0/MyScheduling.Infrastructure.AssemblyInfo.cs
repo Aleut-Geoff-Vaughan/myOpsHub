@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("MyScheduling.Infrastructure")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+2f4ebd45bc66265d00d4c09f34b4b1b16767c8bd")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+524f449b71a86aa845e982fda2fe5b8896d4175f")]
 [assembly: System.Reflection.AssemblyProductAttribute("MyScheduling.Infrastructure")]
 [assembly: System.Reflection.AssemblyTitleAttribute("MyScheduling.Infrastructure")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

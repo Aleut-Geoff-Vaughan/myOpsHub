@@ -9,6 +9,7 @@ import { AdminLayout } from './components/layout/AdminLayout';
 import { DashboardPage } from './pages/DashboardPage';
 import { PeoplePage } from './pages/PeoplePage';
 import { ProjectsPage } from './pages/ProjectsPage';
+import { WbsPage } from './pages/WbsPage';
 import { StaffingPage } from './pages/StaffingPage';
 import { HotelingPage } from './pages/HotelingPage';
 import { AdminPage } from './pages/AdminPage';
@@ -100,6 +101,7 @@ function App() {
               <Route index element={<DashboardPage />} />
               <Route path="people" element={<PeoplePage />} />
               <Route path="projects" element={<ProjectsPage />} />
+              <Route path="wbs" element={<WbsPage />} />
               <Route path="staffing" element={<StaffingPage />} />
               <Route path="hoteling" element={<HotelingPage />} />
               <Route path="reports" element={<div className="p-6">Reports Module (Coming Soon)</div>} />
