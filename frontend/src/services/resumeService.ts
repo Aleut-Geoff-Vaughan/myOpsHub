@@ -1,4 +1,4 @@
-import axios from 'axios';
+import { api } from '../lib/api-client';
 import type {
   ResumeProfile,
   ResumeSection,
@@ -12,8 +12,6 @@ import type {
   ResumeTemplateType,
 } from '../types/api';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://localhost:5001';
-
 // ==================== RESUME CRUD ====================
 
 export const getResumes = async (
@@ -26,23 +24,20 @@ export const getResumes = async (
   if (status !== undefined) params.append('status', status.toString());
   if (search) params.append('search', search);
 
-  const response = await axios.get<ResumeProfile[]>(
-    `${API_BASE_URL}/api/resumes${params.toString() ? `?${params}` : ''}`
+  return api.get<ResumeProfile[]>(
+    `/resumes${params.toString() ? `?${params}` : ''}`
   );
-  return response.data;
 };
 
 export const getResume = async (id: string): Promise<ResumeProfile> => {
-  const response = await axios.get<ResumeProfile>(`${API_BASE_URL}/api/resumes/${id}`);
-  return response.data;
+  return api.get<ResumeProfile>(`/resumes/${id}`);
 };
 
 export const createResume = async (data: {
   personId: string;
   templateConfig?: string;
 }): Promise<ResumeProfile> => {
-  const response = await axios.post<ResumeProfile>(`${API_BASE_URL}/api/resumes`, data);
-  return response.data;
+  return api.post<ResumeProfile>(`/resumes`, data);
 };
 
 export const updateResume = async (
@@ -54,11 +49,11 @@ export const updateResume = async (
     linkedInProfileUrl?: string;
   }
 ): Promise<void> => {
-  await axios.put(`${API_BASE_URL}/api/resumes/${id}`, data);
+  return api.put<void>(`/resumes/${id}`, data);
 };
 
 export const deleteResume = async (id: string): Promise<void> => {
-  await axios.delete(`${API_BASE_URL}/api/resumes/${id}`);
+  return api.delete<void>(`/resumes/${id}`);
 };
 
 // ==================== SECTIONS & ENTRIES ====================
@@ -70,11 +65,10 @@ export const addSection = async (
     displayOrder: number;
   }
 ): Promise<ResumeSection> => {
-  const response = await axios.post<ResumeSection>(
-    `${API_BASE_URL}/api/resumes/${resumeId}/sections`,
+  return api.post<ResumeSection>(
+    `/resumes/${resumeId}/sections`,
     data
   );
-  return response.data;
 };
 
 export const addEntry = async (
@@ -88,11 +82,10 @@ export const addEntry = async (
     additionalFields?: string;
   }
 ): Promise<ResumeEntry> => {
-  const response = await axios.post<ResumeEntry>(
-    `${API_BASE_URL}/api/resumes/sections/${sectionId}/entries`,
+  return api.post<ResumeEntry>(
+    `/resumes/sections/${sectionId}/entries`,
     data
   );
-  return response.data;
 };
 
 export const updateEntry = async (
@@ -106,27 +99,25 @@ export const updateEntry = async (
     additionalFields?: string;
   }
 ): Promise<void> => {
-  await axios.put(`${API_BASE_URL}/api/resumes/entries/${entryId}`, data);
+  return api.put<void>(`/resumes/entries/${entryId}`, data);
 };
 
 export const deleteEntry = async (entryId: string): Promise<void> => {
-  await axios.delete(`${API_BASE_URL}/api/resumes/entries/${entryId}`);
+  return api.delete<void>(`/resumes/entries/${entryId}`);
 };
 
 // ==================== VERSION MANAGEMENT ====================
 
 export const getVersions = async (resumeId: string): Promise<ResumeVersion[]> => {
-  const response = await axios.get<ResumeVersion[]>(
-    `${API_BASE_URL}/api/resumes/${resumeId}/versions`
+  return api.get<ResumeVersion[]>(
+    `/resumes/${resumeId}/versions`
   );
-  return response.data;
 };
 
 export const getVersion = async (resumeId: string, versionId: string): Promise<ResumeVersion> => {
-  const response = await axios.get<ResumeVersion>(
-    `${API_BASE_URL}/api/resumes/${resumeId}/versions/${versionId}`
+  return api.get<ResumeVersion>(
+    `/resumes/${resumeId}/versions/${versionId}`
   );
-  return response.data;
 };
 
 export const createVersion = async (
@@ -137,19 +128,18 @@ export const createVersion = async (
     createdByUserId: string;
   }
 ): Promise<ResumeVersion> => {
-  const response = await axios.post<ResumeVersion>(
-    `${API_BASE_URL}/api/resumes/${resumeId}/versions`,
+  return api.post<ResumeVersion>(
+    `/resumes/${resumeId}/versions`,
     data
   );
-  return response.data;
 };
 
 export const activateVersion = async (resumeId: string, versionId: string): Promise<void> => {
-  await axios.post(`${API_BASE_URL}/api/resumes/${resumeId}/versions/${versionId}/activate`);
+  return api.post<void>(`/resumes/${resumeId}/versions/${versionId}/activate`, undefined);
 };
 
 export const deleteVersion = async (resumeId: string, versionId: string): Promise<void> => {
-  await axios.delete(`${API_BASE_URL}/api/resumes/${resumeId}/versions/${versionId}`);
+  return api.delete<void>(`/resumes/${resumeId}/versions/${versionId}`);
 };
 
 // ==================== APPROVALS ====================
@@ -162,15 +152,13 @@ export const getApprovals = async (
   if (status !== undefined) params.append('status', status.toString());
   if (reviewerId) params.append('reviewerId', reviewerId);
 
-  const response = await axios.get<ResumeApproval[]>(
-    `${API_BASE_URL}/api/resume-approvals${params.toString() ? `?${params}` : ''}`
+  return api.get<ResumeApproval[]>(
+    `/resume-approvals${params.toString() ? `?${params}` : ''}`
   );
-  return response.data;
 };
 
 export const getApproval = async (id: string): Promise<ResumeApproval> => {
-  const response = await axios.get<ResumeApproval>(`${API_BASE_URL}/api/resume-approvals/${id}`);
-  return response.data;
+  return api.get<ResumeApproval>(`/resume-approvals/${id}`);
 };
 
 export const requestApproval = async (data: {
@@ -179,11 +167,10 @@ export const requestApproval = async (data: {
   requestedByUserId: string;
   requestNotes?: string;
 }): Promise<ResumeApproval> => {
-  const response = await axios.post<ResumeApproval>(
-    `${API_BASE_URL}/api/resume-approvals`,
+  return api.post<ResumeApproval>(
+    `/resume-approvals`,
     data
   );
-  return response.data;
 };
 
 export const approveResume = async (
@@ -193,7 +180,7 @@ export const approveResume = async (
     reviewNotes?: string;
   }
 ): Promise<void> => {
-  await axios.put(`${API_BASE_URL}/api/resume-approvals/${id}/approve`, data);
+  return api.put<void>(`/resume-approvals/${id}/approve`, data);
 };
 
 export const rejectResume = async (
@@ -203,7 +190,7 @@ export const rejectResume = async (
     reviewNotes: string;
   }
 ): Promise<void> => {
-  await axios.put(`${API_BASE_URL}/api/resume-approvals/${id}/reject`, data);
+  return api.put<void>(`/resume-approvals/${id}/reject`, data);
 };
 
 export const requestChanges = async (
@@ -213,28 +200,26 @@ export const requestChanges = async (
     reviewNotes: string;
   }
 ): Promise<void> => {
-  await axios.put(`${API_BASE_URL}/api/resume-approvals/${id}/request-changes`, data);
+  return api.put<void>(`/resume-approvals/${id}/request-changes`, data);
 };
 
 export const getPendingApprovals = async (tenantId?: string): Promise<ResumeApproval[]> => {
   const params = new URLSearchParams();
   if (tenantId) params.append('tenantId', tenantId);
 
-  const response = await axios.get<ResumeApproval[]>(
-    `${API_BASE_URL}/api/resume-approvals/pending${params.toString() ? `?${params}` : ''}`
+  return api.get<ResumeApproval[]>(
+    `/resume-approvals/pending${params.toString() ? `?${params}` : ''}`
   );
-  return response.data;
 };
 
 export const getMyApprovalRequests = async (userId: string): Promise<ResumeApproval[]> => {
-  const response = await axios.get<ResumeApproval[]>(
-    `${API_BASE_URL}/api/resume-approvals/my-requests?userId=${userId}`
+  return api.get<ResumeApproval[]>(
+    `/resume-approvals/my-requests?userId=${userId}`
   );
-  return response.data;
 };
 
 export const cancelApproval = async (id: string): Promise<void> => {
-  await axios.delete(`${API_BASE_URL}/api/resume-approvals/${id}`);
+  return api.delete<void>(`/resume-approvals/${id}`);
 };
 
 // ==================== TEMPLATES ====================
@@ -249,15 +234,13 @@ export const getTemplates = async (
   if (type !== undefined) params.append('type', type.toString());
   if (isActive !== undefined) params.append('isActive', isActive.toString());
 
-  const response = await axios.get<ResumeTemplate[]>(
-    `${API_BASE_URL}/api/resume-templates${params.toString() ? `?${params}` : ''}`
+  return api.get<ResumeTemplate[]>(
+    `/resume-templates${params.toString() ? `?${params}` : ''}`
   );
-  return response.data;
 };
 
 export const getTemplate = async (id: string): Promise<ResumeTemplate> => {
-  const response = await axios.get<ResumeTemplate>(`${API_BASE_URL}/api/resume-templates/${id}`);
-  return response.data;
+  return api.get<ResumeTemplate>(`/resume-templates/${id}`);
 };
 
 export const createTemplate = async (data: {
@@ -269,11 +252,10 @@ export const createTemplate = async (data: {
   storedFileId?: string;
   isDefault?: boolean;
 }): Promise<ResumeTemplate> => {
-  const response = await axios.post<ResumeTemplate>(
-    `${API_BASE_URL}/api/resume-templates`,
+  return api.post<ResumeTemplate>(
+    `/resume-templates`,
     data
   );
-  return response.data;
 };
 
 export const updateTemplate = async (
@@ -288,30 +270,28 @@ export const updateTemplate = async (
     isActive?: boolean;
   }
 ): Promise<void> => {
-  await axios.put(`${API_BASE_URL}/api/resume-templates/${id}`, data);
+  return api.put<void>(`/resume-templates/${id}`, data);
 };
 
 export const deleteTemplate = async (id: string): Promise<void> => {
-  await axios.delete(`${API_BASE_URL}/api/resume-templates/${id}`);
+  return api.delete<void>(`/resume-templates/${id}`);
 };
 
 export const getDefaultTemplate = async (
   tenantId: string,
   type: ResumeTemplateType
 ): Promise<ResumeTemplate> => {
-  const response = await axios.get<ResumeTemplate>(
-    `${API_BASE_URL}/api/resume-templates/default?tenantId=${tenantId}&type=${type}`
+  return api.get<ResumeTemplate>(
+    `/resume-templates/default?tenantId=${tenantId}&type=${type}`
   );
-  return response.data;
 };
 
 export const duplicateTemplate = async (
   id: string,
   newName?: string
 ): Promise<ResumeTemplate> => {
-  const response = await axios.post<ResumeTemplate>(
-    `${API_BASE_URL}/api/resume-templates/${id}/duplicate`,
+  return api.post<ResumeTemplate>(
+    `/resume-templates/${id}/duplicate`,
     { newName }
   );
-  return response.data;
 };
