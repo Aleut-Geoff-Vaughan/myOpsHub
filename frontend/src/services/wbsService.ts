@@ -1,11 +1,21 @@
-import apiClient from './apiClient';
-import {
+import { api } from '../lib/api-client';
+import type {
   WbsElement,
-  WbsChangeHistory,
   WbsType,
   WbsApprovalStatus,
   WorkflowRequest,
-} from '../types/api';
+  WbsChangeHistory,
+} from '../types/wbs';
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  pageNumber: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+  hasPreviousPage: boolean;
+  hasNextPage: boolean;
+}
 
 export interface WbsFilters {
   projectId?: string;
@@ -13,6 +23,8 @@ export interface WbsFilters {
   type?: WbsType;
   approvalStatus?: WbsApprovalStatus;
   includeHistory?: boolean;
+  pageNumber?: number;
+  pageSize?: number;
 }
 
 export interface CreateWbsRequest {
@@ -27,7 +39,6 @@ export interface CreateWbsRequest {
 }
 
 export interface UpdateWbsRequest {
-  code?: string;
   description?: string;
   validFrom?: string;
   validTo?: string;
@@ -37,8 +48,8 @@ export interface UpdateWbsRequest {
 }
 
 const wbsService = {
-  // List WBS elements with optional filters
-  async getWbsElements(filters?: WbsFilters): Promise<WbsElement[]> {
+  // List WBS elements with optional filters and pagination
+  async getWbsElements(filters?: WbsFilters): Promise<PaginatedResponse<WbsElement>> {
     const params = new URLSearchParams();
     if (filters?.projectId) params.append('projectId', filters.projectId);
     if (filters?.ownerId) params.append('ownerId', filters.ownerId);
@@ -46,66 +57,62 @@ const wbsService = {
     if (filters?.approvalStatus !== undefined)
       params.append('approvalStatus', filters.approvalStatus.toString());
     if (filters?.includeHistory) params.append('includeHistory', 'true');
+    if (filters?.pageNumber) params.append('pageNumber', filters.pageNumber.toString());
+    if (filters?.pageSize) params.append('pageSize', filters.pageSize.toString());
 
     const queryString = params.toString();
     const url = `/wbs${queryString ? `?${queryString}` : ''}`;
-    const response = await apiClient.get<WbsElement[]>(url);
-    return response.data;
+    return api.get<PaginatedResponse<WbsElement>>(url);
   },
 
   // Get single WBS element by ID
   async getWbsElement(id: string): Promise<WbsElement> {
-    const response = await apiClient.get<WbsElement>(`/wbs/${id}`);
-    return response.data;
+    return api.get<WbsElement>(`/wbs/${id}`);
   },
 
   // Get WBS elements pending approval
   async getPendingApprovals(): Promise<WbsElement[]> {
-    const response = await apiClient.get<WbsElement[]>('/wbs/pending-approval');
-    return response.data;
+    return api.get<WbsElement[]>('/wbs/pending-approval');
   },
 
   // Get WBS change history
   async getWbsHistory(id: string): Promise<WbsChangeHistory[]> {
-    const response = await apiClient.get<WbsChangeHistory[]>(`/wbs/${id}/history`);
-    return response.data;
+    return api.get<WbsChangeHistory[]>(`/wbs/${id}/history`);
   },
 
   // Create new WBS element
   async createWbs(data: CreateWbsRequest): Promise<WbsElement> {
-    const response = await apiClient.post<WbsElement>('/wbs', data);
-    return response.data;
+    return api.post<WbsElement>('/wbs', data);
   },
 
   // Update WBS element
   async updateWbs(id: string, data: UpdateWbsRequest): Promise<WbsElement> {
-    const response = await apiClient.put<WbsElement>(`/wbs/${id}`, data);
-    return response.data;
+    return api.put<WbsElement>(`/wbs/${id}`, data);
   },
 
   // Submit WBS for approval
   async submitForApproval(id: string, request?: WorkflowRequest): Promise<void> {
-    await apiClient.post(`/wbs/${id}/submit`, request || {});
+    await api.post(`/wbs/${id}/submit`, request || {});
   },
 
   // Approve WBS
   async approveWbs(id: string, request?: WorkflowRequest): Promise<void> {
-    await apiClient.post(`/wbs/${id}/approve`, request || {});
+    await api.post(`/wbs/${id}/approve`, request || {});
   },
 
   // Reject WBS
   async rejectWbs(id: string, request: WorkflowRequest): Promise<void> {
-    await apiClient.post(`/wbs/${id}/reject`, request);
+    await api.post(`/wbs/${id}/reject`, request);
   },
 
   // Suspend WBS
   async suspendWbs(id: string, request?: WorkflowRequest): Promise<void> {
-    await apiClient.post(`/wbs/${id}/suspend`, request || {});
+    await api.post(`/wbs/${id}/suspend`, request || {});
   },
 
   // Close WBS
   async closeWbs(id: string, request?: WorkflowRequest): Promise<void> {
-    await apiClient.post(`/wbs/${id}/close`, request || {});
+    await api.post(`/wbs/${id}/close`, request || {});
   },
 };
 

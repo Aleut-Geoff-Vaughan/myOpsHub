@@ -5,21 +5,24 @@
 ### Quick Start Commands
 
 ```bash
-# Start Backend API (port 5000)
+# Start Backend API (port 5107)
 cd /workspaces/myScheduling/backend/src/MyScheduling.Api
-dotnet run --urls "http://0.0.0.0:5000"
+dotnet run
 
 # Start Frontend (port 5173) - in another terminal
 cd /workspaces/myScheduling/frontend
 npm run dev -- --host 0.0.0.0
+
+# Note: Backend runs on port 5107 by default
+# Frontend Vite proxy is configured to forward /api requests to http://localhost:5107
 ```
 
 ---
 
 ## Active Priority Tasks
 
-### 1. Master Data Management - WBS ✅ **COMPLETED 2025-11-20**
-**Phase 1 Complete**: Full WBS Management with Workflow Approvals
+### 1. Master Data Management - WBS ✅ **COMPLETED 2025-11-21**
+**Phase 1 Complete**: Full WBS Management with Workflow Approvals + Security Hardening
 
 #### Backend Complete ✅
 - [x] Design architecture (MASTER-DATA-DESIGN.md) ✅
@@ -28,6 +31,16 @@ npm run dev -- --host 0.0.0.0
 - [x] Database migration applied successfully ✅
 - [x] WbsController with full workflow API (11 endpoints) ✅
 - [x] Added TypeScript enums (WbsType, WbsApprovalStatus, WbsStatus) ✅
+- [x] **Security Hardening: Comprehensive Authorization** ✅ **COMPLETED 2025-11-21**
+  - Created reusable `VerifyUserAccess()` helper method
+  - Added tenant membership validation to all workflow endpoints
+  - Implemented role-based access control (RBAC) with proper role checks
+  - Added OverrideApprover role support for approval workflows
+  - System admin bypass functionality
+  - Security audit logging for authorization failures
+  - Protected endpoints: SubmitForApproval, ApproveWbs, RejectWbs, SuspendWbs, CloseWbs
+  - Protected bulk operations: BulkSubmitForApproval, BulkApproveWbs, BulkRejectWbs, BulkCloseWbs
+  - Prevents cross-tenant WBS access and manipulation
 
 #### Frontend Complete ✅
 - [x] Created WBS interfaces and types in api.ts ✅
@@ -108,34 +121,90 @@ This phase adds role-based facilities management, space ownership, approval work
 - [ ] Add space equipment and features editor
 - [ ] Add booking rules configuration UI
 
-### 3. Dynamic Validation Framework (FUTURE) 🔵
-**Future Phase**: Phase 3 - Flexible, Non-Hardcoded Validation System
+### 3. Dynamic Validation Framework ✅ **BACKEND COMPLETED 2025-11-20**
+**Phase 3 Complete**: Flexible, Non-Hardcoded Validation System (Backend + API)
 
 See [MASTER-DATA-DESIGN.md](MASTER-DATA-DESIGN.md) for full architecture details.
 
-This will allow administrators to define validation rules dynamically using JSON or pseudo-code without requiring code deployments.
+This allows administrators to define validation rules dynamically using JSON expressions without requiring code deployments.
 
-#### Planned Tasks
-- [ ] Create ValidationRule entity
-  - Rule expression storage (JSON/pseudo-code)
-  - Conditional execution
-  - Multi-severity support
-- [ ] Implement IValidationEngine service
-- [ ] Implement IRuleInterpreter service
-  - Parse JSON expressions
-  - Execute pseudo-code
-- [ ] Database migration for validation
-- [ ] Create ValidationController
-- [ ] Build ValidationRuleBuilder UI
-  - Visual rule creation
-  - Test panel
-  - Template library
+#### Backend Complete ✅
+- [x] Created ValidationRule entity ✅
+  - EntityType and FieldName targeting
+  - 6 rule types (Required, Range, Pattern, Custom, CrossField, External)
+  - 3 severity levels (Error, Warning, Information)
+  - JSON rule expression storage
+  - Conditional execution support
+  - Execution order management
+- [x] Created enums (ValidationRuleType, ValidationSeverity) ✅
+- [x] Implemented IValidationEngine service interface ✅
+- [x] Implemented IRuleInterpreter service interface ✅
+- [x] Implemented ValidationEngine service ✅
+  - Validates entities against all applicable rules
+  - Field-level validation support
+  - Condition evaluation
+- [x] Implemented RuleInterpreter service ✅
+  - Required field validation
+  - Range validation (numeric min/max)
+  - Pattern validation (regex)
+  - Cross-field validation (date comparisons)
+  - Expression validation
+  - Error message formatting with placeholders
+- [x] Database migration applied successfully ✅
+- [x] Created ValidationController with 14 endpoints ✅
+  - CRUD operations for rules
+  - Validate entity/field operations
+  - Test rule endpoint
+  - Get rules by entity type
+  - Validate expressions
+  - Bulk reorder rules
+- [x] Registered services in DI container ✅
+- [x] Created TypeScript types and enums ✅
+- [x] Created validationService.ts API client ✅
 
-### 4. Authentication (HIGH PRIORITY) 🔴
+#### Frontend Pending 🟡
+- [ ] Build ValidationRulesPage component
+  - List all validation rules with filtering
+  - Statistics cards
+  - Rule management (create/edit/delete/activate)
+- [ ] Build ValidationRuleModal component
+  - Visual rule creation/editing
+  - Expression editor with validation
+  - Test panel for sample data
+- [ ] Add route and navigation for Validation Rules
+- [ ] Integrate validation into forms
+  - Real-time field validation
+  - Entity-level validation before save
+
+### 4. Dashboard Frontend Issues ✅ **RESOLVED 2025-11-21**
+**Issue**: Dashboard API endpoint returning 404 in frontend
+- **Solution**: Started both backend (port 5107) and frontend (port 5173) servers
+- **Status**: Dashboard API endpoint working correctly
+- [x] Restart both frontend and backend servers ✅
+- [x] Verify backend is responding to dashboard endpoint ✅
+- [x] Check browser console for CORS errors ✅
+- [x] Verify Vite proxy configuration in vite.config.ts ✅
+
+### 5. DateTime PostgreSQL Issues ✅ **RESOLVED 2025-11-21**
+**Issue**: PostgreSQL rejecting DateTime with Kind=Unspecified
+- **Solution**: Added UTC conversion to all DateTime parameters
+- **Impact**: Booking queries and dashboard operations now work correctly
+- [x] Review BookingsController DateTime parameter handling ✅
+- [x] Add `.ToUniversalTime()` conversions where needed ✅
+- [x] Update DashboardController with UTC handling ✅
+- 🟡 Remaining: Check other controllers if similar issues arise
+
+### 6. Authentication & Security (PARTIALLY COMPLETE) 🟡
 - [ ] Add JWT token generation and validation
 - [ ] Add authentication middleware to protect API endpoints
 - [ ] Add password hashing (bcrypt) and verification
-- [ ] Implement proper role-based access control (RBAC)
+- [x] Implement role-based access control (RBAC) ✅ **COMPLETED 2025-11-21**
+  - WbsController: Full authorization with workflow protection
+  - WorkLocationPreferencesController: Personal data protection
+  - AssignmentsController: Staffing security
+  - BookingsController: Space booking security
+  - 22 total endpoints secured with tenant isolation and role checks
+- 🟡 Optional: ResumesController, FacilitiesController (lower priority)
 
 ### 5. User Management Enhancements - Phase 3 (IN PROGRESS) 🟡
 **Current Phase**: Phase 3 - User Lifecycle & Advanced Features
@@ -805,4 +874,241 @@ This will allow administrators to define validation rules dynamically using JSON
 
 ---
 
-Last Updated: 2025-11-20
+## Recent Work Sessions
+
+### Work Session 2025-11-21 - WBS Security Hardening & Dashboard Optimization ✅
+
+**Main Achievement**: Comprehensive security implementation for WBS workflow endpoints
+
+#### WBS Authorization Security (COMPLETED)
+**Problem**: WBS workflow endpoints lacked proper authorization checks, potentially allowing:
+- Cross-tenant WBS access and manipulation
+- Unauthorized users to approve/reject WBS elements
+- Bypassing assigned approver requirements
+
+**Solution Implemented**:
+1. Created reusable `VerifyUserAccess()` helper method in WbsController
+   - Validates user exists and has active tenant membership
+   - Checks user has required roles for the operation
+   - Allows system admins to bypass role checks
+   - Provides security audit logging
+
+2. Added comprehensive authorization to all workflow endpoints:
+   - **SubmitForApproval**: Requires Employee/TeamLead/ProjectManager/ResourceManager/TenantAdmin
+     - Owner verification (only owner or PM can submit)
+   - **ApproveWbs**: Requires ProjectManager/ResourceManager/OverrideApprover/TenantAdmin
+     - Assigned approver verification with override capability
+   - **RejectWbs**: Requires ProjectManager/ResourceManager/OverrideApprover/TenantAdmin
+     - Assigned approver verification with override capability
+   - **SuspendWbs**: Requires ProjectManager/ResourceManager/TenantAdmin
+   - **CloseWbs**: Requires ProjectManager/ResourceManager/TenantAdmin
+
+3. Added authorization to all bulk operations:
+   - BulkSubmitForApproval
+   - BulkApproveWbs
+   - BulkRejectWbs
+   - BulkCloseWbs
+   - Each WBS validated individually with detailed failure tracking
+
+**Files Modified**:
+- `/workspaces/myScheduling/backend/src/MyScheduling.Api/Controllers/WbsController.cs`
+  - Added `VerifyUserAccess()` helper method (lines 26-74)
+  - Updated 9 endpoints with authorization checks
+  - Added security logging throughout
+
+**Build Status**: ✅ Build succeeded with 0 errors (3 pre-existing warnings in unrelated files)
+
+**Security Impact**:
+- ✅ Prevents cross-tenant WBS access
+- ✅ Enforces role-based permissions for all workflow actions
+- ✅ Provides audit trail of authorization failures
+- ✅ Supports override capabilities for special roles
+- ✅ System admin bypass for administrative operations
+
+#### Dashboard Work Location Feature (PREVIOUSLY COMPLETED)
+**Note**: Dashboard implementation was completed in previous session but encountered runtime issues:
+- DashboardController exists and properly configured
+- Frontend hooks and components fully implemented
+- Issue: 404 errors when accessing `/api/dashboard` endpoint
+- Possible causes: Server restart needed, proxy configuration, CORS
+- **Action Required**: Debug and resolve dashboard API connectivity (see section 4 above)
+
+#### Remaining Items for Next Session
+1. **Dashboard 404 Issue** (HIGH PRIORITY)
+   - Restart servers and verify endpoint connectivity
+   - Check CORS and proxy configuration
+   - Test dashboard API directly with curl
+
+2. **DateTime PostgreSQL Issue** (MEDIUM PRIORITY)
+   - Fix DateTime.Kind issues in BookingsController
+   - Add UTC conversions throughout API
+
+3. **Extend Security to Other Controllers**
+   - Apply similar authorization patterns to:
+     - AssignmentsController
+     - BookingsController
+     - WorkLocationPreferencesController
+     - ResumesController
+     - FacilitiesController
+
+4. **Testing**
+   - Test WBS authorization with different user roles
+   - Verify cross-tenant protection
+   - Test override approver functionality
+
+---
+
+### Work Session 2025-11-21 (Morning) - Dashboard Fix & Multi-Controller Security ✅
+
+**Main Achievement**: Fixed Dashboard issues and extended authorization to 3 additional controllers
+
+#### 1. Dashboard 404 Issue - RESOLVED ✅
+**Problem**: Frontend requests to `/api/dashboard` returning 404
+**Root Cause**: Backend and frontend servers weren't running
+**Solution**: Started both servers (backend: port 5107, frontend: port 5173)
+**Verification**: Dashboard API endpoint tested and working correctly
+
+#### 2. DateTime PostgreSQL Compatibility - FIXED ✅
+**Problem**: PostgreSQL rejecting DateTime values without explicit UTC Kind
+**Files Fixed**:
+- `BookingsController.cs`: Added UTC conversion for startDate/endDate parameters (lines 54-65)
+- `DashboardController.cs`: Added UTC conversion for date range calculations (lines 52-65)
+**Impact**: Booking queries and dashboard date operations now work with PostgreSQL
+
+#### 3. WorkLocationPreferences Authorization - SECURED ✅
+**Security Implementation**:
+- Added `VerifyUserAccess()` helper method
+- **POST**: Users can only create own preferences (managers can create for others)
+- **PUT**: Users can only update own preferences (managers can update for others)
+- **DELETE**: Users can only delete own preferences (managers can delete for others)
+- Roles: Employee, TeamLead, ProjectManager, ResourceManager, OfficeManager, TenantAdmin
+**Build Status**: ✅ Succeeded with 0 errors
+
+#### 4. Assignments Authorization - SECURED ✅
+**Security Implementation**:
+- Added `VerifyUserAccess()` helper method
+- **POST**: Only managers can create assignments (TeamLead, ProjectManager, ResourceManager, TenantAdmin)
+- **PUT**: Only managers can update assignments
+- **DELETE**: Only managers can delete assignments
+- **APPROVE**: Only managers can approve assignments (ProjectManager, ResourceManager, TenantAdmin)
+- Prevents cross-tenant assignment manipulation
+**Build Status**: ✅ Succeeded with 0 errors
+
+#### 5. Bookings Authorization - SECURED ✅
+**Security Implementation**:
+- Added `VerifyUserAccess()` helper method
+- **POST**: Users can book for themselves, managers can book for others
+- **PUT**: Users can update own bookings, managers can update any
+- **DELETE**: Users can delete own bookings, managers can delete any
+- Roles: Employee (for self), OfficeManager/ResourceManager/TenantAdmin (for others)
+- Prevents cross-tenant booking manipulation
+**Build Status**: ✅ Succeeded with 0 errors
+
+#### Files Modified:
+- `/workspaces/myScheduling/backend/src/MyScheduling.Api/Controllers/BookingsController.cs`
+- `/workspaces/myScheduling/backend/src/MyScheduling.Api/Controllers/DashboardController.cs`
+- `/workspaces/myScheduling/backend/src/MyScheduling.Api/Controllers/WorkLocationPreferencesController.cs`
+- `/workspaces/myScheduling/backend/src/MyScheduling.Api/Controllers/AssignmentsController.cs`
+
+#### Security Coverage Summary:
+- ✅ WBS Controller: Full authorization (9 endpoints - completed yesterday)
+- ✅ WorkLocationPreferences Controller: Full authorization (4 endpoints - completed today)
+- ✅ Assignments Controller: Full authorization (5 endpoints - completed today)
+- ✅ Bookings Controller: Full authorization (4 endpoints - completed today)
+- 🟡 Remaining: ResumesController, FacilitiesController (optional enhancements)
+
+#### Overall Impact:
+- **4 Controllers Secured**: WBS, WorkLocationPreferences, Assignments, Bookings
+- **22 Total Endpoints Protected**: All CRUD operations secured
+- **Cross-Tenant Protection**: Comprehensive tenant isolation enforced
+- **Role-Based Access**: Proper RBAC implementation across all controllers
+- **Audit Logging**: Security violations logged for compliance
+
+---
+
+### Work Session 2025-11-21 (Afternoon) - Dashboard Enhancements: PTO & Holidays ✅
+
+**Main Achievement**: Completed all dashboard enhancements with PTO support and Federal Holidays system
+
+#### 1. Added PTO to Work Location Types ✅
+**Backend Implementation**:
+- Updated [Hoteling.cs:191](backend/src/MyScheduling.Core/Entities/Hoteling.cs#L191) to add `PTO` enum value
+- Database migration applied successfully
+**Frontend Implementation**:
+- Updated [api.ts:332](frontend/src/types/api.ts#L332) TypeScript enum with PTO = 5
+- Added PTO to location selector dropdown in [WorkLocationSelector.tsx:119](frontend/src/components/WorkLocationSelector.tsx#L119)
+- Updated calendar display to show PTO with palm tree icon 🌴 and yellow styling
+- Updated legend to include PTO option
+**Build Status**: ✅ Backend and frontend built successfully
+
+#### 2. Company Holidays System Implementation ✅
+**Entity & Database**:
+- Created `CompanyHoliday` entity at [Hoteling.cs:195-203](backend/src/MyScheduling.Core/Entities/Hoteling.cs#L195-L203)
+  - Properties: Name, HolidayDate (DateOnly), Type, IsRecurring, Description, IsObserved
+- Created `HolidayType` enum: Federal, Company, Religious, Cultural, Regional
+- Added DbSet to [MySchedulingDbContext.cs:58](backend/src/MyScheduling.Infrastructure/Data/MySchedulingDbContext.cs#L58)
+- Configured entity mapping with indexes at [MySchedulingDbContext.cs:457-466](backend/src/MyScheduling.Infrastructure/Data/MySchedulingDbContext.cs#L457-L466)
+- Migration `AddCompanyHolidaysAndPTO` created and applied successfully
+
+**Database Seeding**:
+- Created [CreateCompanyHolidaysAsync()](backend/src/MyScheduling.Infrastructure/Data/DatabaseSeeder.cs#L662-735) method
+- Loaded all 11 US Federal Holidays for 2025:
+  - New Year's Day (Jan 1)
+  - Martin Luther King Jr. Day (Jan 20)
+  - Presidents' Day (Feb 17)
+  - Memorial Day (May 26)
+  - Juneteenth (June 19)
+  - Independence Day (July 4)
+  - Labor Day (Sept 1)
+  - Columbus Day (Oct 13)
+  - Veterans Day (Nov 11)
+  - Thanksgiving Day (Nov 27)
+  - Christmas Day (Dec 25)
+- Also loaded 2026 Federal Holidays for continuity
+- Holidays seeded for all tenants with proper tenant isolation
+
+**API Implementation**:
+- Created [HolidaysController.cs](backend/src/MyScheduling.Api/Controllers/HolidaysController.cs) with full CRUD operations
+- Authorization: Requires `TenantAdmin` role for all modifications
+- GET endpoints support filtering by:
+  - Year (e.g., `?year=2025`)
+  - Holiday type (Federal, Company, etc.)
+  - Observed status
+- Comprehensive tenant isolation and security logging
+**Build Status**: ✅ Built successfully with 0 errors
+
+#### 3. Dashboard Calendar Already Monday-Friday ✅
+**Finding**: The dashboard calendar was already configured to show Monday-Friday only
+- [WeekCalendarView.tsx](frontend/src/components/WeekCalendarView.tsx) uses `grid-cols-5`
+- Utilizes `getWeekdays()` utility that filters to weekdays only
+- No changes needed - feature already implemented!
+
+#### Files Modified:
+**Backend**:
+- `backend/src/MyScheduling.Core/Entities/Hoteling.cs` - Added PTO enum + CompanyHoliday entity
+- `backend/src/MyScheduling.Infrastructure/Data/MySchedulingDbContext.cs` - Added CompanyHolidays DbSet and config
+- `backend/src/MyScheduling.Infrastructure/Data/DatabaseSeeder.cs` - Added Federal Holidays seeding
+- `backend/src/MyScheduling.Api/Controllers/HolidaysController.cs` - New controller for holiday management
+
+**Frontend**:
+- `frontend/src/types/api.ts` - Added PTO to WorkLocationType enum
+- `frontend/src/components/WorkLocationSelector.tsx` - Added PTO to dropdown
+- `frontend/src/components/WeekCalendarView.tsx` - Added PTO display (icon, color, label, legend)
+
+#### Feature Summary:
+✅ **PTO Support**: Users can now mark days as Paid Time Off with visual calendar indicators
+✅ **Federal Holidays**: 2025-2026 US Federal Holidays loaded and ready
+✅ **Holiday API**: Full CRUD API for admin holiday management
+✅ **Monday-Friday Calendar**: Dashboard displays weekdays only (already implemented)
+✅ **Multi-Tenant**: All holidays properly isolated by tenant
+✅ **Authorization**: Only TenantAdmins can manage company holidays
+
+#### Remaining Optional Enhancement:
+- 🟡 Frontend Admin UI for holiday management (API ready, UI not built yet)
+  - Would be similar to WBS or People management pages
+  - Can create/edit/delete holidays through admin portal
+  - Not critical since holidays are seeded and API is available
+
+---
+
+Last Updated: 2025-11-21 (Afternoon Session)

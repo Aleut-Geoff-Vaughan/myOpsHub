@@ -40,6 +40,7 @@ public class MySchedulingDbContext : DbContext
     // Projects & WBS
     public DbSet<Project> Projects => Set<Project>();
     public DbSet<WbsElement> WbsElements => Set<WbsElement>();
+    public DbSet<WbsChangeHistory> WbsChangeHistories => Set<WbsChangeHistory>();
 
     // Staffing & Assignments
     public DbSet<ProjectRole> ProjectRoles => Set<ProjectRole>();
@@ -54,6 +55,18 @@ public class MySchedulingDbContext : DbContext
     public DbSet<FacilityPermission> FacilityPermissions => Set<FacilityPermission>();
     public DbSet<SpaceMaintenanceLog> SpaceMaintenanceLogs => Set<SpaceMaintenanceLog>();
     public DbSet<WorkLocationPreference> WorkLocationPreferences => Set<WorkLocationPreference>();
+    public DbSet<CompanyHoliday> CompanyHolidays => Set<CompanyHoliday>();
+
+    // Work Location Templates & DOA
+    public DbSet<WorkLocationTemplate> WorkLocationTemplates => Set<WorkLocationTemplate>();
+    public DbSet<WorkLocationTemplateItem> WorkLocationTemplateItems => Set<WorkLocationTemplateItem>();
+    public DbSet<DelegationOfAuthorityLetter> DelegationOfAuthorityLetters => Set<DelegationOfAuthorityLetter>();
+    public DbSet<DigitalSignature> DigitalSignatures => Set<DigitalSignature>();
+    public DbSet<DOAActivation> DOAActivations => Set<DOAActivation>();
+
+    // Team Calendars
+    public DbSet<TeamCalendar> TeamCalendars => Set<TeamCalendar>();
+    public DbSet<TeamCalendarMember> TeamCalendarMembers => Set<TeamCalendarMember>();
 
     // Validation
     public DbSet<ValidationRule> ValidationRules => Set<ValidationRule>();
@@ -70,6 +83,8 @@ public class MySchedulingDbContext : DbContext
         ConfigureProjects(modelBuilder);
         ConfigureStaffing(modelBuilder);
         ConfigureHoteling(modelBuilder);
+        ConfigureWorkLocationTemplates(modelBuilder);
+        ConfigureTeamCalendars(modelBuilder);
         ConfigureValidation(modelBuilder);
 
         // Apply naming conventions for PostgreSQL (snake_case)
@@ -150,11 +165,18 @@ public class MySchedulingDbContext : DbContext
 
             entity.HasIndex(e => new { e.TenantId, e.Email });
             entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.ManagerId);
 
             entity.HasOne(e => e.User)
                 .WithMany()
                 .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            // Self-referencing Manager relationship
+            entity.HasOne(e => e.Manager)
+                .WithMany(m => m.DirectReports)
+                .HasForeignKey(e => e.ManagerId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<ResumeProfile>(entity =>
@@ -235,6 +257,27 @@ public class MySchedulingDbContext : DbContext
                 .WithMany(p => p.WbsElements)
                 .HasForeignKey(e => e.ProjectId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<WbsChangeHistory>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ChangeType).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.ChangedAt).IsRequired();
+
+            entity.HasIndex(e => e.WbsElementId);
+            entity.HasIndex(e => new { e.WbsElementId, e.ChangedAt });
+            entity.HasIndex(e => e.ChangedByUserId);
+
+            entity.HasOne(e => e.WbsElement)
+                .WithMany(w => w.ChangeHistory)
+                .HasForeignKey(e => e.WbsElementId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.ChangedBy)
+                .WithMany()
+                .HasForeignKey(e => e.ChangedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 
@@ -430,6 +473,149 @@ public class MySchedulingDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.BookingId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.DOAActivation)
+                .WithMany(d => d.WorkLocationPreferences)
+                .HasForeignKey(e => e.DOAActivationId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<CompanyHoliday>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Description).HasMaxLength(500);
+
+            // One holiday per tenant per date
+            entity.HasIndex(e => new { e.TenantId, e.HolidayDate, e.Type });
+            entity.HasIndex(e => new { e.TenantId, e.IsObserved });
+        });
+    }
+
+    private void ConfigureWorkLocationTemplates(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<WorkLocationTemplate>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.Type).IsRequired();
+            entity.Property(e => e.IsShared).IsRequired().HasDefaultValue(false);
+
+            entity.HasIndex(e => new { e.TenantId, e.UserId, e.IsShared });
+            entity.HasIndex(e => e.Type);
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<WorkLocationTemplateItem>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.DayOffset).IsRequired();
+            entity.Property(e => e.LocationType).IsRequired();
+            entity.Property(e => e.RemoteLocation).HasMaxLength(200);
+            entity.Property(e => e.City).HasMaxLength(100);
+            entity.Property(e => e.State).HasMaxLength(100);
+            entity.Property(e => e.Country).HasMaxLength(100);
+            entity.Property(e => e.Notes).HasMaxLength(500);
+
+            entity.HasIndex(e => new { e.TemplateId, e.DayOffset });
+
+            entity.HasOne(e => e.Template)
+                .WithMany(t => t.Items)
+                .HasForeignKey(e => e.TemplateId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Office)
+                .WithMany()
+                .HasForeignKey(e => e.OfficeId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<DelegationOfAuthorityLetter>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.LetterContent).IsRequired();
+            entity.Property(e => e.EffectiveStartDate).IsRequired();
+            entity.Property(e => e.EffectiveEndDate).IsRequired();
+            entity.Property(e => e.IsFinancialAuthority).IsRequired().HasDefaultValue(false);
+            entity.Property(e => e.IsOperationalAuthority).IsRequired().HasDefaultValue(false);
+            entity.Property(e => e.Status).IsRequired();
+            entity.Property(e => e.Notes).HasMaxLength(1000);
+
+            entity.HasIndex(e => new { e.TenantId, e.DelegatorUserId, e.Status });
+            entity.HasIndex(e => new { e.TenantId, e.DesigneeUserId, e.Status });
+            entity.HasIndex(e => new { e.Status, e.EffectiveStartDate, e.EffectiveEndDate });
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.DelegatorUser)
+                .WithMany()
+                .HasForeignKey(e => e.DelegatorUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.DesigneeUser)
+                .WithMany()
+                .HasForeignKey(e => e.DesigneeUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<DigitalSignature>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.SignatureData).IsRequired();
+            entity.Property(e => e.SignedAt).IsRequired();
+            entity.Property(e => e.IpAddress).IsRequired().HasMaxLength(45); // IPv6 max length
+            entity.Property(e => e.UserAgent).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.Role).IsRequired();
+            entity.Property(e => e.IsVerified).IsRequired().HasDefaultValue(true);
+
+            entity.HasIndex(e => new { e.DOALetterId, e.Role });
+            entity.HasIndex(e => e.SignerUserId);
+
+            entity.HasOne(e => e.DOALetter)
+                .WithMany(d => d.Signatures)
+                .HasForeignKey(e => e.DOALetterId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.SignerUser)
+                .WithMany()
+                .HasForeignKey(e => e.SignerUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<DOAActivation>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.StartDate).IsRequired();
+            entity.Property(e => e.EndDate).IsRequired();
+            entity.Property(e => e.Reason).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
+
+            entity.HasIndex(e => new { e.TenantId, e.DOALetterId, e.IsActive });
+            entity.HasIndex(e => new { e.StartDate, e.EndDate });
+
+            entity.HasOne(e => e.DOALetter)
+                .WithMany(d => d.Activations)
+                .HasForeignKey(e => e.DOALetterId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 
@@ -651,6 +837,55 @@ public class MySchedulingDbContext : DbContext
             entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
 
             entity.HasIndex(e => new { e.TenantId, e.IsActive }).IsUnique();
+        });
+    }
+
+    private void ConfigureTeamCalendars(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<TeamCalendar>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.Type).IsRequired();
+            entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
+
+            entity.HasIndex(e => new { e.TenantId, e.IsActive });
+            entity.HasIndex(e => new { e.TenantId, e.Type });
+            entity.HasIndex(e => e.OwnerId);
+
+            entity.HasOne(e => e.Owner)
+                .WithMany()
+                .HasForeignKey(e => e.OwnerId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<TeamCalendarMember>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.MembershipType).IsRequired();
+            entity.Property(e => e.AddedDate).IsRequired();
+            entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
+
+            // Unique constraint: person can only be in each calendar once
+            entity.HasIndex(e => new { e.TenantId, e.TeamCalendarId, e.PersonId }).IsUnique();
+            entity.HasIndex(e => new { e.PersonId, e.IsActive });
+            entity.HasIndex(e => new { e.TeamCalendarId, e.IsActive });
+
+            entity.HasOne(e => e.TeamCalendar)
+                .WithMany(t => t.Members)
+                .HasForeignKey(e => e.TeamCalendarId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Person)
+                .WithMany()
+                .HasForeignKey(e => e.PersonId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.AddedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.AddedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
     }
 

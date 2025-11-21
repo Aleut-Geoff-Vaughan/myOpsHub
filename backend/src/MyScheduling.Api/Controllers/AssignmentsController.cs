@@ -18,6 +18,52 @@ public class AssignmentsController : ControllerBase
         _logger = logger;
     }
 
+    /// <summary>
+    /// Verify that a user has access to an assignment's tenant and has appropriate roles
+    /// </summary>
+    private async Task<(bool isAuthorized, string? errorMessage, TenantMembership? membership)>
+        VerifyUserAccess(Guid userId, Guid tenantId, params AppRole[] requiredRoles)
+    {
+        var user = await _context.Users
+            .Include(u => u.TenantMemberships)
+            .FirstOrDefaultAsync(u => u.Id == userId);
+
+        if (user == null)
+        {
+            return (false, "User not found", null);
+        }
+
+        var tenantMembership = user.TenantMemberships
+            .FirstOrDefault(tm => tm.TenantId == tenantId && tm.IsActive);
+
+        if (tenantMembership == null)
+        {
+            _logger.LogWarning("User {UserId} attempted to access assignment from tenant {TenantId} without membership",
+                userId, tenantId);
+            return (false, "User does not have access to this tenant", null);
+        }
+
+        // System admins bypass role checks
+        if (user.IsSystemAdmin)
+        {
+            return (true, null, tenantMembership);
+        }
+
+        // Check if user has any of the required roles
+        if (requiredRoles.Length > 0)
+        {
+            var hasRole = tenantMembership.Roles.Any(r => requiredRoles.Contains(r));
+            if (!hasRole)
+            {
+                _logger.LogWarning("User {UserId} lacks required roles {RequiredRoles} for assignment action",
+                    userId, string.Join(", ", requiredRoles));
+                return (false, $"User does not have permission. Required role: {string.Join(" or ", requiredRoles)}", tenantMembership);
+            }
+        }
+
+        return (true, null, tenantMembership);
+    }
+
     // GET: api/assignments
     [HttpGet]
     public async Task<ActionResult<IEnumerable<Assignment>>> GetAssignments(
@@ -96,10 +142,23 @@ public class AssignmentsController : ControllerBase
 
     // POST: api/assignments
     [HttpPost]
-    public async Task<ActionResult<Assignment>> CreateAssignment(Assignment assignment)
+    public async Task<ActionResult<Assignment>> CreateAssignment(
+        [FromQuery] Guid userId,
+        Assignment assignment)
     {
         try
         {
+            // Verify user access
+            var (isAuthorized, errorMessage, _) = await VerifyUserAccess(
+                userId,
+                assignment.TenantId,
+                AppRole.TeamLead, AppRole.ProjectManager, AppRole.ResourceManager, AppRole.TenantAdmin);
+
+            if (!isAuthorized)
+            {
+                return StatusCode(403, errorMessage);
+            }
+
             // Check for overlapping assignments
             var hasOverlap = await _context.Assignments
                 .AnyAsync(a =>
@@ -129,7 +188,10 @@ public class AssignmentsController : ControllerBase
 
     // PUT: api/assignments/{id}
     [HttpPut("{id}")]
-    public async Task<IActionResult> UpdateAssignment(Guid id, Assignment assignment)
+    public async Task<IActionResult> UpdateAssignment(
+        Guid id,
+        [FromQuery] Guid userId,
+        Assignment assignment)
     {
         if (id != assignment.Id)
         {
@@ -138,6 +200,23 @@ public class AssignmentsController : ControllerBase
 
         try
         {
+            var existing = await _context.Assignments.FindAsync(id);
+            if (existing == null)
+            {
+                return NotFound($"Assignment with ID {id} not found");
+            }
+
+            // Verify user access
+            var (isAuthorized, errorMessage, _) = await VerifyUserAccess(
+                userId,
+                existing.TenantId,
+                AppRole.TeamLead, AppRole.ProjectManager, AppRole.ResourceManager, AppRole.TenantAdmin);
+
+            if (!isAuthorized)
+            {
+                return StatusCode(403, errorMessage);
+            }
+
             _context.Entry(assignment).State = EntityState.Modified;
 
             try
@@ -164,7 +243,9 @@ public class AssignmentsController : ControllerBase
 
     // DELETE: api/assignments/{id}
     [HttpDelete("{id}")]
-    public async Task<IActionResult> DeleteAssignment(Guid id)
+    public async Task<IActionResult> DeleteAssignment(
+        Guid id,
+        [FromQuery] Guid userId)
     {
         try
         {
@@ -172,6 +253,17 @@ public class AssignmentsController : ControllerBase
             if (assignment == null)
             {
                 return NotFound($"Assignment with ID {id} not found");
+            }
+
+            // Verify user access
+            var (isAuthorized, errorMessage, _) = await VerifyUserAccess(
+                userId,
+                assignment.TenantId,
+                AppRole.TeamLead, AppRole.ProjectManager, AppRole.ResourceManager, AppRole.TenantAdmin);
+
+            if (!isAuthorized)
+            {
+                return StatusCode(403, errorMessage);
             }
 
             _context.Assignments.Remove(assignment);
@@ -196,6 +288,17 @@ public class AssignmentsController : ControllerBase
             if (assignment == null)
             {
                 return NotFound($"Assignment with ID {id} not found");
+            }
+
+            // Verify user access - only managers can approve
+            var (isAuthorized, errorMessage, _) = await VerifyUserAccess(
+                approvedByUserId,
+                assignment.TenantId,
+                AppRole.ProjectManager, AppRole.ResourceManager, AppRole.TenantAdmin);
+
+            if (!isAuthorized)
+            {
+                return StatusCode(403, errorMessage);
             }
 
             assignment.Status = AssignmentStatus.Active;

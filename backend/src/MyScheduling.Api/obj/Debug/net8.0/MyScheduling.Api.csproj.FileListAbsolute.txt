@@ -5,6 +5,7 @@
 /workspaces/myScheduling/backend/src/MyScheduling.Api/bin/Debug/net8.0/MyScheduling.Api.runtimeconfig.json
 /workspaces/myScheduling/backend/src/MyScheduling.Api/bin/Debug/net8.0/MyScheduling.Api.dll
 /workspaces/myScheduling/backend/src/MyScheduling.Api/bin/Debug/net8.0/MyScheduling.Api.pdb
+/workspaces/myScheduling/backend/src/MyScheduling.Api/bin/Debug/net8.0/AspNetCoreRateLimit.dll
 /workspaces/myScheduling/backend/src/MyScheduling.Api/bin/Debug/net8.0/Azure.Core.dll
 /workspaces/myScheduling/backend/src/MyScheduling.Api/bin/Debug/net8.0/Azure.Extensions.AspNetCore.Configuration.Secrets.dll
 /workspaces/myScheduling/backend/src/MyScheduling.Api/bin/Debug/net8.0/Azure.Identity.dll
@@ -38,6 +39,7 @@
 /workspaces/myScheduling/backend/src/MyScheduling.Api/bin/Debug/net8.0/Microsoft.IdentityModel.Abstractions.dll
 /workspaces/myScheduling/backend/src/MyScheduling.Api/bin/Debug/net8.0/Microsoft.OpenApi.dll
 /workspaces/myScheduling/backend/src/MyScheduling.Api/bin/Debug/net8.0/Mono.TextTemplating.dll
+/workspaces/myScheduling/backend/src/MyScheduling.Api/bin/Debug/net8.0/Newtonsoft.Json.dll
 /workspaces/myScheduling/backend/src/MyScheduling.Api/bin/Debug/net8.0/Npgsql.dll
 /workspaces/myScheduling/backend/src/MyScheduling.Api/bin/Debug/net8.0/Npgsql.EntityFrameworkCore.PostgreSQL.dll
 /workspaces/myScheduling/backend/src/MyScheduling.Api/bin/Debug/net8.0/SQLitePCLRaw.batteries_v2.dll
@@ -154,5 +156,3 @@
 /workspaces/myScheduling/backend/src/MyScheduling.Api/obj/Debug/net8.0/MyScheduling.Api.pdb
 /workspaces/myScheduling/backend/src/MyScheduling.Api/obj/Debug/net8.0/MyScheduling.Api.genruntimeconfig.cache
 /workspaces/myScheduling/backend/src/MyScheduling.Api/obj/Debug/net8.0/ref/MyScheduling.Api.dll
-/workspaces/myScheduling/backend/src/MyScheduling.Api/bin/Debug/net8.0/AspNetCoreRateLimit.dll
-/workspaces/myScheduling/backend/src/MyScheduling.Api/bin/Debug/net8.0/Newtonsoft.Json.dll

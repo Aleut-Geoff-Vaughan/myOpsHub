@@ -1,6 +1,4 @@
-const API_BASE_URL = import.meta.env.DEV
-  ? 'http://localhost:5000/api'
-  : '/api';
+const API_BASE_URL = '/api';
 
 export class ApiError extends Error {
   constructor(
@@ -13,6 +11,20 @@ export class ApiError extends Error {
   }
 }
 
+// Helper to get user ID from localStorage
+function getUserId(): string | null {
+  try {
+    const authState = localStorage.getItem('auth-storage');
+    if (authState) {
+      const parsed = JSON.parse(authState);
+      return parsed.state?.user?.id || null;
+    }
+  } catch (error) {
+    console.error('Failed to get user ID from auth storage:', error);
+  }
+  return null;
+}
+
 export async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
@@ -22,6 +34,12 @@ export async function apiRequest<T>(
   const defaultHeaders: HeadersInit = {
     'Content-Type': 'application/json',
   };
+
+  // Add user ID header if available
+  const userId = getUserId();
+  if (userId) {
+    defaultHeaders['X-User-Id'] = userId;
+  }
 
   const config: RequestInit = {
     ...options,

@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using MyScheduling.Core.Common;
 using MyScheduling.Core.Entities;
+using MyScheduling.Core.Models;
 using MyScheduling.Infrastructure.Data;
 using System.Text.Json;
 
@@ -8,6 +10,8 @@ namespace MyScheduling.Api.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[Produces("application/json")]
+[Tags("WBS Management")]
 public class WbsController : ControllerBase
 {
     private readonly MySchedulingDbContext _context;
@@ -19,17 +23,86 @@ public class WbsController : ControllerBase
         _logger = logger;
     }
 
-    // GET: api/wbs
+    /// <summary>
+    /// Verify that a user has access to a WBS element's tenant and has appropriate roles
+    /// </summary>
+    /// <param name="userId">User ID to check</param>
+    /// <param name="tenantId">Tenant ID of the WBS element</param>
+    /// <param name="requiredRoles">List of roles that grant access (any one is sufficient)</param>
+    /// <returns>Tuple with (isAuthorized, errorMessage, tenantMembership)</returns>
+    private async Task<(bool isAuthorized, string? errorMessage, TenantMembership? membership)>
+        VerifyUserAccess(Guid userId, Guid tenantId, params AppRole[] requiredRoles)
+    {
+        var user = await _context.Users
+            .Include(u => u.TenantMemberships)
+            .FirstOrDefaultAsync(u => u.Id == userId);
+
+        if (user == null)
+        {
+            return (false, "User not found", null);
+        }
+
+        var tenantMembership = user.TenantMemberships
+            .FirstOrDefault(tm => tm.TenantId == tenantId && tm.IsActive);
+
+        if (tenantMembership == null)
+        {
+            _logger.LogWarning("User {UserId} attempted to access WBS from tenant {TenantId} without membership",
+                userId, tenantId);
+            return (false, "User does not have access to this tenant", null);
+        }
+
+        // System admins bypass role checks
+        if (user.IsSystemAdmin)
+        {
+            return (true, null, tenantMembership);
+        }
+
+        // Check if user has any of the required roles
+        if (requiredRoles.Length > 0)
+        {
+            var hasRole = tenantMembership.Roles.Any(r => requiredRoles.Contains(r));
+            if (!hasRole)
+            {
+                _logger.LogWarning("User {UserId} lacks required roles {RequiredRoles} for WBS action",
+                    userId, string.Join(", ", requiredRoles));
+                return (false, $"User does not have permission. Required role: {string.Join(" or ", requiredRoles)}", tenantMembership);
+            }
+        }
+
+        return (true, null, tenantMembership);
+    }
+
+    /// <summary>
+    /// Get all WBS elements with optional filtering and pagination
+    /// </summary>
+    /// <param name="projectId">Filter by project ID</param>
+    /// <param name="ownerId">Filter by owner user ID</param>
+    /// <param name="type">Filter by WBS type (Billable, NonBillable, etc.)</param>
+    /// <param name="approvalStatus">Filter by approval status</param>
+    /// <param name="includeHistory">Include change history</param>
+    /// <param name="pageNumber">Page number (1-based, default: 1)</param>
+    /// <param name="pageSize">Page size (default: 50, max: 200)</param>
+    /// <returns>Paginated list of WBS elements with metadata</returns>
     [HttpGet]
-    public async Task<ActionResult<IEnumerable<WbsElement>>> GetWbsElements(
+    [ProducesResponseType(typeof(PaginatedResponse<WbsElement>), 200)]
+    [ProducesResponseType(500)]
+    public async Task<ActionResult<PaginatedResponse<WbsElement>>> GetWbsElements(
         [FromQuery] Guid? projectId = null,
         [FromQuery] Guid? ownerId = null,
         [FromQuery] WbsType? type = null,
         [FromQuery] WbsApprovalStatus? approvalStatus = null,
-        [FromQuery] bool includeHistory = false)
+        [FromQuery] bool includeHistory = false,
+        [FromQuery] int pageNumber = 1,
+        [FromQuery] int pageSize = 50)
     {
         try
         {
+            // Validate pagination parameters
+            if (pageNumber < 1) pageNumber = 1;
+            if (pageSize < 1) pageSize = 50;
+            if (pageSize > 200) pageSize = 200;
+
             var query = _context.WbsElements
                 .Include(w => w.Project)
                 .Include(w => w.Owner)
@@ -62,11 +135,26 @@ public class WbsController : ControllerBase
                     .ThenInclude(h => h.ChangedBy);
             }
 
+            // Get total count before pagination
+            var totalCount = await query.CountAsync();
+
+            // Apply pagination
             var wbsElements = await query
                 .OrderBy(w => w.Code)
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
                 .ToListAsync();
 
-            return Ok(wbsElements);
+            var response = new PaginatedResponse<WbsElement>
+            {
+                Items = wbsElements,
+                PageNumber = pageNumber,
+                PageSize = pageSize,
+                TotalCount = totalCount,
+                TotalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
+            };
+
+            return Ok(response);
         }
         catch (Exception ex)
         {
@@ -75,8 +163,15 @@ public class WbsController : ControllerBase
         }
     }
 
-    // GET: api/wbs/{id}
+    /// <summary>
+    /// Get a single WBS element by ID
+    /// </summary>
+    /// <param name="id">WBS element ID</param>
+    /// <returns>WBS element with project, owner, approver, and change history</returns>
     [HttpGet("{id}")]
+    [ProducesResponseType(typeof(WbsElement), 200)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(500)]
     public async Task<ActionResult<WbsElement>> GetWbsElement(Guid id)
     {
         try
@@ -103,8 +198,14 @@ public class WbsController : ControllerBase
         }
     }
 
-    // GET: api/wbs/pending-approval
+    /// <summary>
+    /// Get WBS elements pending approval
+    /// </summary>
+    /// <param name="approverId">Optional filter by approver user ID</param>
+    /// <returns>List of WBS elements with PendingApproval status</returns>
     [HttpGet("pending-approval")]
+    [ProducesResponseType(typeof(IEnumerable<WbsElement>), 200)]
+    [ProducesResponseType(500)]
     public async Task<ActionResult<IEnumerable<WbsElement>>> GetPendingApprovals(
         [FromQuery] Guid? approverId = null)
     {
@@ -134,13 +235,19 @@ public class WbsController : ControllerBase
         }
     }
 
-    // GET: api/wbs/{id}/history
+    /// <summary>
+    /// Get change history for a WBS element
+    /// </summary>
+    /// <param name="id">WBS element ID</param>
+    /// <returns>List of change history records ordered by date descending</returns>
     [HttpGet("{id}/history")]
+    [ProducesResponseType(typeof(IEnumerable<WbsChangeHistory>), 200)]
+    [ProducesResponseType(500)]
     public async Task<ActionResult<IEnumerable<WbsChangeHistory>>> GetWbsHistory(Guid id)
     {
         try
         {
-            var history = await _context.Set<WbsChangeHistory>()
+            var history = await _context.WbsChangeHistories
                 .Include(h => h.ChangedBy)
                 .Where(h => h.WbsElementId == id)
                 .OrderByDescending(h => h.ChangedAt)
@@ -155,8 +262,17 @@ public class WbsController : ControllerBase
         }
     }
 
-    // POST: api/wbs
+    /// <summary>
+    /// Create a new WBS element
+    /// </summary>
+    /// <param name="request">WBS element creation request</param>
+    /// <returns>Created WBS element with status set to Draft</returns>
     [HttpPost]
+    [ProducesResponseType(typeof(WbsElement), 201)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(409)]
+    [ProducesResponseType(500)]
     public async Task<ActionResult<WbsElement>> CreateWbsElement([FromBody] CreateWbsRequest request)
     {
         try
@@ -214,7 +330,7 @@ public class WbsController : ControllerBase
                 UpdatedAt = DateTime.UtcNow
             };
 
-            _context.Set<WbsChangeHistory>().Add(history);
+            _context.WbsChangeHistories.Add(history);
             await _context.SaveChangesAsync();
 
             return CreatedAtAction(nameof(GetWbsElement), new { id = wbsElement.Id }, wbsElement);
@@ -226,8 +342,17 @@ public class WbsController : ControllerBase
         }
     }
 
-    // PUT: api/wbs/{id}
+    /// <summary>
+    /// Update a WBS element (only allowed for Draft or Rejected status)
+    /// </summary>
+    /// <param name="id">WBS element ID</param>
+    /// <param name="request">WBS element update request</param>
+    /// <returns>No content on success</returns>
     [HttpPut("{id}")]
+    [ProducesResponseType(204)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(500)]
     public async Task<IActionResult> UpdateWbsElement(Guid id, [FromBody] UpdateWbsRequest request)
     {
         try
@@ -275,7 +400,7 @@ public class WbsController : ControllerBase
                 UpdatedAt = DateTime.UtcNow
             };
 
-            _context.Set<WbsChangeHistory>().Add(history);
+            _context.WbsChangeHistories.Add(history);
             await _context.SaveChangesAsync();
 
             return NoContent();
@@ -287,8 +412,17 @@ public class WbsController : ControllerBase
         }
     }
 
-    // POST: api/wbs/{id}/submit
+    /// <summary>
+    /// Submit a WBS element for approval (Draft or Rejected → PendingApproval)
+    /// </summary>
+    /// <param name="id">WBS element ID</param>
+    /// <param name="request">Workflow request with user ID and optional notes</param>
+    /// <returns>No content on success</returns>
     [HttpPost("{id}/submit")]
+    [ProducesResponseType(204)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(500)]
     public async Task<IActionResult> SubmitForApproval(Guid id, [FromBody] WorkflowRequest request)
     {
         try
@@ -297,6 +431,31 @@ public class WbsController : ControllerBase
             if (wbsElement == null)
             {
                 return NotFound($"WBS element with ID {id} not found");
+            }
+
+            // Verify user access and role
+            var (isAuthorized, errorMessage, _) = await VerifyUserAccess(
+                request.UserId,
+                wbsElement.TenantId,
+                AppRole.Employee, AppRole.TeamLead, AppRole.ProjectManager, AppRole.ResourceManager, AppRole.TenantAdmin);
+
+            if (!isAuthorized)
+            {
+                return StatusCode(403, errorMessage);
+            }
+
+            // Verify user is the owner or has appropriate role
+            if (wbsElement.OwnerUserId != request.UserId)
+            {
+                var (canModify, modifyError, membership) = await VerifyUserAccess(
+                    request.UserId,
+                    wbsElement.TenantId,
+                    AppRole.ProjectManager, AppRole.ResourceManager, AppRole.TenantAdmin);
+
+                if (!canModify)
+                {
+                    return StatusCode(403, "Only the WBS owner or project managers can submit for approval");
+                }
             }
 
             if (wbsElement.ApprovalStatus != WbsApprovalStatus.Draft &&
@@ -328,7 +487,7 @@ public class WbsController : ControllerBase
                 UpdatedAt = DateTime.UtcNow
             };
 
-            _context.Set<WbsChangeHistory>().Add(history);
+            _context.WbsChangeHistories.Add(history);
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("WBS {WbsId} submitted for approval by user {UserId}", id, request.UserId);
@@ -342,8 +501,17 @@ public class WbsController : ControllerBase
         }
     }
 
-    // POST: api/wbs/{id}/approve
+    /// <summary>
+    /// Approve a WBS element (PendingApproval → Approved)
+    /// </summary>
+    /// <param name="id">WBS element ID</param>
+    /// <param name="request">Workflow request with user ID and optional notes</param>
+    /// <returns>No content on success</returns>
     [HttpPost("{id}/approve")]
+    [ProducesResponseType(204)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(500)]
     public async Task<IActionResult> ApproveWbs(Guid id, [FromBody] WorkflowRequest request)
     {
         try
@@ -354,15 +522,35 @@ public class WbsController : ControllerBase
                 return NotFound($"WBS element with ID {id} not found");
             }
 
+            // Verify user access and role for approval
+            var (isAuthorized, errorMessage, _) = await VerifyUserAccess(
+                request.UserId,
+                wbsElement.TenantId,
+                AppRole.ProjectManager, AppRole.ResourceManager, AppRole.OverrideApprover, AppRole.TenantAdmin);
+
+            if (!isAuthorized)
+            {
+                return StatusCode(403, errorMessage);
+            }
+
             if (wbsElement.ApprovalStatus != WbsApprovalStatus.PendingApproval)
             {
                 return BadRequest($"Cannot approve WBS in {wbsElement.ApprovalStatus} status");
             }
 
-            // Verify approver
+            // Verify approver (assigned approver or override role)
             if (wbsElement.ApproverUserId != request.UserId)
             {
-                return BadRequest("Only the assigned approver can approve this WBS");
+                // Check if user has override approver role
+                var (canOverride, _, membership) = await VerifyUserAccess(
+                    request.UserId,
+                    wbsElement.TenantId,
+                    AppRole.OverrideApprover, AppRole.TenantAdmin);
+
+                if (!canOverride)
+                {
+                    return StatusCode(403, "Only the assigned approver or users with override permission can approve this WBS");
+                }
             }
 
             wbsElement.ApprovalStatus = WbsApprovalStatus.Approved;
@@ -386,7 +574,7 @@ public class WbsController : ControllerBase
                 UpdatedAt = DateTime.UtcNow
             };
 
-            _context.Set<WbsChangeHistory>().Add(history);
+            _context.WbsChangeHistories.Add(history);
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("WBS {WbsId} approved by user {UserId}", id, request.UserId);
@@ -400,8 +588,17 @@ public class WbsController : ControllerBase
         }
     }
 
-    // POST: api/wbs/{id}/reject
+    /// <summary>
+    /// Reject a WBS element (PendingApproval → Rejected)
+    /// </summary>
+    /// <param name="id">WBS element ID</param>
+    /// <param name="request">Workflow request with user ID and required rejection notes</param>
+    /// <returns>No content on success</returns>
     [HttpPost("{id}/reject")]
+    [ProducesResponseType(204)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(500)]
     public async Task<IActionResult> RejectWbs(Guid id, [FromBody] WorkflowRequest request)
     {
         try
@@ -412,15 +609,35 @@ public class WbsController : ControllerBase
                 return NotFound($"WBS element with ID {id} not found");
             }
 
+            // Verify user access and role for rejection
+            var (isAuthorized, errorMessage, _) = await VerifyUserAccess(
+                request.UserId,
+                wbsElement.TenantId,
+                AppRole.ProjectManager, AppRole.ResourceManager, AppRole.OverrideApprover, AppRole.TenantAdmin);
+
+            if (!isAuthorized)
+            {
+                return StatusCode(403, errorMessage);
+            }
+
             if (wbsElement.ApprovalStatus != WbsApprovalStatus.PendingApproval)
             {
                 return BadRequest($"Cannot reject WBS in {wbsElement.ApprovalStatus} status");
             }
 
-            // Verify approver
+            // Verify approver (assigned approver or override role)
             if (wbsElement.ApproverUserId != request.UserId)
             {
-                return BadRequest("Only the assigned approver can reject this WBS");
+                // Check if user has override approver role
+                var (canOverride, _, membership) = await VerifyUserAccess(
+                    request.UserId,
+                    wbsElement.TenantId,
+                    AppRole.OverrideApprover, AppRole.TenantAdmin);
+
+                if (!canOverride)
+                {
+                    return StatusCode(403, "Only the assigned approver or users with override permission can reject this WBS");
+                }
             }
 
             if (string.IsNullOrWhiteSpace(request.Notes))
@@ -447,7 +664,7 @@ public class WbsController : ControllerBase
                 UpdatedAt = DateTime.UtcNow
             };
 
-            _context.Set<WbsChangeHistory>().Add(history);
+            _context.WbsChangeHistories.Add(history);
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("WBS {WbsId} rejected by user {UserId}", id, request.UserId);
@@ -461,8 +678,17 @@ public class WbsController : ControllerBase
         }
     }
 
-    // POST: api/wbs/{id}/suspend
+    /// <summary>
+    /// Suspend an approved WBS element (Approved → Suspended)
+    /// </summary>
+    /// <param name="id">WBS element ID</param>
+    /// <param name="request">Workflow request with user ID and optional notes</param>
+    /// <returns>No content on success</returns>
     [HttpPost("{id}/suspend")]
+    [ProducesResponseType(204)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(500)]
     public async Task<IActionResult> SuspendWbs(Guid id, [FromBody] WorkflowRequest request)
     {
         try
@@ -471,6 +697,17 @@ public class WbsController : ControllerBase
             if (wbsElement == null)
             {
                 return NotFound($"WBS element with ID {id} not found");
+            }
+
+            // Verify user access and role for suspension
+            var (isAuthorized, errorMessage, _) = await VerifyUserAccess(
+                request.UserId,
+                wbsElement.TenantId,
+                AppRole.ProjectManager, AppRole.ResourceManager, AppRole.TenantAdmin);
+
+            if (!isAuthorized)
+            {
+                return StatusCode(403, errorMessage);
             }
 
             if (wbsElement.ApprovalStatus != WbsApprovalStatus.Approved)
@@ -498,7 +735,7 @@ public class WbsController : ControllerBase
                 UpdatedAt = DateTime.UtcNow
             };
 
-            _context.Set<WbsChangeHistory>().Add(history);
+            _context.WbsChangeHistories.Add(history);
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("WBS {WbsId} suspended by user {UserId}", id, request.UserId);
@@ -512,8 +749,16 @@ public class WbsController : ControllerBase
         }
     }
 
-    // POST: api/wbs/{id}/close
+    /// <summary>
+    /// Close a WBS element (any status → Closed)
+    /// </summary>
+    /// <param name="id">WBS element ID</param>
+    /// <param name="request">Workflow request with user ID and optional notes</param>
+    /// <returns>No content on success</returns>
     [HttpPost("{id}/close")]
+    [ProducesResponseType(204)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(500)]
     public async Task<IActionResult> CloseWbs(Guid id, [FromBody] WorkflowRequest request)
     {
         try
@@ -522,6 +767,17 @@ public class WbsController : ControllerBase
             if (wbsElement == null)
             {
                 return NotFound($"WBS element with ID {id} not found");
+            }
+
+            // Verify user access and role for closing
+            var (isAuthorized, errorMessage, _) = await VerifyUserAccess(
+                request.UserId,
+                wbsElement.TenantId,
+                AppRole.ProjectManager, AppRole.ResourceManager, AppRole.TenantAdmin);
+
+            if (!isAuthorized)
+            {
+                return StatusCode(403, errorMessage);
             }
 
             var oldStatus = wbsElement.ApprovalStatus;
@@ -544,7 +800,7 @@ public class WbsController : ControllerBase
                 UpdatedAt = DateTime.UtcNow
             };
 
-            _context.Set<WbsChangeHistory>().Add(history);
+            _context.WbsChangeHistories.Add(history);
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("WBS {WbsId} closed by user {UserId}", id, request.UserId);
@@ -555,6 +811,573 @@ public class WbsController : ControllerBase
         {
             _logger.LogError(ex, "Error closing WBS {WbsId}", id);
             return StatusCode(500, "An error occurred while closing the WBS");
+        }
+    }
+
+    /// <summary>
+    /// Bulk submit multiple WBS elements for approval
+    /// </summary>
+    /// <param name="request">Bulk workflow request with WBS IDs and user ID</param>
+    /// <returns>Result summary with successful and failed operations</returns>
+    [HttpPost("bulk/submit")]
+    [ProducesResponseType(typeof(BulkOperationResult), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(500)]
+    public async Task<ActionResult<BulkOperationResult>> BulkSubmitForApproval([FromBody] BulkWorkflowRequest request)
+    {
+        try
+        {
+            if (request.WbsIds == null || !request.WbsIds.Any())
+            {
+                return BadRequest("At least one WBS ID is required");
+            }
+
+            var result = new BulkOperationResult();
+
+            // Use transaction to ensure all changes succeed or none do
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // Load all WBS elements at once to avoid N+1 queries
+                var wbsElements = await _context.WbsElements
+                    .Where(w => request.WbsIds.Contains(w.Id))
+                    .ToListAsync();
+
+                var wbsDict = wbsElements.ToDictionary(w => w.Id);
+
+                foreach (var wbsId in request.WbsIds)
+            {
+                try
+                {
+                    if (!wbsDict.TryGetValue(wbsId, out var wbsElement))
+                    {
+                        result.Failed.Add(new FailedOperation
+                        {
+                            Id = wbsId,
+                            Error = "WBS element not found"
+                        });
+                        continue;
+                    }
+
+                    // Verify user access and role
+                    var (isAuthorized, errorMessage, _) = await VerifyUserAccess(
+                        request.UserId,
+                        wbsElement.TenantId,
+                        AppRole.Employee, AppRole.TeamLead, AppRole.ProjectManager, AppRole.ResourceManager, AppRole.TenantAdmin);
+
+                    if (!isAuthorized)
+                    {
+                        result.Failed.Add(new FailedOperation
+                        {
+                            Id = wbsId,
+                            Error = errorMessage ?? "Not authorized"
+                        });
+                        continue;
+                    }
+
+                    // Verify user is the owner or has appropriate role
+                    if (wbsElement.OwnerUserId != request.UserId)
+                    {
+                        var (canModify, modifyError, _) = await VerifyUserAccess(
+                            request.UserId,
+                            wbsElement.TenantId,
+                            AppRole.ProjectManager, AppRole.ResourceManager, AppRole.TenantAdmin);
+
+                        if (!canModify)
+                        {
+                            result.Failed.Add(new FailedOperation
+                            {
+                                Id = wbsId,
+                                Error = "Only the WBS owner or project managers can submit for approval"
+                            });
+                            continue;
+                        }
+                    }
+
+                    if (wbsElement.ApprovalStatus != WbsApprovalStatus.Draft &&
+                        wbsElement.ApprovalStatus != WbsApprovalStatus.Rejected)
+                    {
+                        result.Failed.Add(new FailedOperation
+                        {
+                            Id = wbsId,
+                            Error = $"Cannot submit WBS in {wbsElement.ApprovalStatus} status"
+                        });
+                        continue;
+                    }
+
+                    if (wbsElement.ApproverUserId == null)
+                    {
+                        result.Failed.Add(new FailedOperation
+                        {
+                            Id = wbsId,
+                            Error = "Approver must be assigned before submitting"
+                        });
+                        continue;
+                    }
+
+                    wbsElement.ApprovalStatus = WbsApprovalStatus.PendingApproval;
+                    wbsElement.UpdatedAt = DateTime.UtcNow;
+
+                    var history = new WbsChangeHistory
+                    {
+                        Id = Guid.NewGuid(),
+                        WbsElementId = wbsElement.Id,
+                        ChangedByUserId = request.UserId,
+                        ChangedAt = DateTime.UtcNow,
+                        ChangeType = "StatusChanged",
+                        OldValues = JsonSerializer.Serialize(new { ApprovalStatus = WbsApprovalStatus.Draft }),
+                        NewValues = JsonSerializer.Serialize(new { ApprovalStatus = WbsApprovalStatus.PendingApproval }),
+                        Notes = request.Notes ?? "Bulk submitted for approval",
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    _context.WbsChangeHistories.Add(history);
+                    result.Successful.Add(wbsId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error processing WBS {WbsId} in bulk submit", wbsId);
+                    result.Failed.Add(new FailedOperation
+                    {
+                        Id = wbsId,
+                        Error = ex.Message
+                    });
+                }
+            }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                _logger.LogInformation("Bulk submit completed: {Successful} succeeded, {Failed} failed",
+                    result.Successful.Count, result.Failed.Count);
+
+                return Ok(result);
+            }
+            catch (Exception transactionEx)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(transactionEx, "Transaction failed during bulk submit, all changes rolled back");
+                throw;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in bulk submit operation");
+            return StatusCode(500, "An error occurred during bulk submit operation");
+        }
+    }
+
+    /// <summary>
+    /// Bulk approve multiple WBS elements
+    /// </summary>
+    /// <param name="request">Bulk workflow request with WBS IDs and user ID</param>
+    /// <returns>Result summary with successful and failed operations</returns>
+    [HttpPost("bulk/approve")]
+    [ProducesResponseType(typeof(BulkOperationResult), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(500)]
+    public async Task<ActionResult<BulkOperationResult>> BulkApproveWbs([FromBody] BulkWorkflowRequest request)
+    {
+        try
+        {
+            if (request.WbsIds == null || !request.WbsIds.Any())
+            {
+                return BadRequest("At least one WBS ID is required");
+            }
+
+            var result = new BulkOperationResult();
+
+            // Use transaction to ensure all changes succeed or none do
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // Load all WBS elements at once to avoid N+1 queries
+                var wbsElements = await _context.WbsElements
+                    .Where(w => request.WbsIds.Contains(w.Id))
+                    .ToListAsync();
+
+                var wbsDict = wbsElements.ToDictionary(w => w.Id);
+
+                foreach (var wbsId in request.WbsIds)
+            {
+                try
+                {
+                    if (!wbsDict.TryGetValue(wbsId, out var wbsElement))
+                    {
+                        result.Failed.Add(new FailedOperation
+                        {
+                            Id = wbsId,
+                            Error = "WBS element not found"
+                        });
+                        continue;
+                    }
+
+                    // Verify user access and role for approval
+                    var (isAuthorized, errorMessage, _) = await VerifyUserAccess(
+                        request.UserId,
+                        wbsElement.TenantId,
+                        AppRole.ProjectManager, AppRole.ResourceManager, AppRole.OverrideApprover, AppRole.TenantAdmin);
+
+                    if (!isAuthorized)
+                    {
+                        result.Failed.Add(new FailedOperation
+                        {
+                            Id = wbsId,
+                            Error = errorMessage ?? "Not authorized"
+                        });
+                        continue;
+                    }
+
+                    if (wbsElement.ApprovalStatus != WbsApprovalStatus.PendingApproval)
+                    {
+                        result.Failed.Add(new FailedOperation
+                        {
+                            Id = wbsId,
+                            Error = $"Cannot approve WBS in {wbsElement.ApprovalStatus} status"
+                        });
+                        continue;
+                    }
+
+                    // Verify approver (assigned approver or override role)
+                    if (wbsElement.ApproverUserId != request.UserId)
+                    {
+                        // Check if user has override approver role
+                        var (canOverride, _, _) = await VerifyUserAccess(
+                            request.UserId,
+                            wbsElement.TenantId,
+                            AppRole.OverrideApprover, AppRole.TenantAdmin);
+
+                        if (!canOverride)
+                        {
+                            result.Failed.Add(new FailedOperation
+                            {
+                                Id = wbsId,
+                                Error = "Only the assigned approver or users with override permission can approve this WBS"
+                            });
+                            continue;
+                        }
+                    }
+
+                    wbsElement.ApprovalStatus = WbsApprovalStatus.Approved;
+                    wbsElement.Status = WbsStatus.Active;
+                    wbsElement.ApprovedAt = DateTime.UtcNow;
+                    wbsElement.ApprovalNotes = request.Notes;
+                    wbsElement.UpdatedAt = DateTime.UtcNow;
+
+                    var history = new WbsChangeHistory
+                    {
+                        Id = Guid.NewGuid(),
+                        WbsElementId = wbsElement.Id,
+                        ChangedByUserId = request.UserId,
+                        ChangedAt = DateTime.UtcNow,
+                        ChangeType = "StatusChanged",
+                        OldValues = JsonSerializer.Serialize(new { ApprovalStatus = WbsApprovalStatus.PendingApproval }),
+                        NewValues = JsonSerializer.Serialize(new { ApprovalStatus = WbsApprovalStatus.Approved }),
+                        Notes = request.Notes ?? "Bulk approved",
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    _context.WbsChangeHistories.Add(history);
+                    result.Successful.Add(wbsId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error processing WBS {WbsId} in bulk approve", wbsId);
+                    result.Failed.Add(new FailedOperation
+                    {
+                        Id = wbsId,
+                        Error = ex.Message
+                    });
+                }
+            }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                _logger.LogInformation("Bulk approve completed: {Successful} succeeded, {Failed} failed",
+                    result.Successful.Count, result.Failed.Count);
+
+                return Ok(result);
+            }
+            catch (Exception transactionEx)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(transactionEx, "Transaction failed during bulk approve, all changes rolled back");
+                throw;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in bulk approve operation");
+            return StatusCode(500, "An error occurred during bulk approve operation");
+        }
+    }
+
+    /// <summary>
+    /// Bulk reject multiple WBS elements
+    /// </summary>
+    /// <param name="request">Bulk workflow request with WBS IDs, user ID, and required rejection notes</param>
+    /// <returns>Result summary with successful and failed operations</returns>
+    [HttpPost("bulk/reject")]
+    [ProducesResponseType(typeof(BulkOperationResult), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(500)]
+    public async Task<ActionResult<BulkOperationResult>> BulkRejectWbs([FromBody] BulkWorkflowRequest request)
+    {
+        try
+        {
+            if (request.WbsIds == null || !request.WbsIds.Any())
+            {
+                return BadRequest("At least one WBS ID is required");
+            }
+
+            if (string.IsNullOrWhiteSpace(request.Notes))
+            {
+                return BadRequest("Rejection reason is required");
+            }
+
+            var result = new BulkOperationResult();
+
+            // Use transaction to ensure all changes succeed or none do
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // Load all WBS elements at once to avoid N+1 queries
+                var wbsElements = await _context.WbsElements
+                    .Where(w => request.WbsIds.Contains(w.Id))
+                    .ToListAsync();
+
+                var wbsDict = wbsElements.ToDictionary(w => w.Id);
+
+                foreach (var wbsId in request.WbsIds)
+            {
+                try
+                {
+                    if (!wbsDict.TryGetValue(wbsId, out var wbsElement))
+                    {
+                        result.Failed.Add(new FailedOperation
+                        {
+                            Id = wbsId,
+                            Error = "WBS element not found"
+                        });
+                        continue;
+                    }
+
+                    // Verify user access and role for rejection
+                    var (isAuthorized, errorMessage, _) = await VerifyUserAccess(
+                        request.UserId,
+                        wbsElement.TenantId,
+                        AppRole.ProjectManager, AppRole.ResourceManager, AppRole.OverrideApprover, AppRole.TenantAdmin);
+
+                    if (!isAuthorized)
+                    {
+                        result.Failed.Add(new FailedOperation
+                        {
+                            Id = wbsId,
+                            Error = errorMessage ?? "Not authorized"
+                        });
+                        continue;
+                    }
+
+                    if (wbsElement.ApprovalStatus != WbsApprovalStatus.PendingApproval)
+                    {
+                        result.Failed.Add(new FailedOperation
+                        {
+                            Id = wbsId,
+                            Error = $"Cannot reject WBS in {wbsElement.ApprovalStatus} status"
+                        });
+                        continue;
+                    }
+
+                    // Verify approver (assigned approver or override role)
+                    if (wbsElement.ApproverUserId != request.UserId)
+                    {
+                        // Check if user has override approver role
+                        var (canOverride, _, _) = await VerifyUserAccess(
+                            request.UserId,
+                            wbsElement.TenantId,
+                            AppRole.OverrideApprover, AppRole.TenantAdmin);
+
+                        if (!canOverride)
+                        {
+                            result.Failed.Add(new FailedOperation
+                            {
+                                Id = wbsId,
+                                Error = "Only the assigned approver or users with override permission can reject this WBS"
+                            });
+                            continue;
+                        }
+                    }
+
+                    wbsElement.ApprovalStatus = WbsApprovalStatus.Rejected;
+                    wbsElement.ApprovalNotes = request.Notes;
+                    wbsElement.UpdatedAt = DateTime.UtcNow;
+
+                    var history = new WbsChangeHistory
+                    {
+                        Id = Guid.NewGuid(),
+                        WbsElementId = wbsElement.Id,
+                        ChangedByUserId = request.UserId,
+                        ChangedAt = DateTime.UtcNow,
+                        ChangeType = "StatusChanged",
+                        OldValues = JsonSerializer.Serialize(new { ApprovalStatus = WbsApprovalStatus.PendingApproval }),
+                        NewValues = JsonSerializer.Serialize(new { ApprovalStatus = WbsApprovalStatus.Rejected }),
+                        Notes = request.Notes,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    _context.WbsChangeHistories.Add(history);
+                    result.Successful.Add(wbsId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error processing WBS {WbsId} in bulk reject", wbsId);
+                    result.Failed.Add(new FailedOperation
+                    {
+                        Id = wbsId,
+                        Error = ex.Message
+                    });
+                }
+            }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                _logger.LogInformation("Bulk reject completed: {Successful} succeeded, {Failed} failed",
+                    result.Successful.Count, result.Failed.Count);
+
+                return Ok(result);
+            }
+            catch (Exception transactionEx)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(transactionEx, "Transaction failed during bulk reject, all changes rolled back");
+                throw;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in bulk reject operation");
+            return StatusCode(500, "An error occurred during bulk reject operation");
+        }
+    }
+
+    /// <summary>
+    /// Bulk close multiple WBS elements
+    /// </summary>
+    /// <param name="request">Bulk workflow request with WBS IDs and user ID</param>
+    /// <returns>Result summary with successful and failed operations</returns>
+    [HttpPost("bulk/close")]
+    [ProducesResponseType(typeof(BulkOperationResult), 200)]
+    [ProducesResponseType(400)]
+    [ProducesResponseType(500)]
+    public async Task<ActionResult<BulkOperationResult>> BulkCloseWbs([FromBody] BulkWorkflowRequest request)
+    {
+        try
+        {
+            if (request.WbsIds == null || !request.WbsIds.Any())
+            {
+                return BadRequest("At least one WBS ID is required");
+            }
+
+            var result = new BulkOperationResult();
+
+            // Use transaction to ensure all changes succeed or none do
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                // Load all WBS elements at once to avoid N+1 queries
+                var wbsElements = await _context.WbsElements
+                    .Where(w => request.WbsIds.Contains(w.Id))
+                    .ToListAsync();
+
+                var wbsDict = wbsElements.ToDictionary(w => w.Id);
+
+                foreach (var wbsId in request.WbsIds)
+            {
+                try
+                {
+                    if (!wbsDict.TryGetValue(wbsId, out var wbsElement))
+                    {
+                        result.Failed.Add(new FailedOperation
+                        {
+                            Id = wbsId,
+                            Error = "WBS element not found"
+                        });
+                        continue;
+                    }
+
+                    // Verify user access and role for closing
+                    var (isAuthorized, errorMessage, _) = await VerifyUserAccess(
+                        request.UserId,
+                        wbsElement.TenantId,
+                        AppRole.ProjectManager, AppRole.ResourceManager, AppRole.TenantAdmin);
+
+                    if (!isAuthorized)
+                    {
+                        result.Failed.Add(new FailedOperation
+                        {
+                            Id = wbsId,
+                            Error = errorMessage ?? "Not authorized"
+                        });
+                        continue;
+                    }
+
+                    var oldStatus = wbsElement.ApprovalStatus;
+                    wbsElement.ApprovalStatus = WbsApprovalStatus.Closed;
+                    wbsElement.Status = WbsStatus.Closed;
+                    wbsElement.UpdatedAt = DateTime.UtcNow;
+
+                    var history = new WbsChangeHistory
+                    {
+                        Id = Guid.NewGuid(),
+                        WbsElementId = wbsElement.Id,
+                        ChangedByUserId = request.UserId,
+                        ChangedAt = DateTime.UtcNow,
+                        ChangeType = "StatusChanged",
+                        OldValues = JsonSerializer.Serialize(new { ApprovalStatus = oldStatus, Status = wbsElement.Status }),
+                        NewValues = JsonSerializer.Serialize(new { ApprovalStatus = WbsApprovalStatus.Closed, Status = WbsStatus.Closed }),
+                        Notes = request.Notes ?? "Bulk closed",
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+
+                    _context.WbsChangeHistories.Add(history);
+                    result.Successful.Add(wbsId);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error processing WBS {WbsId} in bulk close", wbsId);
+                    result.Failed.Add(new FailedOperation
+                    {
+                        Id = wbsId,
+                        Error = ex.Message
+                    });
+                }
+            }
+
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                _logger.LogInformation("Bulk close completed: {Successful} succeeded, {Failed} failed",
+                    result.Successful.Count, result.Failed.Count);
+
+                return Ok(result);
+            }
+            catch (Exception transactionEx)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(transactionEx, "Transaction failed during bulk close, all changes rolled back");
+                throw;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in bulk close operation");
+            return StatusCode(500, "An error occurred during bulk close operation");
         }
     }
 }
@@ -582,11 +1405,5 @@ public class UpdateWbsRequest
     public Guid? OwnerUserId { get; set; }
     public Guid? ApproverUserId { get; set; }
     public Guid? UpdatedByUserId { get; set; }
-    public string? Notes { get; set; }
-}
-
-public class WorkflowRequest
-{
-    public Guid UserId { get; set; }
     public string? Notes { get; set; }
 }

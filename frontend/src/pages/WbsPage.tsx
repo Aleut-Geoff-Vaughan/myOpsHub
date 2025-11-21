@@ -11,19 +11,29 @@ export function WbsPage() {
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<'all' | WbsType>('all');
   const [selectedApprovalFilter, setSelectedApprovalFilter] = useState<'all' | WbsApprovalStatus>('all');
   const [selectedProject, setSelectedProject] = useState<string | undefined>();
+  const [pageNumber, setPageNumber] = useState(1);
+  const [pageSize, setPageSize] = useState(50);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedWbs, setSelectedWbs] = useState<WbsElement | undefined>();
   const [modalMode, setModalMode] = useState<'create' | 'edit' | 'view'>('view');
 
-  const { data: wbsElements = [], isLoading, error } = useQuery({
-    queryKey: ['wbs', selectedProject, selectedTypeFilter, selectedApprovalFilter],
+  const { data: paginatedData, isLoading, error } = useQuery({
+    queryKey: ['wbs', selectedProject, selectedTypeFilter, selectedApprovalFilter, pageNumber, pageSize],
     queryFn: () => wbsService.getWbsElements({
       projectId: selectedProject,
       type: selectedTypeFilter !== 'all' ? selectedTypeFilter : undefined,
       approvalStatus: selectedApprovalFilter !== 'all' ? selectedApprovalFilter : undefined,
       includeHistory: false,
+      pageNumber,
+      pageSize,
     }),
   });
+
+  const wbsElements = paginatedData?.items || [];
+  const totalCount = paginatedData?.totalCount || 0;
+  const totalPages = paginatedData?.totalPages || 0;
+  const hasPreviousPage = paginatedData?.hasPreviousPage || false;
+  const hasNextPage = paginatedData?.hasNextPage || false;
 
   const filteredWbsElements = useMemo(() => {
     if (!searchTerm) return wbsElements;
@@ -364,6 +374,81 @@ export function WbsPage() {
           }}
           emptyMessage={isLoading ? "Loading WBS elements..." : "No WBS elements found"}
         />
+
+        {/* Pagination Controls */}
+        {totalCount > 0 && (
+          <div className="px-6 py-4 border-t border-gray-200">
+            <div className="flex items-center justify-between">
+              {/* Results info */}
+              <div className="text-sm text-gray-600">
+                Showing {((pageNumber - 1) * pageSize) + 1}-{Math.min(pageNumber * pageSize, totalCount)} of {totalCount} results
+              </div>
+
+              {/* Pagination controls */}
+              <div className="flex items-center gap-4">
+                {/* Page size selector */}
+                <div className="flex items-center gap-2">
+                  <label className="text-sm text-gray-600">Per page:</label>
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value));
+                      setPageNumber(1); // Reset to first page
+                    }}
+                    className="px-3 py-1 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                    <option value={200}>200</option>
+                  </select>
+                </div>
+
+                {/* Page navigation */}
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setPageNumber(1)}
+                    disabled={!hasPreviousPage}
+                  >
+                    First
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setPageNumber(p => p - 1)}
+                    disabled={!hasPreviousPage}
+                  >
+                    Previous
+                  </Button>
+
+                  <span className="px-3 py-1 text-sm text-gray-700">
+                    Page {pageNumber} of {totalPages}
+                  </span>
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setPageNumber(p => p + 1)}
+                    disabled={!hasNextPage}
+                  >
+                    Next
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setPageNumber(totalPages)}
+                    disabled={!hasNextPage}
+                  >
+                    Last
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </Card>
 
       {/* WBS Detail Modal */}

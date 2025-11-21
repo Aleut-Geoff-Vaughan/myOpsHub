@@ -27,49 +27,25 @@ public class ValidationController : ControllerBase
         _logger = logger;
     }
 
-    // Helper method to get tenant ID from query parameter or claims
-    // TODO: Replace with proper tenant context once authentication is fully implemented
-    private Guid GetTenantId([FromQuery] Guid? tenantId = null)
-    {
-        if (tenantId.HasValue)
-        {
-            return tenantId.Value;
-        }
-
-        // TODO: Extract from User claims once authentication is implemented
-        // For now, return a default tenant ID for development
-        return Guid.Empty;
-    }
-
     // ==================== VALIDATION RULES CRUD ====================
 
-    /// <summary>
-    /// Get all validation rules with optional filtering
-    /// </summary>
     [HttpGet("rules")]
     public async Task<ActionResult<IEnumerable<ValidationRule>>> GetRules(
-        [FromQuery] Guid? tenantId = null,
+        [FromQuery] Guid tenantId,
         [FromQuery] string? entityType = null,
         [FromQuery] string? fieldName = null,
         [FromQuery] bool? isActive = null)
     {
-        var actualTenantId = GetTenantId(tenantId);
-        var query = _context.ValidationRules.Where(r => r.TenantId == actualTenantId);
+        var query = _context.ValidationRules.Where(r => r.TenantId == tenantId);
 
         if (!string.IsNullOrWhiteSpace(entityType))
-        {
             query = query.Where(r => r.EntityType == entityType);
-        }
 
         if (!string.IsNullOrWhiteSpace(fieldName))
-        {
             query = query.Where(r => r.FieldName == fieldName);
-        }
 
         if (isActive.HasValue)
-        {
             query = query.Where(r => r.IsActive == isActive.Value);
-        }
 
         var rules = await query
             .OrderBy(r => r.EntityType)
@@ -80,69 +56,46 @@ public class ValidationController : ControllerBase
         return Ok(rules);
     }
 
-    /// <summary>
-    /// Get a specific validation rule by ID
-    /// </summary>
     [HttpGet("rules/{id}")]
-    public async Task<ActionResult<ValidationRule>> GetRule(Guid id, [FromQuery] Guid? tenantId = null)
+    public async Task<ActionResult<ValidationRule>> GetRule(Guid id, [FromQuery] Guid tenantId)
     {
-        var actualTenantId = GetTenantId(tenantId);
         var rule = await _context.ValidationRules
             .FirstOrDefaultAsync(r => r.Id == id && r.TenantId == tenantId);
 
         if (rule == null)
-        {
             return NotFound();
-        }
 
         return Ok(rule);
     }
 
-    /// <summary>
-    /// Create a new validation rule
-    /// </summary>
     [HttpPost("rules")]
-    public async Task<ActionResult<ValidationRule>> CreateRule([FromBody] ValidationRule rule)
+    public async Task<ActionResult<ValidationRule>> CreateRule([FromQuery] Guid tenantId, [FromBody] ValidationRule rule)
     {
-        var tenantId = User.GetTenantId();
         rule.TenantId = tenantId;
         rule.Id = Guid.NewGuid();
         rule.CreatedAt = DateTime.UtcNow;
 
-        // Validate the rule expression
         if (!_ruleInterpreter.ValidateExpression(rule.RuleType, rule.RuleExpression))
-        {
             return BadRequest(new { error = "Invalid rule expression for the specified rule type" });
-        }
 
         _context.ValidationRules.Add(rule);
         await _context.SaveChangesAsync();
 
-        return CreatedAtAction(nameof(GetRule), new { id = rule.Id }, rule);
+        return CreatedAtAction(nameof(GetRule), new { id = rule.Id, tenantId }, rule);
     }
 
-    /// <summary>
-    /// Update an existing validation rule
-    /// </summary>
     [HttpPut("rules/{id}")]
-    public async Task<IActionResult> UpdateRule(Guid id, [FromBody] ValidationRule rule)
+    public async Task<IActionResult> UpdateRule(Guid id, [FromQuery] Guid tenantId, [FromBody] ValidationRule rule)
     {
-        var tenantId = User.GetTenantId();
         var existingRule = await _context.ValidationRules
             .FirstOrDefaultAsync(r => r.Id == id && r.TenantId == tenantId);
 
         if (existingRule == null)
-        {
             return NotFound();
-        }
 
-        // Validate the rule expression
         if (!_ruleInterpreter.ValidateExpression(rule.RuleType, rule.RuleExpression))
-        {
             return BadRequest(new { error = "Invalid rule expression for the specified rule type" });
-        }
 
-        // Update properties
         existingRule.EntityType = rule.EntityType;
         existingRule.FieldName = rule.FieldName;
         existingRule.RuleType = rule.RuleType;
@@ -158,77 +111,50 @@ public class ValidationController : ControllerBase
         existingRule.UpdatedAt = DateTime.UtcNow;
 
         await _context.SaveChangesAsync();
-
         return NoContent();
     }
 
-    /// <summary>
-    /// Delete a validation rule
-    /// </summary>
     [HttpDelete("rules/{id}")]
-    public async Task<IActionResult> DeleteRule(Guid id)
+    public async Task<IActionResult> DeleteRule(Guid id, [FromQuery] Guid tenantId)
     {
-        var tenantId = User.GetTenantId();
         var rule = await _context.ValidationRules
             .FirstOrDefaultAsync(r => r.Id == id && r.TenantId == tenantId);
 
         if (rule == null)
-        {
             return NotFound();
-        }
 
         _context.ValidationRules.Remove(rule);
         await _context.SaveChangesAsync();
-
         return NoContent();
     }
 
-    /// <summary>
-    /// Activate or deactivate a validation rule
-    /// </summary>
     [HttpPatch("rules/{id}/active")]
-    public async Task<IActionResult> SetRuleActive(Guid id, [FromBody] SetActiveRequest request)
+    public async Task<IActionResult> SetRuleActive(Guid id, [FromQuery] Guid tenantId, [FromBody] SetActiveRequest request)
     {
-        var tenantId = User.GetTenantId();
         var rule = await _context.ValidationRules
             .FirstOrDefaultAsync(r => r.Id == id && r.TenantId == tenantId);
 
         if (rule == null)
-        {
             return NotFound();
-        }
 
         rule.IsActive = request.IsActive;
         rule.UpdatedAt = DateTime.UtcNow;
         await _context.SaveChangesAsync();
-
         return NoContent();
     }
 
     // ==================== VALIDATION OPERATIONS ====================
 
-    /// <summary>
-    /// Validate entity data against all applicable rules
-    /// </summary>
     [HttpPost("validate")]
-    public async Task<ActionResult<ValidationResult>> ValidateEntity([FromBody] ValidateEntityRequest request)
+    public async Task<ActionResult<ValidationResult>> ValidateEntity([FromQuery] Guid tenantId, [FromBody] ValidateEntityRequest request)
     {
-        var tenantId = User.GetTenantId();
-        var result = await _validationEngine.ValidateAsync(
-            request.EntityType,
-            request.EntityData,
-            tenantId);
-
+        var result = await _validationEngine.ValidateAsync(request.EntityType, request.EntityData, tenantId);
         return Ok(result);
     }
 
-    /// <summary>
-    /// Validate a specific field value
-    /// </summary>
     [HttpPost("validate-field")]
-    public async Task<ActionResult<ValidationResult>> ValidateField([FromBody] ValidateFieldRequest request)
+    public async Task<ActionResult<ValidationResult>> ValidateField([FromQuery] Guid tenantId, [FromBody] ValidateFieldRequest request)
     {
-        var tenantId = User.GetTenantId();
         var result = await _validationEngine.ValidateFieldAsync(
             request.EntityType,
             request.FieldName,
@@ -239,43 +165,29 @@ public class ValidationController : ControllerBase
         return Ok(result);
     }
 
-    /// <summary>
-    /// Test a validation rule against sample data
-    /// </summary>
     [HttpPost("rules/{id}/test")]
-    public async Task<ActionResult<ValidationResult>> TestRule(Guid id, [FromBody] Dictionary<string, object?> testData)
+    public async Task<ActionResult<ValidationResult>> TestRule(Guid id, [FromQuery] Guid tenantId, [FromBody] Dictionary<string, object?> testData)
     {
-        var tenantId = User.GetTenantId();
         var rule = await _context.ValidationRules
             .FirstOrDefaultAsync(r => r.Id == id && r.TenantId == tenantId);
 
         if (rule == null)
-        {
             return NotFound();
-        }
 
         var result = await _validationEngine.TestRuleAsync(rule, testData);
         return Ok(result);
     }
 
-    /// <summary>
-    /// Get all rules for a specific entity type
-    /// </summary>
     [HttpGet("rules/entity/{entityType}")]
-    public async Task<ActionResult<IEnumerable<ValidationRule>>> GetRulesForEntity(string entityType)
+    public async Task<ActionResult<IEnumerable<ValidationRule>>> GetRulesForEntity(string entityType, [FromQuery] Guid tenantId)
     {
-        var tenantId = User.GetTenantId();
         var rules = await _validationEngine.GetRulesForEntityAsync(entityType, tenantId);
         return Ok(rules);
     }
 
-    /// <summary>
-    /// Get available entity types that have validation rules
-    /// </summary>
     [HttpGet("entity-types")]
-    public async Task<ActionResult<IEnumerable<string>>> GetEntityTypes()
+    public async Task<ActionResult<IEnumerable<string>>> GetEntityTypes([FromQuery] Guid tenantId)
     {
-        var tenantId = User.GetTenantId();
         var entityTypes = await _context.ValidationRules
             .Where(r => r.TenantId == tenantId)
             .Select(r => r.EntityType)
@@ -286,9 +198,6 @@ public class ValidationController : ControllerBase
         return Ok(entityTypes);
     }
 
-    /// <summary>
-    /// Validate a rule expression for correctness
-    /// </summary>
     [HttpPost("validate-expression")]
     public ActionResult<ExpressionValidationResult> ValidateExpression([FromBody] ValidateExpressionRequest request)
     {
@@ -300,13 +209,9 @@ public class ValidationController : ControllerBase
         });
     }
 
-    /// <summary>
-    /// Bulk update rule execution orders
-    /// </summary>
     [HttpPatch("rules/reorder")]
-    public async Task<IActionResult> ReorderRules([FromBody] List<RuleOrderUpdate> updates)
+    public async Task<IActionResult> ReorderRules([FromQuery] Guid tenantId, [FromBody] List<RuleOrderUpdate> updates)
     {
-        var tenantId = User.GetTenantId();
         var ruleIds = updates.Select(u => u.RuleId).ToList();
         var rules = await _context.ValidationRules
             .Where(r => ruleIds.Contains(r.Id) && r.TenantId == tenantId)
@@ -327,7 +232,7 @@ public class ValidationController : ControllerBase
     }
 }
 
-// Request/Response DTOs
+// DTOs
 public class ValidateEntityRequest
 {
     public string EntityType { get; set; } = string.Empty;

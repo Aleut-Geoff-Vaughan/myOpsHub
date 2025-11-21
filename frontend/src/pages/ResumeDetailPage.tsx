@@ -1,17 +1,16 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
-  getResumeById,
+  getResume,
   updateResume,
-  getResumeSections,
-  createResumeSection,
-  updateResumeSection,
-  deleteResumeSection,
-  getResumeVersions,
-  createResumeVersion,
+  addSection,
+  updateEntry,
+  deleteEntry,
+  getVersions,
+  createVersion,
   requestApproval
 } from '../services/resumeService';
-import {
+import type {
   ResumeProfile,
   ResumeStatus,
   ResumeSection,
@@ -19,7 +18,7 @@ import {
   ResumeVersion,
   CreateResumeSectionRequest,
   UpdateResumeSectionRequest
-} from '../types/api';
+} from '../types/resume';
 
 export function ResumeDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -47,9 +46,9 @@ export function ResumeDetailPage() {
       setLoading(true);
       setError(null);
       const [resumeData, sectionsData, versionsData] = await Promise.all([
-        getResumeById(id!),
-        getResumeSections(id!),
-        getResumeVersions(id!)
+        getResume(id!),
+        addSection(id!),
+        getVersions(id!)
       ]);
       setResume(resumeData);
       setSections(sectionsData);
@@ -66,10 +65,10 @@ export function ResumeDetailPage() {
     try {
       if (editingSection) {
         // Update existing section
-        await updateResumeSection(id!, editingSection.id, sectionData as UpdateResumeSectionRequest);
+        await updateEntry(id!, editingSection.id, sectionData as UpdateResumeSectionRequest);
       } else {
         // Create new section
-        await createResumeSection(id!, sectionData as CreateResumeSectionRequest);
+        await addSection(id!, sectionData as CreateResumeSectionRequest);
       }
       await loadResumeData();
       setShowSectionModal(false);
@@ -84,7 +83,7 @@ export function ResumeDetailPage() {
     if (!confirm('Are you sure you want to delete this section?')) return;
 
     try {
-      await deleteResumeSection(id!, sectionId);
+      await deleteEntry(id!, sectionId);
       await loadResumeData();
     } catch (err) {
       console.error('Failed to delete section:', err);
@@ -96,7 +95,7 @@ export function ResumeDetailPage() {
     if (!confirm('Create a new version snapshot of this resume?')) return;
 
     try {
-      await createResumeVersion(id!, {
+      await createVersion(id!, {
         versionNotes: `Version created on ${new Date().toLocaleDateString()}`
       });
       await loadResumeData();

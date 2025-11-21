@@ -336,6 +336,238 @@ public class UsersController : ControllerBase
         }
     }
 
+    // GET: api/users/me
+    // Get current user's profile
+    [HttpGet("me")]
+    public async Task<ActionResult<UserProfileDto>> GetMyProfile()
+    {
+        try
+        {
+            // Get user ID from header
+            if (!Request.Headers.TryGetValue("X-User-Id", out var userIdValue) ||
+                !Guid.TryParse(userIdValue, out var userId))
+            {
+                return BadRequest("User ID header is required");
+            }
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user == null)
+            {
+                return NotFound("User not found");
+            }
+
+            var profile = new UserProfileDto
+            {
+                Id = user.Id.ToString(),
+                Email = user.Email,
+                DisplayName = user.DisplayName,
+                Department = user.Department,
+                JobTitle = user.JobTitle,
+                PhoneNumber = user.PhoneNumber,
+                ProfilePhotoUrl = user.ProfilePhotoUrl,
+                IsActive = user.IsActive,
+                CreatedAt = user.CreatedAt.ToString("o"),
+                LastLoginAt = user.LastLoginAt?.ToString("o")
+            };
+
+            return Ok(profile);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving user profile");
+            return StatusCode(500, "An error occurred while retrieving the profile");
+        }
+    }
+
+    // PUT: api/users/me
+    // Update current user's profile
+    [HttpPut("me")]
+    public async Task<ActionResult<UserProfileDto>> UpdateMyProfile([FromBody] UpdateUserProfileDto request)
+    {
+        try
+        {
+            // Get user ID from header
+            if (!Request.Headers.TryGetValue("X-User-Id", out var userIdValue) ||
+                !Guid.TryParse(userIdValue, out var userId))
+            {
+                return BadRequest("User ID header is required");
+            }
+
+            var user = await _context.Users
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user == null)
+            {
+                return NotFound("User not found");
+            }
+
+            // Update user fields
+            user.DisplayName = request.DisplayName;
+            user.Department = request.Department;
+            user.JobTitle = request.JobTitle;
+            user.PhoneNumber = request.PhoneNumber;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            var profile = new UserProfileDto
+            {
+                Id = user.Id.ToString(),
+                Email = user.Email,
+                DisplayName = user.DisplayName,
+                Department = user.Department,
+                JobTitle = user.JobTitle,
+                PhoneNumber = user.PhoneNumber,
+                ProfilePhotoUrl = user.ProfilePhotoUrl,
+                IsActive = user.IsActive,
+                CreatedAt = user.CreatedAt.ToString("o"),
+                LastLoginAt = user.LastLoginAt?.ToString("o")
+            };
+
+            return Ok(profile);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating user profile");
+            return StatusCode(500, "An error occurred while updating the profile");
+        }
+    }
+
+    // POST: api/users/me/change-password
+    // Change current user's password
+    [HttpPost("me/change-password")]
+    public async Task<IActionResult> ChangeMyPassword([FromBody] ChangePasswordDto request)
+    {
+        try
+        {
+            // Get user ID from header
+            if (!Request.Headers.TryGetValue("X-User-Id", out var userIdValue) ||
+                !Guid.TryParse(userIdValue, out var userId))
+            {
+                return BadRequest("User ID header is required");
+            }
+
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                return NotFound("User not found");
+            }
+
+            // TODO: Implement proper password verification and hashing
+            // For now, this is a placeholder endpoint that returns success
+            // In a production system, you would:
+            // 1. Verify the current password
+            // 2. Hash the new password with a proper algorithm (bcrypt, Argon2, etc.)
+            // 3. Store the hashed password
+
+            user.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Password change requested for user {UserId}", userId);
+
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error changing password");
+            return StatusCode(500, "An error occurred while changing the password");
+        }
+    }
+
+    // POST: api/users/me/profile-photo
+    // Upload profile photo
+    [HttpPost("me/profile-photo")]
+    public async Task<ActionResult<ProfilePhotoResponseDto>> UploadProfilePhoto([FromForm] IFormFile file)
+    {
+        try
+        {
+            // Get user ID from header
+            if (!Request.Headers.TryGetValue("X-User-Id", out var userIdValue) ||
+                !Guid.TryParse(userIdValue, out var userId))
+            {
+                return BadRequest("User ID header is required");
+            }
+
+            if (file == null || file.Length == 0)
+            {
+                return BadRequest("No file uploaded");
+            }
+
+            // Validate file type
+            var allowedTypes = new[] { "image/jpeg", "image/jpg", "image/png", "image/gif" };
+            if (!allowedTypes.Contains(file.ContentType.ToLower()))
+            {
+                return BadRequest("Invalid file type. Only JPEG, PNG, and GIF images are allowed");
+            }
+
+            // Validate file size (5MB max)
+            if (file.Length > 5 * 1024 * 1024)
+            {
+                return BadRequest("File size exceeds 5MB limit");
+            }
+
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                return NotFound("User not found");
+            }
+
+            // TODO: Implement actual file storage (Azure Blob, S3, local filesystem, etc.)
+            // For now, just generate a mock URL
+            var fileName = $"{userId}_{Guid.NewGuid()}{Path.GetExtension(file.FileName)}";
+            var photoUrl = $"/uploads/profile-photos/{fileName}";
+
+            user.ProfilePhotoUrl = photoUrl;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(new ProfilePhotoResponseDto { ProfilePhotoUrl = photoUrl });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error uploading profile photo");
+            return StatusCode(500, "An error occurred while uploading the photo");
+        }
+    }
+
+    // DELETE: api/users/me/profile-photo
+    // Delete profile photo
+    [HttpDelete("me/profile-photo")]
+    public async Task<IActionResult> DeleteProfilePhoto()
+    {
+        try
+        {
+            // Get user ID from header
+            if (!Request.Headers.TryGetValue("X-User-Id", out var userIdValue) ||
+                !Guid.TryParse(userIdValue, out var userId))
+            {
+                return BadRequest("User ID header is required");
+            }
+
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                return NotFound("User not found");
+            }
+
+            // TODO: Delete actual file from storage
+            user.ProfilePhotoUrl = null;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error deleting profile photo");
+            return StatusCode(500, "An error occurred while deleting the photo");
+        }
+    }
+
     private async Task<bool> UserExists(Guid id)
     {
         return await _context.Users.AnyAsync(e => e.Id == id);
@@ -346,4 +578,38 @@ public class UsersController : ControllerBase
 public class DeactivateUserRequest
 {
     public Guid? DeactivatedByUserId { get; set; }
+}
+
+public class UserProfileDto
+{
+    public required string Id { get; set; }
+    public required string Email { get; set; }
+    public required string DisplayName { get; set; }
+    public string? Department { get; set; }
+    public string? JobTitle { get; set; }
+    public string? PhoneNumber { get; set; }
+    public string? ProfilePhotoUrl { get; set; }
+    public bool IsActive { get; set; }
+    public required string CreatedAt { get; set; }
+    public string? LastLoginAt { get; set; }
+}
+
+public class UpdateUserProfileDto
+{
+    public required string DisplayName { get; set; }
+    public string? Department { get; set; }
+    public string? JobTitle { get; set; }
+    public string? PhoneNumber { get; set; }
+}
+
+public class ChangePasswordDto
+{
+    public required string CurrentPassword { get; set; }
+    public required string NewPassword { get; set; }
+    public required string ConfirmPassword { get; set; }
+}
+
+public class ProfilePhotoResponseDto
+{
+    public required string ProfilePhotoUrl { get; set; }
 }

@@ -97,6 +97,43 @@ public class PeopleController : ControllerBase
         }
     }
 
+    /// <summary>
+    /// Get current user's person record
+    /// </summary>
+    /// <param name="userId">Current user's ID</param>
+    /// <returns>Person record for the current user</returns>
+    [HttpGet("me")]
+    [ProducesResponseType(typeof(Person), 200)]
+    [ProducesResponseType(404)]
+    [ProducesResponseType(500)]
+    public async Task<ActionResult<Person>> GetCurrentPerson([FromQuery] Guid userId)
+    {
+        try
+        {
+            var person = await _context.People
+                .Include(p => p.User)
+                .Include(p => p.ResumeProfile)
+                .Include(p => p.PersonSkills)
+                    .ThenInclude(ps => ps.Skill)
+                .Include(p => p.PersonCertifications)
+                    .ThenInclude(pc => pc.Certification)
+                .FirstOrDefaultAsync(p => p.UserId == userId);
+
+            if (person == null)
+            {
+                _logger.LogWarning("Person record not found for user {UserId}", userId);
+                return NotFound("Person record not found for current user");
+            }
+
+            return Ok(person);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving person for user {UserId}", userId);
+            return StatusCode(500, "An error occurred while retrieving the person");
+        }
+    }
+
     // POST: api/people
     [HttpPost]
     public async Task<ActionResult<Person>> CreatePerson(Person person)

@@ -1,4 +1,5 @@
-// Enums
+// API Type Definitions
+// Last updated: 2025-11-20
 export enum PersonStatus {
   Active = 0,
   Inactive = 1,
@@ -275,6 +276,7 @@ export enum WbsStatus {
   Closed = 2,
 }
 
+// WBS Element interface
 export interface WbsElement {
   id: string;
   tenantId: string;
@@ -315,6 +317,7 @@ export interface WbsChangeHistory {
 }
 
 export interface WorkflowRequest {
+  userId: string;
   notes?: string;
 }
 
@@ -326,6 +329,7 @@ export enum WorkLocationType {
   ClientSite = 2,
   OfficeNoReservation = 3,
   OfficeWithReservation = 4,
+  PTO = 5,
 }
 
 export interface WorkLocationPreference {
@@ -522,6 +526,17 @@ export interface ResumeTemplate {
   updatedAt?: string;
 }
 
+export interface CreateResumeSectionRequest {
+  type: ResumeSectionType;
+  title: string;
+  displayOrder: number;
+}
+
+export interface UpdateResumeSectionRequest {
+  title?: string;
+  displayOrder?: number;
+}
+
 export interface Skill {
   id: string;
   name: string;
@@ -561,4 +576,85 @@ export interface PersonCertification {
   certification?: Certification;
   createdAt: string;
   updatedAt?: string;
+}
+// ==================== VALIDATION FRAMEWORK ====================
+
+export enum ValidationRuleType {
+  Required = 0,
+  Range = 1,
+  Pattern = 2,
+  Custom = 3,
+  CrossField = 4,
+  External = 5,
+}
+
+export enum ValidationSeverity {
+  Error = 0,
+  Warning = 1,
+  Information = 2,
+}
+
+export interface ValidationRule {
+  id: string;
+  tenantId: string;
+  entityType: string;
+  fieldName?: string;
+  ruleType: ValidationRuleType;
+  severity: ValidationSeverity;
+  ruleExpression: string;
+  errorMessage: string;
+  isActive: boolean;
+  name: string;
+  description?: string;
+  executionOrder: number;
+  conditions?: string;
+  metadata?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface ValidationError {
+  fieldName: string;
+  message: string;
+  ruleType: ValidationRuleType;
+  severity: ValidationSeverity;
+  context?: Record<string, any>;
+}
+
+export interface ValidationResult {
+  isValid: boolean;
+  errors: ValidationError[];
+  warnings: ValidationError[];
+  information: ValidationError[];
+}
+
+export interface ValidateEntityRequest {
+  entityType: string;
+  entityData: Record<string, any>;
+}
+
+export interface ValidateFieldRequest {
+  entityType: string;
+  fieldName: string;
+  fieldValue: any;
+  entityData?: Record<string, any>;
+}
+
+export interface ValidateExpressionRequest {
+  ruleType: ValidationRuleType;
+  expression: string;
+}
+
+export interface ExpressionValidationResult {
+  isValid: boolean;
+  message: string;
+}
+
+export interface RuleOrderUpdate {
+  ruleId: string;
+  executionOrder: number;
+}
+
+export interface SetActiveRequest {
+  isActive: boolean;
 }

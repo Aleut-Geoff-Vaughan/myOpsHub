@@ -45,6 +45,7 @@ interface AuthState {
   switchWorkspace: () => void;
   logout: () => Promise<void>;
   hasRole: (role: AppRole) => boolean;
+  setUser: (user: Partial<User>) => void;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -109,6 +110,13 @@ export const useAuthStore = create<AuthState>()(
       hasRole: (role: AppRole) => {
         const { currentWorkspace } = get();
         return currentWorkspace?.roles?.includes(role) ?? false;
+      },
+
+      setUser: (updatedUser: Partial<User>) => {
+        const { user } = get();
+        if (user) {
+          set({ user: { ...user, ...updatedUser } });
+        }
       },
     }),
     {

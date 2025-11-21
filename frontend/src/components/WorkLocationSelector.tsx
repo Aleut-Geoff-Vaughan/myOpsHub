@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Modal, Button, Input, Select, FormGroup, TextArea } from './ui';
 import { WorkLocationType, type WorkLocationPreference, type Office } from '../types/api';
 import { useOffices } from '../hooks/useBookings';
 import { useTenants } from '../hooks/useTenants';
 import { useCreateWorkLocationPreference, useUpdateWorkLocationPreference } from '../hooks/useWorkLocation';
 import { useAuthStore } from '../stores/authStore';
+import { workLocationService } from '../services/workLocationService';
 
 interface WorkLocationSelectorProps {
   isOpen: boolean;
@@ -22,6 +24,7 @@ export function WorkLocationSelector({
   personId,
 }: WorkLocationSelectorProps) {
   const { user } = useAuthStore();
+  const queryClient = useQueryClient();
   const { data: tenants = [] } = useTenants();
   const { data: allOffices = [] } = useOffices();
   const createMutation = useCreateWorkLocationPreference();
@@ -101,7 +104,46 @@ export function WorkLocationSelector({
           preference: { ...existingPreference, ...preferenceData },
         });
       } else {
-        await createMutation.mutateAsync(preferenceData);
+        try {
+          await createMutation.mutateAsync(preferenceData);
+        } catch (createError: any) {
+          // If we get a 409 Conflict, it means a preference was created (e.g., by template)
+          // but our local cache is stale. Fetch the existing preference and update it instead.
+          if (createError?.status === 409 || createError?.message?.includes('409')) {
+            console.log('Preference already exists, fetching and updating instead');
+            try {
+              // Fetch all preferences for this person and date using the proper API service
+              const preferences = await workLocationService.getAll({
+                personId: preferenceData.personId,
+              });
+
+              // Find the one for this specific date
+              const existing = preferences.find((p) => p.workDate === preferenceData.workDate);
+
+              if (existing) {
+                // Update the existing preference with new data
+                await updateMutation.mutateAsync({
+                  id: existing.id,
+                  preference: { ...existing, ...preferenceData },
+                });
+
+                // Wait for dashboard refetch to complete before closing modal
+                console.log('Waiting for dashboard refetch...');
+                await queryClient.refetchQueries({
+                  predicate: (query) => query.queryKey[0] === 'dashboard'
+                });
+                console.log('Dashboard refetch completed');
+              } else {
+                throw createError;
+              }
+            } catch (fetchError) {
+              console.error('Failed to fetch existing preference:', fetchError);
+              throw createError;
+            }
+          } else {
+            throw createError;
+          }
+        }
       }
       onClose();
     } catch (error) {
@@ -116,6 +158,7 @@ export function WorkLocationSelector({
     { value: WorkLocationType.ClientSite.toString(), label: 'Client Site - At client location' },
     { value: WorkLocationType.OfficeNoReservation.toString(), label: 'Office - No desk reservation' },
     { value: WorkLocationType.OfficeWithReservation.toString(), label: 'Office - With desk/room reservation' },
+    { value: WorkLocationType.PTO.toString(), label: 'PTO - Paid Time Off' },
   ];
 
   const officeOptions = companyOffices.map(o => ({

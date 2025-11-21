@@ -175,10 +175,18 @@ public class WorkLocationPreference : TenantEntity
 
     public string? Notes { get; set; }  // Optional notes about the day
 
+    // DOA relationship
+    public Guid? DOAActivationId { get; set; }  // Link to active delegation of authority
+
     // Navigation properties
-    public virtual Person Person { get; set; } = null!;
+    [System.Text.Json.Serialization.JsonIgnore]
+    public virtual Person? Person { get; set; }
+    [System.Text.Json.Serialization.JsonIgnore]
     public virtual Office? Office { get; set; }
+    [System.Text.Json.Serialization.JsonIgnore]
     public virtual Booking? Booking { get; set; }
+    [System.Text.Json.Serialization.JsonIgnore]
+    public virtual DOAActivation? DOAActivation { get; set; }
 }
 
 public enum WorkLocationType
@@ -187,5 +195,26 @@ public enum WorkLocationType
     RemotePlus,             // Remote with location details
     ClientSite,             // Working at a client location
     OfficeNoReservation,    // In office but no specific desk/room booked
-    OfficeWithReservation   // In office with a specific booking
+    OfficeWithReservation,  // In office with a specific booking
+    PTO                     // Paid Time Off
+}
+
+// Company Holidays for tracking federal/company-wide holidays
+public class CompanyHoliday : TenantEntity
+{
+    public string Name { get; set; } = string.Empty;
+    public DateOnly HolidayDate { get; set; }
+    public HolidayType Type { get; set; }
+    public bool IsRecurring { get; set; } = false;  // Does this recur annually?
+    public string? Description { get; set; }
+    public bool IsObserved { get; set; } = true;  // Is the company observing this holiday?
+}
+
+public enum HolidayType
+{
+    Federal,            // US Federal holidays
+    Company,            // Company-specific holidays
+    Religious,          // Religious observances
+    Cultural,           // Cultural observances
+    Regional            // State or regional holidays
 }

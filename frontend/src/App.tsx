@@ -16,6 +16,11 @@ import { FacilitiesPage } from './pages/FacilitiesPage';
 import { ResumesPage } from './pages/ResumesPage';
 import { ResumeDetailPage } from './pages/ResumeDetailPage';
 import { AdminPage } from './pages/AdminPage';
+import { TeamCalendarPage } from './pages/TeamCalendarPage';
+import { TeamCalendarAdminPage } from './pages/TeamCalendarAdminPage';
+import { UserProfilePage } from './pages/UserProfilePage';
+import TemplatesPage from './pages/TemplatesPage';
+import DOAPage from './pages/DOAPage';
 import { useAuthStore } from './stores/authStore';
 
 const queryClient = new QueryClient({
@@ -110,6 +115,11 @@ function App() {
               <Route path="facilities" element={<FacilitiesPage />} />
               <Route path="resumes" element={<ResumesPage />} />
               <Route path="resumes/:id" element={<ResumeDetailPage />} />
+              <Route path="team-calendar" element={<TeamCalendarPage />} />
+              <Route path="team-calendar/admin" element={<TeamCalendarAdminPage />} />
+              <Route path="templates" element={<TemplatesPage />} />
+              <Route path="doa" element={<DOAPage />} />
+              <Route path="profile" element={<UserProfilePage />} />
               <Route path="reports" element={<div className="p-6">Reports Module (Coming Soon)</div>} />
             </Route>
             <Route path="*" element={<Navigate to={isAuthenticated ? "/" : "/login"} replace />} />

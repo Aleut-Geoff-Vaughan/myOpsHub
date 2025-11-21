@@ -27,11 +27,7 @@ export function LoginPage() {
   useEffect(() => {
     const checkHealth = async () => {
       try {
-        const apiUrl = import.meta.env.DEV
-          ? 'http://localhost:5000'
-          : window.location.origin;
-
-        const response = await fetch(`${apiUrl}/api/health`);
+        const response = await fetch('/api/health');
         if (response.ok) {
           const data = await response.json();
           setHealthStatus(data);

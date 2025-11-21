@@ -106,7 +106,8 @@ public class DatabaseSeeder
             {
                 _logger.LogInformation("Seeding data for tenant: {TenantName}", tenant.Name);
 
-                // Create test user with tenant membership for first tenant
+                // Create test user with tenant membership and person record for first tenant
+                Person? testPerson = null;
                 if (tenant == tenants.First())
                 {
                     var testUser = new User
@@ -127,7 +128,7 @@ public class DatabaseSeeder
                         Id = Guid.NewGuid(),
                         UserId = testUser.Id,
                         TenantId = tenant.Id,
-                        Roles = new List<AppRole> { AppRole.Employee, AppRole.ProjectManager },
+                        Roles = new List<AppRole> { AppRole.Employee, AppRole.ProjectManager, AppRole.ResourceManager },
                         JoinedAt = DateTime.UtcNow,
                         IsActive = true,
                         CreatedAt = DateTime.UtcNow,
@@ -135,11 +136,37 @@ public class DatabaseSeeder
                     };
                     _context.TenantMemberships.Add(testMembership);
                     await _context.SaveChangesAsync();
-                    _logger.LogInformation("Created test user with tenant access: {Email}", testUser.Email);
+
+                    // Create Person record for test user
+                    testPerson = new Person
+                    {
+                        Id = Guid.NewGuid(),
+                        TenantId = tenant.Id,
+                        Name = "Test User",
+                        Email = "test@test.com",
+                        JobTitle = "Project Manager",
+                        LaborCategory = "Management",
+                        Location = "Anchorage, AK",
+                        Status = PersonStatus.Active,
+                        Type = PersonType.Employee,
+                        UserId = testUser.Id,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+                    _context.People.Add(testPerson);
+                    await _context.SaveChangesAsync();
+
+                    _logger.LogInformation("Created test user with tenant access and person record: {Email}", testUser.Email);
                 }
 
                 // Create users and people (50 employees per tenant)
                 var people = await CreatePeopleAsync(tenant.Id, 50);
+
+                // Add test person to the people list so they get assignments and bookings
+                if (testPerson != null)
+                {
+                    people.Insert(0, testPerson);
+                }
                 _logger.LogInformation("Created {Count} people for {TenantName}", people.Count, tenant.Name);
 
                 // Create projects
@@ -166,6 +193,17 @@ public class DatabaseSeeder
                 // Create bookings
                 var bookings = await CreateBookingsAsync(people, spaces);
                 _logger.LogInformation("Created {Count} bookings for {TenantName}", bookings.Count, tenant.Name);
+
+                // Create work location preferences for test user (first tenant only)
+                if (testPerson != null && tenant == tenants.First())
+                {
+                    var workLocationPrefs = await CreateWorkLocationPreferencesAsync(testPerson);
+                    _logger.LogInformation("Created {Count} work location preferences for test user", workLocationPrefs.Count);
+                }
+
+                // Create company holidays for this tenant
+                var holidays = await CreateCompanyHolidaysAsync(tenant.Id);
+                _logger.LogInformation("Created {Count} company holidays for {TenantName}", holidays.Count, tenant.Name);
             }
 
             _logger.LogInformation("Database seeding completed successfully!");
@@ -571,5 +609,128 @@ public class DatabaseSeeder
         if (dayOffset < -1) return BookingStatus.Completed; // Past bookings
         if (dayOffset == -1 || dayOffset == 0) return BookingStatus.CheckedIn; // Today/yesterday
         return BookingStatus.Reserved; // Future bookings
+    }
+
+    private async Task<List<WorkLocationPreference>> CreateWorkLocationPreferencesAsync(Person person)
+    {
+        var preferences = new List<WorkLocationPreference>();
+
+        // Create preferences for the next 14 days (Monday-Friday only)
+        var today = DateTime.UtcNow.Date;
+        var startDate = today.AddDays(-(int)today.DayOfWeek + 1); // Start from this Monday
+
+        for (int i = 0; i < 14; i++)
+        {
+            var date = startDate.AddDays(i);
+
+            // Skip weekends
+            if (date.DayOfWeek == DayOfWeek.Saturday || date.DayOfWeek == DayOfWeek.Sunday)
+                continue;
+
+            // Create a pattern: Mon/Wed/Fri in office, Tue/Thu remote
+            WorkLocationType locationType;
+            if (date.DayOfWeek == DayOfWeek.Monday || date.DayOfWeek == DayOfWeek.Wednesday || date.DayOfWeek == DayOfWeek.Friday)
+            {
+                locationType = WorkLocationType.OfficeNoReservation;
+            }
+            else
+            {
+                locationType = WorkLocationType.RemotePlus;
+            }
+
+            preferences.Add(new WorkLocationPreference
+            {
+                Id = Guid.NewGuid(),
+                TenantId = person.TenantId,
+                PersonId = person.Id,
+                WorkDate = DateOnly.FromDateTime(date),
+                LocationType = locationType,
+                RemoteLocation = locationType == WorkLocationType.RemotePlus ? "Home" : null,
+                City = locationType == WorkLocationType.RemotePlus ? "Anchorage" : null,
+                State = locationType == WorkLocationType.RemotePlus ? "AK" : null,
+                Country = locationType == WorkLocationType.RemotePlus ? "USA" : null,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            });
+        }
+
+        _context.WorkLocationPreferences.AddRange(preferences);
+        await _context.SaveChangesAsync();
+        return preferences;
+    }
+
+    private async Task<List<CompanyHoliday>> CreateCompanyHolidaysAsync(Guid tenantId)
+    {
+        var holidays = new List<CompanyHoliday>();
+
+        // 2025 US Federal Holidays
+        var federalHolidays2025 = new List<(string Name, int Month, int Day, string? Description)>
+        {
+            ("New Year's Day", 1, 1, "The first day of the year"),
+            ("Martin Luther King Jr. Day", 1, 20, "Third Monday in January - Birthday of Martin Luther King Jr."),
+            ("Presidents' Day", 2, 17, "Third Monday in February - Washington's Birthday"),
+            ("Memorial Day", 5, 26, "Last Monday in May - Honoring military personnel who died in service"),
+            ("Juneteenth", 6, 19, "Commemoration of the end of slavery in the United States"),
+            ("Independence Day", 7, 4, "Celebrating the Declaration of Independence"),
+            ("Labor Day", 9, 1, "First Monday in September - Tribute to American workers"),
+            ("Columbus Day", 10, 13, "Second Monday in October - Discovery of America"),
+            ("Veterans Day", 11, 11, "Honoring military veterans"),
+            ("Thanksgiving Day", 11, 27, "Fourth Thursday in November"),
+            ("Christmas Day", 12, 25, "Celebrating the birth of Jesus Christ")
+        };
+
+        foreach (var (name, month, day, description) in federalHolidays2025)
+        {
+            holidays.Add(new CompanyHoliday
+            {
+                Id = Guid.NewGuid(),
+                TenantId = tenantId,
+                Name = name,
+                HolidayDate = new DateOnly(2025, month, day),
+                Type = HolidayType.Federal,
+                IsRecurring = true,
+                Description = description,
+                IsObserved = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            });
+        }
+
+        // 2026 US Federal Holidays (for continuity)
+        var federalHolidays2026 = new List<(string Name, int Month, int Day)>
+        {
+            ("New Year's Day", 1, 1),
+            ("Martin Luther King Jr. Day", 1, 19),
+            ("Presidents' Day", 2, 16),
+            ("Memorial Day", 5, 25),
+            ("Juneteenth", 6, 19),
+            ("Independence Day", 7, 4),
+            ("Labor Day", 9, 7),
+            ("Columbus Day", 10, 12),
+            ("Veterans Day", 11, 11),
+            ("Thanksgiving Day", 11, 26),
+            ("Christmas Day", 12, 25)
+        };
+
+        foreach (var (name, month, day) in federalHolidays2026)
+        {
+            holidays.Add(new CompanyHoliday
+            {
+                Id = Guid.NewGuid(),
+                TenantId = tenantId,
+                Name = name,
+                HolidayDate = new DateOnly(2026, month, day),
+                Type = HolidayType.Federal,
+                IsRecurring = true,
+                Description = null,
+                IsObserved = true,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            });
+        }
+
+        _context.CompanyHolidays.AddRange(holidays);
+        await _context.SaveChangesAsync();
+        return holidays;
     }
 }

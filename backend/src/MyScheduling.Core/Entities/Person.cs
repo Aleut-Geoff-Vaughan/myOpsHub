@@ -13,8 +13,13 @@ public class Person : TenantEntity
     public PersonType Type { get; set; } = PersonType.Employee;
     public PersonStatus Status { get; set; }
 
+    // Manager relationship (self-referencing)
+    public Guid? ManagerId { get; set; }
+
     // Navigation properties
     public virtual User? User { get; set; }
+    public virtual Person? Manager { get; set; }
+    public virtual ICollection<Person> DirectReports { get; set; } = new List<Person>();
     public virtual ResumeProfile? ResumeProfile { get; set; }
     public virtual ICollection<PersonSkill> PersonSkills { get; set; } = new List<PersonSkill>();
     public virtual ICollection<PersonCertification> PersonCertifications { get; set; } = new List<PersonCertification>();
