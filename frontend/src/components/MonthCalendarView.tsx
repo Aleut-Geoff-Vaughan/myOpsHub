@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { WorkLocationType, type WorkLocationPreference } from '../types/api';
-import { getMonthWeekdays, getMonthYear, isToday, isPast, getMondayOfWeek } from '../utils/dateUtils';
+import { getMonthWeekdays, getMonthYear, isToday, isPast } from '../utils/dateUtils';
 
 interface MonthCalendarViewProps {
   referenceDate: Date;

@@ -2,7 +2,6 @@ import { useState, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Card, CardHeader, CardBody, Button, Table, StatusBadge, Input } from '../components/ui';
 import { facilitiesService } from '../services/facilitiesService';
-import type { Space, FacilityPermission, SpaceMaintenanceLog, Office } from '../types/api';
 import { SpaceType, FacilityAccessLevel, MaintenanceStatus, MaintenanceType } from '../types/api';
 import { bookingsService } from '../services/bookingsService';
 
@@ -286,14 +285,14 @@ export function FacilitiesPage() {
                 <div className="overflow-x-auto">
                   <Table
                     columns={[
-                      { key: 'name', label: 'Name', className: 'font-medium' },
-                      { key: 'type', label: 'Type' },
-                      { key: 'office', label: 'Office' },
-                      { key: 'capacity', label: 'Capacity', className: 'text-center' },
-                      { key: 'status', label: 'Status' },
-                      { key: 'approval', label: 'Approval Required' },
-                      { key: 'dailyCost', label: 'Daily Cost' },
-                      { key: 'actions', label: '', className: 'text-right' },
+                      { key: 'name', header: 'Name' },
+                      { key: 'type', header: 'Type' },
+                      { key: 'office', header: 'Office' },
+                      { key: 'capacity', header: 'Capacity', align: 'center' },
+                      { key: 'status', header: 'Status' },
+                      { key: 'approval', header: 'Approval Required' },
+                      { key: 'dailyCost', header: 'Daily Cost' },
+                      { key: 'actions', header: '', align: 'right' },
                     ]}
                     data={filteredSpaces.map((space) => ({
                       key: space.id,
@@ -302,9 +301,7 @@ export function FacilitiesPage() {
                       office: offices.find(o => o.id === space.officeId)?.name || 'Unknown',
                       capacity: space.capacity.toString(),
                       status: (
-                        <StatusBadge variant={space.isActive ? 'success' : 'default'}>
-                          {space.isActive ? 'Active' : 'Inactive'}
-                        </StatusBadge>
+                        <StatusBadge status={space.isActive ? 'Active' : 'Inactive'} variant={space.isActive ? 'success' : 'default'} />
                       ),
                       approval: space.requiresApproval ? 'Yes' : 'No',
                       dailyCost: space.dailyCost ? `$${space.dailyCost.toFixed(2)}` : '-',
@@ -335,18 +332,16 @@ export function FacilitiesPage() {
                 <div className="overflow-x-auto">
                   <Table
                     columns={[
-                      { key: 'user', label: 'User/Role' },
-                      { key: 'accessLevel', label: 'Access Level' },
-                      { key: 'scope', label: 'Scope' },
-                      { key: 'actions', label: '', className: 'text-right' },
+                      { key: 'user', header: 'User/Role' },
+                      { key: 'accessLevel', header: 'Access Level' },
+                      { key: 'scope', header: 'Scope' },
+                      { key: 'actions', header: '', align: 'right' },
                     ]}
                     data={permissions.map((permission) => ({
                       key: permission.id,
                       user: permission.user?.displayName || permission.role?.toString() || 'Unknown',
                       accessLevel: (
-                        <StatusBadge variant="info">
-                          {getAccessLevelLabel(permission.accessLevel)}
-                        </StatusBadge>
+                        <StatusBadge status={getAccessLevelLabel(permission.accessLevel)} variant="info" />
                       ),
                       scope: permission.space ? `Space: ${permission.space.name}` : permission.office ? `Office: ${permission.office.name}` : 'Global',
                       actions: (
@@ -376,23 +371,21 @@ export function FacilitiesPage() {
                 <div className="overflow-x-auto">
                   <Table
                     columns={[
-                      { key: 'space', label: 'Space' },
-                      { key: 'type', label: 'Type' },
-                      { key: 'status', label: 'Status' },
-                      { key: 'scheduled', label: 'Scheduled Date' },
-                      { key: 'reportedBy', label: 'Reported By' },
-                      { key: 'assignedTo', label: 'Assigned To' },
-                      { key: 'cost', label: 'Cost' },
-                      { key: 'actions', label: '', className: 'text-right' },
+                      { key: 'space', header: 'Space' },
+                      { key: 'type', header: 'Type' },
+                      { key: 'status', header: 'Status' },
+                      { key: 'scheduled', header: 'Scheduled Date' },
+                      { key: 'reportedBy', header: 'Reported By' },
+                      { key: 'assignedTo', header: 'Assigned To' },
+                      { key: 'cost', header: 'Cost' },
+                      { key: 'actions', header: '', align: 'right' },
                     ]}
                     data={maintenanceLogs.map((log) => ({
                       key: log.id,
                       space: log.space?.name || 'Unknown',
                       type: getMaintenanceTypeLabel(log.type),
                       status: (
-                        <StatusBadge variant={getMaintenanceStatusVariant(log.status)}>
-                          {getMaintenanceStatusLabel(log.status)}
-                        </StatusBadge>
+                        <StatusBadge status={getMaintenanceStatusLabel(log.status)} variant={getMaintenanceStatusVariant(log.status)} />
                       ),
                       scheduled: new Date(log.scheduledDate).toLocaleDateString(),
                       reportedBy: log.reportedBy?.displayName || 'Unknown',

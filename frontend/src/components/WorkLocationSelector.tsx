@@ -43,7 +43,7 @@ export function WorkLocationSelector({
   const [state, setState] = useState(existingPreference?.state ?? '');
   const [country, setCountry] = useState(existingPreference?.country ?? '');
   const [notes, setNotes] = useState(existingPreference?.notes ?? '');
-  const [showBookingModal, setShowBookingModal] = useState(false);
+  // const [showBookingModal, setShowBookingModal] = useState(false);
 
   useEffect(() => {
     if (existingPreference) {

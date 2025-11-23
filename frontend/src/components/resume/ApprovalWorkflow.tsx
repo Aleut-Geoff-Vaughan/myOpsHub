@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { CheckCircle, XCircle, Clock, AlertCircle, MessageSquare, User } from 'lucide-react';
 import {
-  getResumeApprovals,
+  getApprovals,
   approveResume,
   rejectResume,
   requestChanges
 } from '../../services/resumeService';
-import { ResumeApproval, ApprovalStatus } from '../../types/api';
+import { type ResumeApproval, ApprovalStatus } from '../../types/api';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 
@@ -32,7 +32,7 @@ export function ApprovalWorkflow({ resumeId, onApprovalChange }: ApprovalWorkflo
       setLoading(true);
       setError(null);
       // This would need to be filtered by resumeId on the backend
-      const data = await getResumeApprovals();
+      const data = await getApprovals();
       // Filter by resumeId on frontend for now
       const filteredApprovals = data.filter(a => a.resumeProfileId === resumeId);
       setApprovals(filteredApprovals);
@@ -353,7 +353,6 @@ interface ApprovalActionModalProps {
 }
 
 function ApprovalActionModal({
-  approval,
   actionType,
   onSubmit,
   onClose

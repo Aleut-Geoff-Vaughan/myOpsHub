@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import { FileText, Plus, Edit2, Trash2, Copy, Star, Eye } from 'lucide-react';
 import {
-  getResumeTemplates,
+  getTemplates,
   createTemplate,
   updateTemplate,
   deleteTemplate,
   duplicateTemplate
 } from '../../services/resumeService';
-import { ResumeTemplate, ResumeTemplateType } from '../../types/api';
+import { type ResumeTemplate, ResumeTemplateType } from '../../types/api';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 
@@ -33,7 +33,7 @@ export function TemplateManagement({ tenantId, onTemplateSelect }: TemplateManag
     try {
       setLoading(true);
       setError(null);
-      const data = await getResumeTemplates(
+      const data = await getTemplates(
         tenantId,
         filterType,
         showActiveOnly ? true : undefined
@@ -83,7 +83,7 @@ export function TemplateManagement({ tenantId, onTemplateSelect }: TemplateManag
 
   const handleDuplicateTemplate = async (templateId: string, newName: string) => {
     try {
-      await duplicateTemplate(templateId, { newName });
+      await duplicateTemplate(templateId, newName);
       await loadTemplates();
     } catch (err) {
       console.error('Error duplicating template:', err);
@@ -399,7 +399,7 @@ function TemplateModal({ template, tenantId, onSubmit, onClose }: TemplateModalP
           </div>
 
           <div className="flex justify-end gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
             </Button>
             <Button type="submit">

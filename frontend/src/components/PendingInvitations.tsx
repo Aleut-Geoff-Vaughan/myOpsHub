@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { userInvitationsService } from '../services/userInvitationsService';
 import type { UserInvitation, InvitationStatus } from '../services/userInvitationsService';
-import { Card, CardHeader, CardBody, StatusBadge } from './ui';
+import { Card, CardHeader, CardBody } from './ui';
 import { AppRole } from '../types/api';
 
 interface PendingInvitationsProps {

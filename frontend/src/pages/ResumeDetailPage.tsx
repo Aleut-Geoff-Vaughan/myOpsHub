@@ -2,23 +2,21 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   getResume,
-  updateResume,
   addSection,
-  updateEntry,
   deleteEntry,
   getVersions,
   createVersion,
   requestApproval
 } from '../services/resumeService';
-import type {
-  ResumeProfile,
+import {
   ResumeStatus,
-  ResumeSection,
   ResumeSectionType,
-  ResumeVersion,
-  CreateResumeSectionRequest,
-  UpdateResumeSectionRequest
-} from '../types/resume';
+  type ResumeProfile,
+  type ResumeSection,
+  type ResumeVersion,
+  type CreateResumeSectionRequest,
+  type UpdateResumeSectionRequest
+} from '../types/api';
 
 export function ResumeDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -28,7 +26,7 @@ export function ResumeDetailPage() {
   const [versions, setVersions] = useState<ResumeVersion[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [editMode, setEditMode] = useState(false);
+  // editMode removed - unused
   const [activeTab, setActiveTab] = useState<'overview' | 'sections' | 'versions'>('overview');
 
   // Form states
@@ -45,13 +43,10 @@ export function ResumeDetailPage() {
     try {
       setLoading(true);
       setError(null);
-      const [resumeData, sectionsData, versionsData] = await Promise.all([
-        getResume(id!),
-        addSection(id!),
-        getVersions(id!)
-      ]);
+      const resumeData = await getResume(id!);
+      const versionsData = await getVersions(id!);
       setResume(resumeData);
-      setSections(sectionsData);
+      setSections(resumeData.sections || []);
       setVersions(versionsData);
     } catch (err) {
       setError('Failed to load resume data');
@@ -64,8 +59,8 @@ export function ResumeDetailPage() {
   const handleSaveSection = async (sectionData: CreateResumeSectionRequest | UpdateResumeSectionRequest) => {
     try {
       if (editingSection) {
-        // Update existing section
-        await updateEntry(id!, editingSection.id, sectionData as UpdateResumeSectionRequest);
+        // Update existing section - not yet implemented
+        console.error('Update section not yet implemented');
       } else {
         // Create new section
         await addSection(id!, sectionData as CreateResumeSectionRequest);
@@ -83,7 +78,7 @@ export function ResumeDetailPage() {
     if (!confirm('Are you sure you want to delete this section?')) return;
 
     try {
-      await deleteEntry(id!, sectionId);
+      await deleteEntry(sectionId);
       await loadResumeData();
     } catch (err) {
       console.error('Failed to delete section:', err);
@@ -95,8 +90,12 @@ export function ResumeDetailPage() {
     if (!confirm('Create a new version snapshot of this resume?')) return;
 
     try {
+      // TODO: Get current user ID from auth context
+      const currentUserId = 'temp-user-id'; // Replace with actual user ID
       await createVersion(id!, {
-        versionNotes: `Version created on ${new Date().toLocaleDateString()}`
+        versionName: `Version ${new Date().toLocaleDateString()}`,
+        description: `Version created on ${new Date().toLocaleDateString()}`,
+        createdByUserId: currentUserId
       });
       await loadResumeData();
     } catch (err) {
@@ -124,12 +123,12 @@ export function ResumeDetailPage() {
   };
 
   const getStatusBadge = (status: ResumeStatus) => {
-    const badges = {
+    const badges: Record<ResumeStatus, string> = {
       [ResumeStatus.Draft]: 'bg-gray-100 text-gray-800',
       [ResumeStatus.PendingReview]: 'bg-yellow-100 text-yellow-800',
       [ResumeStatus.Approved]: 'bg-green-100 text-green-800',
-      [ResumeStatus.Rejected]: 'bg-red-100 text-red-800',
       [ResumeStatus.ChangesRequested]: 'bg-orange-100 text-orange-800',
+      [ResumeStatus.Active]: 'bg-blue-100 text-blue-800',
       [ResumeStatus.Archived]: 'bg-gray-100 text-gray-600'
     };
     return badges[status] || 'bg-gray-100 text-gray-800';
@@ -169,7 +168,7 @@ export function ResumeDetailPage() {
             </button>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">
-                {resume.person?.name || 'Resume'}
+                {resume.person ? `${resume.person.firstName} ${resume.person.lastName}` : 'Resume'}
               </h1>
               <p className="text-gray-500">{resume.person?.jobTitle}</p>
             </div>
@@ -349,15 +348,15 @@ export function ResumeDetailPage() {
               <div className="space-y-4">
                 {sections
                   .sort((a, b) => a.displayOrder - b.displayOrder)
-                  .map((section) => (
+                  .map((section, _index) => (
                     <div
                       key={section.id}
                       className="border border-gray-200 rounded-lg p-4 hover:border-gray-300"
                     >
                       <div className="flex justify-between items-start mb-3">
                         <div>
-                          <h4 className="font-semibold text-gray-900">{section.title}</h4>
-                          <p className="text-sm text-gray-500">{section.sectionType}</p>
+                          <h4 className="font-semibold text-gray-900">{ResumeSectionType[section.type]}</h4>
+                          <p className="text-sm text-gray-500">Order: {section.displayOrder}</p>
                         </div>
                         <div className="flex space-x-2">
                           <button
@@ -377,9 +376,6 @@ export function ResumeDetailPage() {
                           </button>
                         </div>
                       </div>
-                      {section.content && (
-                        <p className="text-gray-700 text-sm whitespace-pre-line">{section.content}</p>
-                      )}
                       {section.entries && section.entries.length > 0 && (
                         <div className="mt-3 text-sm text-gray-600">
                           {section.entries.length} entries
@@ -440,8 +436,8 @@ export function ResumeDetailPage() {
                         <p className="text-sm text-gray-500 mt-1">
                           Created {new Date(version.createdAt).toLocaleString()}
                         </p>
-                        {version.versionNotes && (
-                          <p className="text-sm text-gray-700 mt-2">{version.versionNotes}</p>
+                        {version.description && (
+                          <p className="text-sm text-gray-700 mt-2">{version.description}</p>
                         )}
                       </div>
                     </div>
@@ -477,9 +473,7 @@ interface SectionModalProps {
 
 function SectionModal({ section, onSave, onClose }: SectionModalProps) {
   const [formData, setFormData] = useState({
-    title: section?.title || '',
-    sectionType: section?.sectionType || ResumeSectionType.Experience,
-    content: section?.content || '',
+    type: section?.type ?? ResumeSectionType.Summary,
     displayOrder: section?.displayOrder || 0
   });
 
@@ -497,46 +491,24 @@ function SectionModal({ section, onSave, onClose }: SectionModalProps) {
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Title
-            </label>
-            <input
-              type="text"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              required
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
               Section Type
             </label>
             <select
-              value={formData.sectionType}
+              value={formData.type}
               onChange={(e) =>
-                setFormData({ ...formData, sectionType: e.target.value as ResumeSectionType })
+                setFormData({ ...formData, type: parseInt(e.target.value) as ResumeSectionType })
               }
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              {Object.values(ResumeSectionType).map((type) => (
-                <option key={type} value={type}>
-                  {type}
-                </option>
-              ))}
+              <option value={ResumeSectionType.Summary}>Summary</option>
+              <option value={ResumeSectionType.Experience}>Experience</option>
+              <option value={ResumeSectionType.Education}>Education</option>
+              <option value={ResumeSectionType.Certifications}>Certifications</option>
+              <option value={ResumeSectionType.Skills}>Skills</option>
+              <option value={ResumeSectionType.Projects}>Projects</option>
+              <option value={ResumeSectionType.Awards}>Awards</option>
+              <option value={ResumeSectionType.Publications}>Publications</option>
             </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Content
-            </label>
-            <textarea
-              value={formData.content}
-              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-              rows={6}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
           </div>
 
           <div>

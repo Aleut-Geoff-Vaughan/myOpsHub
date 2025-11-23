@@ -123,6 +123,7 @@ export interface Person {
   firstName: string;
   lastName: string;
   displayName: string;
+  name: string;
   email: string;
   phone?: string;
   jobTitle?: string;
@@ -217,9 +218,11 @@ export interface User {
   id: string;
   email: string;
   displayName: string;
+  name: string;
   entraObjectId: string;
   isSystemAdmin: boolean;
   isActive: boolean;
+  personId?: string;
   lastLoginAt?: string;
   deactivatedAt?: string;
   deactivatedByUserId?: string;
@@ -261,6 +264,7 @@ export interface Space {
   managerUserId?: string;
   requiresApproval: boolean;
   isActive: boolean;
+  isAvailable: boolean;
   equipment?: string;
   features?: string;
   dailyCost?: number;

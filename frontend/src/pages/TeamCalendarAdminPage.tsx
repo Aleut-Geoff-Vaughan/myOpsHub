@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../stores/authStore';
-import { Card, CardHeader, CardBody } from '../components/ui';
+import { Card, CardBody } from '../components/ui';
 import { teamCalendarService } from '../services/teamCalendarService';
 import toast from 'react-hot-toast';
 import type {

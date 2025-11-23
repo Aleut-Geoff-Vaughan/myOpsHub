@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Clock, GitBranch, Eye, Download, Tag } from 'lucide-react';
+import { Clock, GitBranch, Eye, Tag } from 'lucide-react';
 import {
-  getResumeVersions,
-  createResumeVersion,
-  setActiveVersion,
-  getVersionById
+  getVersions,
+  createVersion,
+  activateVersion,
+  getVersion
 } from '../../services/resumeService';
-import { ResumeVersion } from '../../types/api';
+import { type ResumeVersion } from '../../types/api';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 
@@ -36,7 +36,7 @@ export function VersionManagement({
     try {
       setLoading(true);
       setError(null);
-      const data = await getResumeVersions(resumeId);
+      const data = await getVersions(resumeId);
       setVersions(data);
     } catch (err) {
       console.error('Error loading versions:', err);
@@ -48,7 +48,13 @@ export function VersionManagement({
 
   const handleCreateVersion = async (versionNotes: string) => {
     try {
-      await createResumeVersion(resumeId, { versionNotes });
+      // TODO: Get current user ID from auth context
+      const currentUserId = 'temp-user-id';
+      await createVersion(resumeId, {
+        versionName: `Version ${versions.length + 1}`,
+        description: versionNotes,
+        createdByUserId: currentUserId
+      });
       await loadVersions();
       setShowCreateModal(false);
       onVersionChange?.();
@@ -64,7 +70,7 @@ export function VersionManagement({
     }
 
     try {
-      await setActiveVersion(resumeId, versionId);
+      await activateVersion(resumeId, versionId);
       await loadVersions();
       onVersionChange?.();
     } catch (err) {
@@ -75,7 +81,7 @@ export function VersionManagement({
 
   const handleViewVersion = async (versionId: string) => {
     try {
-      const version = await getVersionById(resumeId, versionId);
+      const version = await getVersion(resumeId, versionId);
       setSelectedVersion(version);
       setShowVersionDetails(true);
     } catch (err) {
@@ -163,8 +169,8 @@ export function VersionManagement({
                           {new Date(version.createdAt).toLocaleString()}
                         </span>
                       </div>
-                      {version.versionNotes && (
-                        <p className="text-sm text-gray-700 mt-2">{version.versionNotes}</p>
+                      {version.description && (
+                        <p className="text-sm text-gray-700 mt-2">{version.description}</p>
                       )}
                     </div>
                     <div className="flex gap-2 ml-4">
@@ -256,7 +262,7 @@ function CreateVersionModal({ onSubmit, onClose }: CreateVersionModalProps) {
           </div>
 
           <div className="flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
             </Button>
             <Button type="submit">Create Version</Button>
@@ -298,10 +304,10 @@ function VersionDetailsModal({ version, onClose }: VersionDetailsModalProps) {
           </button>
         </div>
 
-        {version.versionNotes && (
+        {version.description && (
           <div className="mb-4 p-3 bg-gray-50 rounded-lg">
             <p className="text-sm font-medium text-gray-700 mb-1">Notes</p>
-            <p className="text-sm text-gray-600">{version.versionNotes}</p>
+            <p className="text-sm text-gray-600">{version.description}</p>
           </div>
         )}
 

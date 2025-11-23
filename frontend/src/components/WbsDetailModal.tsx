@@ -4,7 +4,7 @@ import { Modal, Button, Input, Select, FormGroup, StatusBadge, Card, CardBody } 
 import wbsService from '../services/wbsService';
 import { projectsService } from '../services/projectsService';
 import type { WbsElement, WorkflowRequest } from '../types/api';
-import { WbsType, WbsApprovalStatus, WbsStatus } from '../types/api';
+import { WbsType, WbsApprovalStatus } from '../types/api';
 
 interface WbsDetailModalProps {
   isOpen: boolean;

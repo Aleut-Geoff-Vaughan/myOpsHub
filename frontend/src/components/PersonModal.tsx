@@ -56,7 +56,7 @@ export function PersonModal({ isOpen, onClose, person, mode }: PersonModalProps)
   }, [person, mode, tenants]);
 
   const createMutation = useMutation({
-    mutationFn: (data: Omit<Person, 'id' | 'createdAt' | 'updatedAt' | 'displayName' | 'userId'>) =>
+    mutationFn: (data: Omit<Person, 'id' | 'createdAt' | 'updatedAt' | 'displayName' | 'name' | 'userId'>) =>
       peopleService.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['people'] });
@@ -101,7 +101,9 @@ export function PersonModal({ isOpen, onClose, person, mode }: PersonModalProps)
     if (mode === 'create') {
       createMutation.mutate(formData);
     } else if (person) {
-      updateMutation.mutate({ ...person, ...formData });
+      const displayName = `${formData.firstName} ${formData.lastName}`;
+      const name = displayName;
+      updateMutation.mutate({ ...person, ...formData, displayName, name });
     }
   };
 
