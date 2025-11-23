@@ -416,7 +416,7 @@ export function ResumeDetailPage() {
               </div>
             ) : (
               <div className="space-y-4">
-                {versions.map((version, index) => (
+                {versions.map((version) => (
                   <div
                     key={version.id}
                     className="border border-gray-200 rounded-lg p-4 hover:border-gray-300"

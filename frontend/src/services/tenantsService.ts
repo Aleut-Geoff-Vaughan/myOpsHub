@@ -33,12 +33,12 @@ export const usersService = {
     return api.get<User>(`/users/${id}`);
   },
 
-  async create(user: Omit<User, 'id' | 'createdAt' | 'updatedAt'>): Promise<User> {
+  async create(user: Partial<User>): Promise<User> {
     return api.post<User>('/users', user);
   },
 
-  async update(id: string, user: User): Promise<void> {
-    return api.put<void>(`/users/${id}`, user);
+  async updateProfile(id: string, user: Partial<User>): Promise<User> {
+    return api.patch<User>(`/users/${id}/profile`, user);
   },
 
   async delete(id: string): Promise<void> {
@@ -51,5 +51,22 @@ export const usersService = {
 
   async reactivate(id: string): Promise<void> {
     return api.post<void>(`/users/${id}/reactivate`);
+  },
+
+  async getLoginHistory(userId: string, take: number = 10): Promise<{
+    totalLogins: number;
+    lastSuccessfulAt?: string;
+    lastFailedAt?: string;
+    logins: {
+      id: string;
+      email?: string;
+      isSuccess: boolean;
+      ipAddress?: string;
+      userAgent?: string;
+      createdAt: string;
+    }[];
+  }> {
+    const query = take ? `?take=${take}` : '';
+    return api.get(`/users/${userId}/logins${query}`);
   },
 };

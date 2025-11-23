@@ -187,7 +187,8 @@ export function FacilitiesPage() {
 
       {/* Tabs */}
       <Card>
-        <CardHeader>
+        <CardHeader title="Facilities" />
+        <div className="px-6 pb-4">
           <div className="flex space-x-1 border-b border-gray-200">
             <button
               onClick={() => setActiveTab('spaces')}
@@ -220,7 +221,7 @@ export function FacilitiesPage() {
               Maintenance
             </button>
           </div>
-        </CardHeader>
+        </div>
 
         <CardBody>
           {/* Spaces Tab */}

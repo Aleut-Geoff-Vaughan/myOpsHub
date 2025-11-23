@@ -1,7 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { templateService } from '../services/templateService';
 import type {
-  WorkLocationTemplate,
   CreateTemplateRequest,
   UpdateTemplateRequest,
   ApplyTemplateRequest,

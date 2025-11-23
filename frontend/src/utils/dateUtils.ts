@@ -109,7 +109,7 @@ export function isPast(date: Date): boolean {
  */
 export function isWeekend(date: Date): boolean {
   const day = date.getDay();
-  return WORK_SCHEDULE.WEEKEND_DAYS.includes(day);
+  return (WORK_SCHEDULE.WEEKEND_DAYS as readonly number[]).includes(day);
 }
 
 /**

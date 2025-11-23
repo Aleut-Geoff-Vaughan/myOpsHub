@@ -4,6 +4,8 @@ using MyScheduling.Core.Entities;
 using MyScheduling.Infrastructure.Data;
 using MyScheduling.Api.Attributes;
 using MyScheduling.Core.Interfaces;
+using MyScheduling.Api.Models;
+using System.ComponentModel.DataAnnotations;
 
 namespace MyScheduling.Api.Controllers;
 
@@ -23,6 +25,54 @@ public class UsersController : AuthorizedControllerBase
         _context = context;
         _logger = logger;
         _authService = authService;
+    }
+
+    // PATCH: api/users/{id}/profile
+    [HttpPatch("{id}/profile")]
+    [RequiresPermission(Resource = "User", Action = PermissionAction.Update)]
+    public async Task<ActionResult<User>> UpdateUserProfile(Guid id, [FromBody] UpdateUserProfileRequest request)
+    {
+        try
+        {
+            var user = await _context.Users.FindAsync(id);
+            if (user == null)
+            {
+                return NotFound($"User with ID {id} not found");
+            }
+
+            if (string.IsNullOrWhiteSpace(request.Email))
+            {
+                return BadRequest("Email is required");
+            }
+
+            // Check duplicate email (other users)
+            var existingUser = await _context.Users
+                .Where(u => u.Id != id)
+                .FirstOrDefaultAsync(u => u.Email == request.Email);
+            if (existingUser != null)
+            {
+                return Conflict($"Another user already has email {request.Email}");
+            }
+
+            user.DisplayName = string.IsNullOrWhiteSpace(request.DisplayName) ? user.DisplayName : request.DisplayName;
+            user.Email = request.Email;
+            user.PhoneNumber = request.PhoneNumber;
+            user.JobTitle = request.JobTitle;
+            user.Department = request.Department;
+            if (request.IsSystemAdmin.HasValue)
+            {
+                user.IsSystemAdmin = request.IsSystemAdmin.Value;
+            }
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+            return Ok(user);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating profile for user {UserId}", id);
+            return StatusCode(500, "An error occurred while updating the user");
+        }
     }
 
     // GET: api/users
@@ -96,6 +146,45 @@ public class UsersController : AuthorizedControllerBase
             _logger.LogError(ex, "Error retrieving user {UserId}", id);
             return StatusCode(500, "An error occurred while retrieving the user");
         }
+    }
+
+    // GET: api/users/{id}/logins
+    [HttpGet("{id}/logins")]
+    [RequiresPermission(Resource = "User", Action = PermissionAction.Read)]
+    public async Task<ActionResult<object>> GetUserLogins(Guid id, [FromQuery] int take = 10)
+    {
+        var user = await _context.Users.FindAsync(id);
+        if (user == null)
+        {
+            return NotFound($"User with ID {id} not found");
+        }
+
+        take = Math.Clamp(take, 1, 100);
+
+        var query = _context.LoginAudits
+            .Where(l => l.UserId == id)
+            .OrderByDescending(l => l.CreatedAt);
+
+        var total = await query.CountAsync();
+        var lastSuccess = await query.Where(l => l.IsSuccess).FirstOrDefaultAsync();
+        var lastFailed = await query.Where(l => !l.IsSuccess).FirstOrDefaultAsync();
+        var items = await query.Take(take).ToListAsync();
+
+        return Ok(new
+        {
+            totalLogins = total,
+            lastSuccessfulAt = lastSuccess?.CreatedAt,
+            lastFailedAt = lastFailed?.CreatedAt,
+            logins = items.Select(l => new
+            {
+                l.Id,
+                l.Email,
+                l.IsSuccess,
+                l.IpAddress,
+                l.UserAgent,
+                l.CreatedAt
+            })
+        });
     }
 
     // POST: api/users

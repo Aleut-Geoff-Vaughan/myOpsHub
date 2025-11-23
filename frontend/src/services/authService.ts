@@ -29,4 +29,8 @@ export const authService = {
   async logout(): Promise<void> {
     return api.post<void>('/auth/logout', {});
   },
+
+  async setPassword(userId: string, password: string): Promise<void> {
+    return api.post<void>('/auth/set-password', { userId, password });
+  },
 };

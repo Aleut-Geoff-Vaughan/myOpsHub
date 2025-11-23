@@ -7,6 +7,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using MyScheduling.Core.Entities;
 
 namespace MyScheduling.Api.Controllers;
 
@@ -17,17 +18,20 @@ public class AuthController : ControllerBase
     private readonly MySchedulingDbContext _context;
     private readonly ILogger<AuthController> _logger;
     private readonly IConfiguration _configuration;
+    private readonly IHttpContextAccessor _httpContextAccessor;
     private const int MaxFailedLoginAttempts = 5;
     private const int LockoutDurationMinutes = 30;
 
     public AuthController(
         MySchedulingDbContext context,
         ILogger<AuthController> logger,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IHttpContextAccessor httpContextAccessor)
     {
         _context = context;
         _logger = logger;
         _configuration = configuration;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     [HttpPost("login")]
@@ -137,11 +141,13 @@ public class AuthController : ControllerBase
                 TenantAccess = tenantAccess
             };
 
+            await LogLoginAsync(user, true);
             return Ok(response);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error during login for email: {Email}", request.Email);
+            await LogLoginAsync(null, false, request.Email);
             return StatusCode(500, new { message = "An error occurred during login" });
         }
     }
@@ -201,6 +207,34 @@ public class AuthController : ControllerBase
         {
             _logger.LogError(ex, "Error changing password");
             return StatusCode(500, new { message = "An error occurred while changing password" });
+        }
+    }
+
+    private async Task LogLoginAsync(User? user, bool isSuccess, string? emailOverride = null)
+    {
+        try
+        {
+            var httpContext = _httpContextAccessor.HttpContext;
+            var ip = httpContext?.Connection?.RemoteIpAddress?.ToString();
+            var userAgent = httpContext?.Request?.Headers["User-Agent"].FirstOrDefault();
+
+            var audit = new LoginAudit
+            {
+                Id = Guid.NewGuid(),
+                UserId = user?.Id,
+                Email = emailOverride ?? user?.Email,
+                IsSuccess = isSuccess,
+                IpAddress = ip,
+                UserAgent = userAgent,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.LoginAudits.Add(audit);
+            await _context.SaveChangesAsync();
+        }
+        catch (Exception logEx)
+        {
+            _logger.LogWarning(logEx, "Failed to log login audit");
         }
     }
 

@@ -4,6 +4,7 @@ import { Modal, Button, Input, Select, FormGroup, StatusBadge, Card, CardBody } 
 import wbsService from '../services/wbsService';
 import { projectsService } from '../services/projectsService';
 import type { WbsElement, WorkflowRequest } from '../types/api';
+import { useAuthStore } from '../stores/authStore';
 import { WbsType, WbsApprovalStatus } from '../types/api';
 
 interface WbsDetailModalProps {
@@ -14,6 +15,7 @@ interface WbsDetailModalProps {
 }
 
 export function WbsDetailModal({ isOpen, onClose, wbs, mode }: WbsDetailModalProps) {
+  const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<'details' | 'history'>('details');
   const [showWorkflowAction, setShowWorkflowAction] = useState(false);
@@ -181,7 +183,7 @@ export function WbsDetailModal({ isOpen, onClose, wbs, mode }: WbsDetailModalPro
   };
 
   const handleWorkflowAction = (action: 'submit' | 'approve' | 'reject' | 'suspend' | 'close') => {
-    const request: WorkflowRequest = { notes: workflowNotes || undefined };
+    const request: WorkflowRequest = { notes: workflowNotes || undefined, userId: user?.id || '' };
 
     switch (action) {
       case 'submit':

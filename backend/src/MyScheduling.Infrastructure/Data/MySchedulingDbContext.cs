@@ -75,6 +75,7 @@ public class MySchedulingDbContext : DbContext
     public DbSet<Permission> Permissions => Set<Permission>();
     public DbSet<RolePermissionTemplate> RolePermissionTemplates => Set<RolePermissionTemplate>();
     public DbSet<AuthorizationAuditLog> AuthorizationAuditLogs => Set<AuthorizationAuditLog>();
+    public DbSet<LoginAudit> LoginAudits => Set<LoginAudit>();
 
     // Dropdown Configuration
     public DbSet<TenantDropdownConfiguration> TenantDropdownConfigurations => Set<TenantDropdownConfiguration>();

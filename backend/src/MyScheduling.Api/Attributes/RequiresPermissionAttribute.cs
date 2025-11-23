@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Filters;
 using MyScheduling.Core.Entities;
 using MyScheduling.Core.Interfaces;
+using System.Security.Claims;
 
 namespace MyScheduling.Api.Attributes;
 
@@ -39,7 +40,10 @@ public class RequiresPermissionAttribute : Attribute, IAsyncAuthorizationFilter
         }
 
         // Get user ID from JWT claims
-        var userIdClaim = context.HttpContext.User.Claims.FirstOrDefault(c => c.Type == "sub" || c.Type == "userId");
+        var userIdClaim = context.HttpContext.User.Claims.FirstOrDefault(c =>
+            c.Type == ClaimTypes.NameIdentifier ||
+            c.Type.Equals("sub", StringComparison.OrdinalIgnoreCase) ||
+            c.Type.Equals("userId", StringComparison.OrdinalIgnoreCase));
         if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
         {
             context.Result = new UnauthorizedObjectResult(new { error = "User ID not found in token" });
@@ -48,7 +52,9 @@ public class RequiresPermissionAttribute : Attribute, IAsyncAuthorizationFilter
 
         // Get tenant ID from JWT claims if available
         Guid? tenantId = null;
-        var tenantIdClaim = context.HttpContext.User.Claims.FirstOrDefault(c => c.Type == "tenantId");
+        var tenantIdClaim = context.HttpContext.User.Claims.FirstOrDefault(c =>
+            c.Type.Equals("tenantId", StringComparison.OrdinalIgnoreCase) ||
+            c.Type.Equals("TenantId", StringComparison.OrdinalIgnoreCase));
         if (tenantIdClaim != null && Guid.TryParse(tenantIdClaim.Value, out var parsedTenantId))
         {
             tenantId = parsedTenantId;

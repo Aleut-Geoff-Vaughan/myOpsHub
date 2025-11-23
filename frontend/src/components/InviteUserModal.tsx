@@ -70,7 +70,7 @@ export function InviteUserModal({ isOpen, onClose, tenantId, tenantName }: Invit
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={handleClose} title="Invite New User" size="large">
+    <Modal isOpen={isOpen} onClose={handleClose} title="Invite New User" size="lg">
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Email Input */}
         <div>

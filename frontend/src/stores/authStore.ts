@@ -4,12 +4,17 @@ import { authService, type TenantAccessInfo } from '../services/authService';
 
 export enum AppRole {
   Employee = 'Employee',
+  ViewOnly = 'ViewOnly',
+  TeamLead = 'TeamLead',
   ProjectManager = 'ProjectManager',
   ResourceManager = 'ResourceManager',
   OfficeManager = 'OfficeManager',
+  TenantAdmin = 'TenantAdmin',
   SysAdmin = 'SysAdmin',
   Executive = 'Executive',
   OverrideApprover = 'OverrideApprover',
+  Support = 'Support',
+  Auditor = 'Auditor',
 }
 
 interface User {
@@ -17,6 +22,8 @@ interface User {
   email: string;
   displayName: string;
   isSystemAdmin: boolean;
+  personId?: string;
+  profilePhotoUrl?: string;
 }
 
 interface Workspace {

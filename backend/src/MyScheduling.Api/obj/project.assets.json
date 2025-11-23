@@ -1372,6 +1372,7 @@
         "type": "project",
         "framework": ".NETCoreApp,Version=v8.0",
         "dependencies": {
+          "BCrypt.Net-Next": "4.0.3",
           "MyScheduling.Core": "1.0.0",
           "Npgsql.EntityFrameworkCore.PostgreSQL": "8.0.11"
         },

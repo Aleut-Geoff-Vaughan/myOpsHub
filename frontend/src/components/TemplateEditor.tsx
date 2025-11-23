@@ -30,12 +30,12 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onClos
       dayOffset: item.dayOffset,
       dayOfWeek: item.dayOfWeek,
       locationType: item.locationType,
-      officeId: item.officeId,
-      remoteLocation: item.remoteLocation,
-      city: item.city,
-      state: item.state,
-      country: item.country,
-      notes: item.notes,
+      officeId: item.officeId ?? undefined,
+      remoteLocation: item.remoteLocation ?? undefined,
+      city: item.city ?? undefined,
+      state: item.state ?? undefined,
+      country: item.country ?? undefined,
+      notes: item.notes ?? undefined,
     })) || []
   );
 
@@ -45,26 +45,26 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onClos
         dayOffset: index,
         dayOfWeek: index + 1,
         locationType: WorkLocationType.Remote,
-        officeId: null,
-        remoteLocation: null,
-        city: null,
-        state: null,
-        country: null,
-        notes: null,
+        officeId: undefined,
+        remoteLocation: undefined,
+        city: undefined,
+        state: undefined,
+        country: undefined,
+        notes: undefined,
       }));
       setItems(weekItems);
     } else if (templateType === TemplateType.Day && items.length === 0) {
       setItems([
         {
           dayOffset: 0,
-          dayOfWeek: null,
+          dayOfWeek: undefined,
           locationType: WorkLocationType.Remote,
-          officeId: null,
-          remoteLocation: null,
-          city: null,
-          state: null,
-          country: null,
-          notes: null,
+          officeId: undefined,
+          remoteLocation: undefined,
+          city: undefined,
+          state: undefined,
+          country: undefined,
+          notes: undefined,
         },
       ]);
     }
@@ -75,14 +75,14 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onClos
       ...items,
       {
         dayOffset: items.length,
-        dayOfWeek: null,
+        dayOfWeek: undefined,
         locationType: WorkLocationType.Remote,
-        officeId: null,
-        remoteLocation: null,
-        city: null,
-        state: null,
-        country: null,
-        notes: null,
+        officeId: undefined,
+        remoteLocation: undefined,
+        city: undefined,
+        state: undefined,
+        country: undefined,
+        notes: undefined,
       },
     ]);
   };
@@ -123,7 +123,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onClos
       return;
     }
 
-    const request: CreateTemplateRequest = {
+    const requestBase: CreateTemplateRequest = {
       name: name.trim(),
       description: description.trim() || undefined,
       type: templateType,
@@ -141,9 +141,10 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onClos
 
     try {
       if (template) {
-        await updateTemplate.mutateAsync({ id: template.id, request });
+        const updateRequest = { ...requestBase, id: template.id };
+        await updateTemplate.mutateAsync({ id: template.id, request: updateRequest });
       } else {
-        await createTemplate.mutateAsync(request);
+        await createTemplate.mutateAsync(requestBase);
       }
       onClose();
     } catch (error) {

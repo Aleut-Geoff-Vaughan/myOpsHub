@@ -228,7 +228,7 @@ export function ApprovalWorkflow({ resumeId, onApprovalChange }: ApprovalWorkflo
                       </Button>
                       <Button
                         size="sm"
-                        variant="outline"
+                        variant="secondary"
                         onClick={() => openActionModal(approval, 'changes')}
                       >
                         <AlertCircle className="w-4 h-4 mr-1" />
@@ -236,7 +236,7 @@ export function ApprovalWorkflow({ resumeId, onApprovalChange }: ApprovalWorkflo
                       </Button>
                       <Button
                         size="sm"
-                        variant="outline"
+                        variant="secondary"
                         onClick={() => openActionModal(approval, 'reject')}
                         className="text-red-600 border-red-300 hover:bg-red-50"
                       >
@@ -438,7 +438,7 @@ function ApprovalActionModal({
           </div>
 
           <div className="flex justify-end gap-3">
-            <Button type="button" variant="outline" onClick={onClose}>
+            <Button type="button" variant="secondary" onClick={onClose}>
               Cancel
             </Button>
             <Button type="submit" className={getButtonClass()}>

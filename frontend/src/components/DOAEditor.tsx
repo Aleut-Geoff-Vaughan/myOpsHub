@@ -75,7 +75,7 @@ export function DOAEditor({ doaId, onClose }: DOAEditorProps) {
       if (isEdit && doaId) {
         await updateMutation.mutateAsync({
           id: doaId,
-          request: formData,
+          request: { ...formData, id: doaId },
         });
         toast.success('DOA letter updated successfully');
       } else {

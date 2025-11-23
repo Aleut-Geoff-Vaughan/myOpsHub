@@ -46,6 +46,8 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
+builder.Services.AddHttpContextAccessor();
+
 // CORS - Environment-specific configuration
 if (builder.Environment.IsDevelopment())
 {

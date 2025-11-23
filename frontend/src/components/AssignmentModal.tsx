@@ -6,7 +6,6 @@ import type { Assignment } from '../types/api';
 import { AssignmentStatus } from '../types/api';
 import { useTenants } from '../hooks/useTenants';
 import { usePeople } from '../hooks/usePeople';
-import { useProjects } from '../hooks/useProjects';
 
 interface AssignmentModalProps {
   isOpen: boolean;
@@ -19,7 +18,6 @@ export function AssignmentModal({ isOpen, onClose, assignment, mode }: Assignmen
   const queryClient = useQueryClient();
   const { data: tenants = [] } = useTenants();
   const { data: people = [] } = usePeople();
-  const { data: projects = [] } = useProjects();
 
   const [formData, setFormData] = useState({
     tenantId: '',

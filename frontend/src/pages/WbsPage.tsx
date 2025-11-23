@@ -3,14 +3,14 @@ import { useQuery } from '@tanstack/react-query';
 import { Card, CardHeader, CardBody, Button, Table, StatusBadge, Input } from '../components/ui';
 import { WbsDetailModal } from '../components/WbsDetailModal';
 import wbsService from '../services/wbsService';
-import type { WbsElement, Project, User } from '../types/api';
-import { WbsType, WbsApprovalStatus, WbsStatus } from '../types/api';
+import type { WbsElement } from '../types/api';
+import { WbsType, WbsApprovalStatus } from '../types/api';
 
 export function WbsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<'all' | WbsType>('all');
   const [selectedApprovalFilter, setSelectedApprovalFilter] = useState<'all' | WbsApprovalStatus>('all');
-  const [selectedProject, setSelectedProject] = useState<string | undefined>();
+  const [selectedProject] = useState<string | undefined>();
   const [pageNumber, setPageNumber] = useState(1);
   const [pageSize, setPageSize] = useState(50);
   const [isModalOpen, setIsModalOpen] = useState(false);

@@ -297,7 +297,15 @@ interface TemplateModalProps {
 }
 
 function TemplateModal({ template, tenantId, onSubmit, onClose }: TemplateModalProps) {
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    tenantId: string;
+    name: string;
+    description: string;
+    type: ResumeTemplateType;
+    templateContent: string;
+    isDefault: boolean;
+    isActive: boolean;
+  }>({
     tenantId: template?.tenantId || tenantId || '',
     name: template?.name || '',
     description: template?.description || '',

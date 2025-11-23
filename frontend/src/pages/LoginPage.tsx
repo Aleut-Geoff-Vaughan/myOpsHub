@@ -19,6 +19,7 @@ export function LoginPage() {
   const [error, setError] = useState('');
   const [healthStatus, setHealthStatus] = useState<HealthStatus | null>(null);
   const [healthError, setHealthError] = useState('');
+  const [isCheckingHealth, setIsCheckingHealth] = useState(true);
 
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
@@ -26,6 +27,7 @@ export function LoginPage() {
   // Health check on component mount
   useEffect(() => {
     const checkHealth = async () => {
+      setIsCheckingHealth(true);
       try {
         const response = await fetch('/api/health');
         if (response.ok) {
@@ -36,6 +38,8 @@ export function LoginPage() {
         }
       } catch (err) {
         setHealthError('Cannot connect to API');
+      } finally {
+        setIsCheckingHealth(false);
       }
     };
 
@@ -100,6 +104,9 @@ export function LoginPage() {
                   <span className="font-medium text-gray-700">{healthStatus.environment}</span>
                 </div>
               )}
+              {!healthStatus && !healthError && (
+                <div className="text-xs text-gray-500 italic">Checking system status...</div>
+              )}
             </div>
           </div>
 
@@ -145,7 +152,7 @@ export function LoginPage() {
 
             <button
               type="submit"
-              disabled={isLoading || !healthStatus}
+              disabled={isLoading || isCheckingHealth}
               className="w-full bg-primary-600 hover:bg-primary-700 text-white font-medium py-3 px-4 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (

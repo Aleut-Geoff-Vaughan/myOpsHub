@@ -22,6 +22,7 @@ import { UserProfilePage } from './pages/UserProfilePage';
 import TemplatesPage from './pages/TemplatesPage';
 import DOAPage from './pages/DOAPage';
 import { useAuthStore } from './stores/authStore';
+import { AdminLoginReport } from './pages/AdminLoginReport';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -95,6 +96,7 @@ function App() {
               <Route path="users" element={<AdminPage viewOverride="users" />} />
               <Route path="tenants" element={<AdminPage viewOverride="tenants" />} />
               <Route path="settings" element={<AdminPage viewOverride="settings" />} />
+              <Route path="logins" element={<AdminLoginReport />} />
             </Route>
 
             {/* Main Application Routes */}

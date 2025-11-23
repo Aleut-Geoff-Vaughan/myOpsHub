@@ -28,6 +28,19 @@ export function WorkspaceSelectorPage() {
     return null;
   }
 
+  // Determine if admin workspace should be shown (system admin flag or roles include system admin)
+  const hasSystemAdminAccess =
+    user.isSystemAdmin ||
+    availableTenants.some((tenant) =>
+      (tenant.roles || []).some(
+        (role) =>
+          role === 'SystemAdmin' ||
+          role === 'SysAdmin' ||
+          role.toLowerCase() === 'systemadmin' ||
+          role.toLowerCase() === 'sysadmin'
+      )
+    );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
       <div className="max-w-2xl w-full">
@@ -46,7 +59,7 @@ export function WorkspaceSelectorPage() {
           {/* Workspace Options */}
           <div className="space-y-3">
             {/* Admin Console */}
-            {user.isSystemAdmin && (
+            {hasSystemAdminAccess && (
               <button
                 onClick={() => handleWorkspaceSelect({ type: 'admin' })}
                 className="w-full text-left p-6 border-2 border-gray-200 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-all group"
@@ -81,7 +94,7 @@ export function WorkspaceSelectorPage() {
                   type: 'tenant',
                   tenantId: tenant.tenantId,
                   tenantName: tenant.tenantName,
-                  roles: tenant.roles as AppRole[]
+                  roles: (tenant.roles as string[]).map(r => r as AppRole)
                 })}
                 className="w-full text-left p-6 border-2 border-gray-200 rounded-lg hover:border-primary-500 hover:bg-primary-50 transition-all group"
               >

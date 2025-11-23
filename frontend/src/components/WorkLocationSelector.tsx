@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Modal, Button, Input, Select, FormGroup, TextArea } from './ui';
-import { WorkLocationType, type WorkLocationPreference, type Office } from '../types/api';
+import { WorkLocationType, type WorkLocationPreference } from '../types/api';
 import { useOffices } from '../hooks/useBookings';
 import { useTenants } from '../hooks/useTenants';
 import { useCreateWorkLocationPreference, useUpdateWorkLocationPreference } from '../hooks/useWorkLocation';
-import { useAuthStore } from '../stores/authStore';
 import { workLocationService } from '../services/workLocationService';
 
 interface WorkLocationSelectorProps {
@@ -23,7 +22,6 @@ export function WorkLocationSelector({
   existingPreference,
   personId,
 }: WorkLocationSelectorProps) {
-  const { user } = useAuthStore();
   const queryClient = useQueryClient();
   const { data: tenants = [] } = useTenants();
   const { data: allOffices = [] } = useOffices();
@@ -270,13 +268,9 @@ export function WorkLocationSelector({
             <p className="text-sm text-emerald-700">
               You'll need to make a desk or room reservation for this day.
             </p>
-            <Button
-              variant="primary"
-              onClick={() => setShowBookingModal(true)}
-            >
-              Make Reservation
-            </Button>
-            {/* TODO: Integrate with BookingModal */}
+            <p className="text-xs text-emerald-700">
+              Booking flow not yet implemented in this modal.
+            </p>
           </div>
         )}
 

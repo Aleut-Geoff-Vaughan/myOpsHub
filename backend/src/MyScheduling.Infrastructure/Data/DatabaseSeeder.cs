@@ -1,6 +1,7 @@
 using MyScheduling.Core.Entities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using BCrypt.Net;
 
 namespace MyScheduling.Infrastructure.Data;
 
@@ -9,6 +10,7 @@ public class DatabaseSeeder
     private readonly MySchedulingDbContext _context;
     private readonly ILogger<DatabaseSeeder> _logger;
     private readonly Random _random = new();
+    private const string DefaultDevPassword = "Password123!";
 
     // Test data arrays
     private readonly string[] _firstNames = {
@@ -67,6 +69,9 @@ public class DatabaseSeeder
         {
             _logger.LogInformation("Starting database seeding...");
 
+            // Backfill passwords for existing users created before hashing was implemented
+            await EnsureDefaultPasswordsAsync();
+
             // Check if data already exists (check both tenants AND people to ensure complete seeding)
             if (await _context.Tenants.AnyAsync() && await _context.People.AnyAsync())
             {
@@ -90,6 +95,7 @@ public class DatabaseSeeder
                 DisplayName = "Test Admin",
                 EntraObjectId = Guid.NewGuid().ToString(),
                 IsSystemAdmin = true,
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultDevPassword, workFactor: 10),
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
             };
@@ -117,6 +123,7 @@ public class DatabaseSeeder
                         DisplayName = "Test User",
                         EntraObjectId = Guid.NewGuid().ToString(),
                         IsSystemAdmin = false,
+                        PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultDevPassword, workFactor: 10),
                         CreatedAt = DateTime.UtcNow,
                         UpdatedAt = DateTime.UtcNow
                     };
@@ -215,6 +222,27 @@ public class DatabaseSeeder
         }
     }
 
+    // Ensure users created before password hashing have a default dev password so login works in dev
+    private async Task EnsureDefaultPasswordsAsync()
+    {
+        var usersWithoutPassword = await _context.Users
+            .Where(u => string.IsNullOrEmpty(u.PasswordHash))
+            .ToListAsync();
+
+        if (!usersWithoutPassword.Any())
+        {
+            return;
+        }
+
+        foreach (var user in usersWithoutPassword)
+        {
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultDevPassword, workFactor: 10);
+        }
+
+        await _context.SaveChangesAsync();
+        _logger.LogInformation("Applied default dev password to {Count} user(s)", usersWithoutPassword.Count);
+    }
+
     private async Task<List<Tenant>> CreateTenantsAsync()
     {
         var tenants = new List<Tenant>
@@ -267,6 +295,7 @@ public class DatabaseSeeder
                     DisplayName = $"{firstName} {lastName}",
                     EntraObjectId = Guid.NewGuid().ToString(), // Use unique GUID for test data
                     IsSystemAdmin = false,
+                    PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultDevPassword, workFactor: 10),
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 };
