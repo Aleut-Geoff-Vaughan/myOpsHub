@@ -68,7 +68,7 @@ public class ResumeTemplate : TenantEntity
 
 public class LinkedInImport : BaseEntity
 {
-    public Guid PersonId { get; set; }
+    public Guid UserId { get; set; }
     public Guid ResumeProfileId { get; set; }
     public string LinkedInProfileUrl { get; set; } = string.Empty;
     public DateTime ImportedAt { get; set; }
@@ -79,7 +79,7 @@ public class LinkedInImport : BaseEntity
     public int ItemsImported { get; set; }
 
     // Navigation properties
-    public virtual Person Person { get; set; } = null!;
+    public virtual User User { get; set; } = null!;
     public virtual ResumeProfile ResumeProfile { get; set; } = null!;
     public virtual User ImportedBy { get; set; } = null!;
 }

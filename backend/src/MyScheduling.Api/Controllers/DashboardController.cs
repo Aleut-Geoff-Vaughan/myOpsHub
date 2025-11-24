@@ -43,15 +43,15 @@ public class DashboardController : AuthorizedControllerBase
     {
         try
         {
-            // Get current user's person record
-            var person = await _context.People
-                .Include(p => p.User)
-                .FirstOrDefaultAsync(p => p.UserId == userId);
+            // Get current user record
+            var user = await _context.Users
+                .Include(u => u.Manager)
+                .FirstOrDefaultAsync(u => u.Id == userId);
 
-            if (person == null)
+            if (user == null)
             {
-                _logger.LogWarning("Person record not found for user {UserId}", userId);
-                return NotFound("Person record not found for current user");
+                _logger.LogWarning("User record not found for user {UserId}", userId);
+                return NotFound("User record not found for current user");
             }
 
             // Calculate default date range (Monday of current week to Friday of next week)
@@ -73,7 +73,7 @@ public class DashboardController : AuthorizedControllerBase
             // Get preferences for date range
             var preferences = await _context.WorkLocationPreferences
                 .Include(p => p.Office)
-                .Where(p => p.PersonId == person.Id
+                .Where(p => p.UserId == user.Id
                          && p.WorkDate >= DateOnly.FromDateTime(start)
                          && p.WorkDate <= DateOnly.FromDateTime(end))
                 .OrderBy(p => p.WorkDate)
@@ -105,7 +105,7 @@ public class DashboardController : AuthorizedControllerBase
 
             var dashboardData = new DashboardData
             {
-                Person = person,
+                User = user,
                 Preferences = preferences,
                 Stats = stats,
                 StartDate = start,
@@ -136,7 +136,7 @@ public class DashboardController : AuthorizedControllerBase
 /// </summary>
 public class DashboardData
 {
-    public Person Person { get; set; } = null!;
+    public User User { get; set; } = null!;
     public List<WorkLocationPreference> Preferences { get; set; } = new();
     public DashboardStats Stats { get; set; } = null!;
     public DateTime StartDate { get; set; }

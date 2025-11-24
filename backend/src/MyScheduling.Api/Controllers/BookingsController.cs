@@ -30,7 +30,7 @@ public class BookingsController : AuthorizedControllerBase
     [HttpGet]
     [RequiresPermission(Resource = "Booking", Action = PermissionAction.Read)]
     public async Task<ActionResult<IEnumerable<Booking>>> GetBookings(
-        [FromQuery] Guid? personId = null,
+        [FromQuery] Guid? userId = null,
         [FromQuery] Guid? spaceId = null,
         [FromQuery] Guid? officeId = null,
         [FromQuery] DateTime? startDate = null,
@@ -40,12 +40,15 @@ public class BookingsController : AuthorizedControllerBase
         try
         {
             var query = _context.Bookings
+                .Include(b => b.User)
+                .Include(b => b.Space)
+                    .ThenInclude(s => s.Office)
                 .AsNoTracking()
                 .AsQueryable();
 
-            if (personId.HasValue)
+            if (userId.HasValue)
             {
-                query = query.Where(b => b.PersonId == personId.Value);
+                query = query.Where(b => b.UserId == userId.Value);
             }
 
             if (spaceId.HasValue)
@@ -100,7 +103,7 @@ public class BookingsController : AuthorizedControllerBase
         try
         {
             var booking = await _context.Bookings
-                .Include(b => b.Person)
+                .Include(b => b.User)
                 .Include(b => b.Space)
                     .ThenInclude(s => s.Office)
                 .Include(b => b.CheckInEvents)
@@ -127,6 +130,10 @@ public class BookingsController : AuthorizedControllerBase
     {
         try
         {
+            if (!booking.UserId.HasValue || booking.UserId == Guid.Empty)
+            {
+                return BadRequest("UserId is required");
+            }
 
             // Check for space conflicts
             var hasConflict = await _context.Bookings

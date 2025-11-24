@@ -13,8 +13,8 @@ public class TeamCalendarResponse
     public string? Description { get; set; }
     public TeamCalendarType Type { get; set; }
     public bool IsActive { get; set; }
-    public Guid? OwnerId { get; set; }
-    public PersonSummary? Owner { get; set; }
+    public Guid? OwnerUserId { get; set; }
+    public UserSummary? Owner { get; set; }
     public int MemberCount { get; set; }
     public List<TeamCalendarMemberResponse> Members { get; set; } = new();
     public DateTime CreatedAt { get; set; }
@@ -27,8 +27,8 @@ public class TeamCalendarMemberResponse
 {
     public Guid Id { get; set; }
     public Guid TeamCalendarId { get; set; }
-    public Guid PersonId { get; set; }
-    public PersonSummary Person { get; set; } = null!;
+    public Guid UserId { get; set; }
+    public UserSummary User { get; set; } = null!;
     public MembershipType MembershipType { get; set; }
     public DateTime AddedDate { get; set; }
     public Guid? AddedByUserId { get; set; }
@@ -45,7 +45,7 @@ public class CreateTeamCalendarRequest
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
     public TeamCalendarType Type { get; set; } = TeamCalendarType.Team;
-    public Guid? OwnerId { get; set; }
+    public Guid? OwnerUserId { get; set; }
     public bool IsActive { get; set; } = true;
 }
 
@@ -57,7 +57,7 @@ public class UpdateTeamCalendarRequest
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
     public TeamCalendarType Type { get; set; }
-    public Guid? OwnerId { get; set; }
+    public Guid? OwnerUserId { get; set; }
     public bool IsActive { get; set; }
 }
 
@@ -66,7 +66,7 @@ public class UpdateTeamCalendarRequest
 /// </summary>
 public class AddTeamCalendarMemberRequest
 {
-    public Guid PersonId { get; set; }
+    public Guid UserId { get; set; }
     public MembershipType MembershipType { get; set; } = MembershipType.OptIn;
 }
 
@@ -75,7 +75,7 @@ public class AddTeamCalendarMemberRequest
 /// </summary>
 public class BulkAddMembersRequest
 {
-    public List<Guid> PersonIds { get; set; } = new();
+    public List<Guid> UserIds { get; set; } = new();
     public MembershipType MembershipType { get; set; } = MembershipType.Forced;
 }
 
@@ -95,10 +95,10 @@ public class TeamCalendarViewResponse
 /// </summary>
 public class TeamMemberSchedule
 {
-    public Guid PersonId { get; set; }
-    public string PersonName { get; set; } = string.Empty;
-    public string? PersonEmail { get; set; }
-    public Guid? ManagerId { get; set; }
+    public Guid UserId { get; set; }
+    public string UserName { get; set; } = string.Empty;
+    public string? UserEmail { get; set; }
+    public Guid? ManagerUserId { get; set; }
     public string? JobTitle { get; set; }
     public List<WorkLocationPreferenceResponse> Preferences { get; set; } = new();
 }
@@ -121,15 +121,15 @@ public class WorkLocationPreferenceResponse
 }
 
 /// <summary>
-/// Summary of a person (used in nested responses)
+/// Summary of a user (used in nested responses)
 /// </summary>
-public class PersonSummary
+public class UserSummary
 {
     public Guid Id { get; set; }
-    public string Name { get; set; } = string.Empty;
+    public string DisplayName { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public string? JobTitle { get; set; }
-    public Guid? ManagerId { get; set; }
+    public Guid? ManagerUserId { get; set; }
     public string? ManagerName { get; set; }
 }
 
@@ -138,7 +138,7 @@ public class PersonSummary
 /// </summary>
 public class ManagerViewRequest
 {
-    public Guid? ManagerId { get; set; } // If null, uses current user's person
+    public Guid? ManagerUserId { get; set; } // If null, uses current user
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
 }
@@ -148,7 +148,7 @@ public class ManagerViewRequest
 /// </summary>
 public class ManagerViewResponse
 {
-    public PersonSummary Manager { get; set; } = null!;
+    public UserSummary Manager { get; set; } = null!;
     public List<TeamMemberSchedule> DirectReports { get; set; } = new();
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }

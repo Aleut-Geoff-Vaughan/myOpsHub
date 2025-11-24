@@ -31,13 +31,16 @@ public class AssignmentsController : AuthorizedControllerBase
     [RequiresPermission(Resource = "Assignment", Action = PermissionAction.Read)]
     public async Task<ActionResult<IEnumerable<Assignment>>> GetAssignments(
         [FromQuery] Guid? tenantId = null,
-        [FromQuery] Guid? personId = null,
+        [FromQuery] Guid? userId = null,
         [FromQuery] Guid? projectId = null,
         [FromQuery] AssignmentStatus? status = null)
     {
         try
         {
             var query = _context.Assignments
+                .Include(a => a.User)
+                .Include(a => a.WbsElement)
+                    .ThenInclude(w => w.Project)
                 .AsNoTracking()
                 .AsQueryable();
 
@@ -46,9 +49,10 @@ public class AssignmentsController : AuthorizedControllerBase
                 query = query.Where(a => a.TenantId == tenantId.Value);
             }
 
-            if (personId.HasValue)
+            var targetUserId = userId;
+            if (targetUserId.HasValue)
             {
-                query = query.Where(a => a.PersonId == personId.Value);
+                query = query.Where(a => a.UserId == targetUserId.Value);
             }
 
             if (projectId.HasValue)
@@ -82,7 +86,7 @@ public class AssignmentsController : AuthorizedControllerBase
         try
         {
             var assignment = await _context.Assignments
-                .Include(a => a.Person)
+                .Include(a => a.User)
                 .Include(a => a.WbsElement)
                     .ThenInclude(w => w.Project)
                 .Include(a => a.ProjectRole)
@@ -111,13 +115,19 @@ public class AssignmentsController : AuthorizedControllerBase
     {
         try
         {
+            if (assignment.UserId == Guid.Empty)
+            {
+                return BadRequest("UserId is required");
+            }
 
-            // Check for overlapping assignments
+            var targetUserId = assignment.UserId;
+
+            // Check for overlapping assignments (by user if available)
             var hasOverlap = await _context.Assignments
                 .AnyAsync(a =>
-                    a.PersonId == assignment.PersonId &&
                     a.Id != assignment.Id &&
                     a.Status == AssignmentStatus.Active &&
+                    a.UserId == targetUserId &&
                     ((assignment.StartDate >= a.StartDate && assignment.StartDate <= a.EndDate) ||
                      (assignment.EndDate >= a.StartDate && assignment.EndDate <= a.EndDate) ||
                      (assignment.StartDate <= a.StartDate && assignment.EndDate >= a.EndDate)));

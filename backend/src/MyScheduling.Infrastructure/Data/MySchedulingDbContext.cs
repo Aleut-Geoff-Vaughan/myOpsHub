@@ -17,8 +17,7 @@ public class MySchedulingDbContext : DbContext
     public DbSet<RoleAssignment> RoleAssignments => Set<RoleAssignment>(); // Deprecated
     public DbSet<UserInvitation> UserInvitations => Set<UserInvitation>();
 
-    // People & Resume
-    public DbSet<Person> People => Set<Person>();
+    // People & Resume (person table removed; profiles now keyed by User)
     public DbSet<ResumeProfile> ResumeProfiles => Set<ResumeProfile>();
     public DbSet<ResumeSection> ResumeSections => Set<ResumeSection>();
     public DbSet<ResumeEntry> ResumeEntries => Set<ResumeEntry>();
@@ -128,6 +127,13 @@ public class MySchedulingDbContext : DbContext
 
             entity.HasIndex(e => e.EntraObjectId).IsUnique();
             entity.HasIndex(e => e.Email).IsUnique();
+            entity.HasIndex(e => e.ManagerId);
+
+            // Self-referencing manager hierarchy
+            entity.HasOne(e => e.Manager)
+                .WithMany(e => e.DirectReports)
+                .HasForeignKey(e => e.ManagerId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<TenantMembership>(entity =>
@@ -175,51 +181,6 @@ public class MySchedulingDbContext : DbContext
 
     private void ConfigurePeople(ModelBuilder modelBuilder)
     {
-        modelBuilder.Entity<Person>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Name).IsRequired().HasMaxLength(255);
-            entity.Property(e => e.Email).IsRequired().HasMaxLength(255);
-
-            entity.HasIndex(e => new { e.TenantId, e.Email });
-            entity.HasIndex(e => e.Status);
-            entity.HasIndex(e => e.ManagerId);
-
-            entity.HasOne(e => e.User)
-                .WithMany()
-                .HasForeignKey(e => e.UserId)
-                .OnDelete(DeleteBehavior.SetNull);
-
-            // Self-referencing Manager relationship
-            entity.HasOne(e => e.Manager)
-                .WithMany(m => m.DirectReports)
-                .HasForeignKey(e => e.ManagerId)
-                .OnDelete(DeleteBehavior.Restrict);
-        });
-
-        modelBuilder.Entity<ResumeProfile>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-
-            entity.HasOne(e => e.Person)
-                .WithOne(p => p.ResumeProfile)
-                .HasForeignKey<ResumeProfile>(e => e.PersonId)
-                .OnDelete(DeleteBehavior.Cascade);
-        });
-
-        modelBuilder.Entity<ResumeSection>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-
-            entity.HasIndex(e => new { e.PersonId, e.DisplayOrder });
-        });
-
-        modelBuilder.Entity<ResumeEntry>(entity =>
-        {
-            entity.HasKey(e => e.Id);
-            entity.Property(e => e.Title).IsRequired().HasMaxLength(255);
-        });
-
         modelBuilder.Entity<Skill>(entity =>
         {
             entity.HasKey(e => e.Id);
@@ -232,7 +193,17 @@ public class MySchedulingDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
 
-            entity.HasIndex(e => new { e.PersonId, e.SkillId }).IsUnique();
+            entity.HasIndex(e => new { e.UserId, e.SkillId }).IsUnique();
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Skill)
+                .WithMany(s => s.PersonSkills)
+                .HasForeignKey(e => e.SkillId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Certification>(entity =>
@@ -247,7 +218,17 @@ public class MySchedulingDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
 
-            entity.HasIndex(e => new { e.PersonId, e.CertificationId });
+            entity.HasIndex(e => new { e.UserId, e.CertificationId });
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Certification)
+                .WithMany(c => c.PersonCertifications)
+                .HasForeignKey(e => e.CertificationId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 
@@ -318,13 +299,13 @@ public class MySchedulingDbContext : DbContext
         {
             entity.HasKey(e => e.Id);
 
-            entity.HasIndex(e => new { e.TenantId, e.PersonId, e.Status });
+            entity.HasIndex(e => new { e.TenantId, e.UserId, e.Status });
             entity.HasIndex(e => new { e.WbsElementId, e.Status });
             entity.HasIndex(e => new { e.StartDate, e.EndDate });
 
-            entity.HasOne(e => e.Person)
-                .WithMany(p => p.Assignments)
-                .HasForeignKey(e => e.PersonId)
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasOne(e => e.ProjectRole)
@@ -390,7 +371,7 @@ public class MySchedulingDbContext : DbContext
             entity.HasKey(e => e.Id);
 
             entity.HasIndex(e => new { e.SpaceId, e.StartDatetime, e.EndDatetime });
-            entity.HasIndex(e => new { e.PersonId, e.Status });
+            entity.HasIndex(e => new { e.UserId, e.Status });
             entity.HasIndex(e => e.Status);
 
             entity.HasOne(e => e.Space)
@@ -398,9 +379,9 @@ public class MySchedulingDbContext : DbContext
                 .HasForeignKey(e => e.SpaceId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            entity.HasOne(e => e.Person)
-                .WithMany(p => p.Bookings)
-                .HasForeignKey(e => e.PersonId)
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
@@ -474,12 +455,12 @@ public class MySchedulingDbContext : DbContext
             entity.Property(e => e.Notes).HasMaxLength(500);
 
             // One preference per person per day
-            entity.HasIndex(e => new { e.TenantId, e.PersonId, e.WorkDate }).IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.UserId, e.WorkDate }).IsUnique();
             entity.HasIndex(e => new { e.WorkDate, e.LocationType });
 
-            entity.HasOne(e => e.Person)
-                .WithMany(p => p.WorkLocationPreferences)
-                .HasForeignKey(e => e.PersonId)
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasOne(e => e.Office)
@@ -644,9 +625,10 @@ public class MySchedulingDbContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Status).IsRequired().HasDefaultValue(MyScheduling.Core.Enums.ResumeStatus.Draft);
             entity.Property(e => e.IsPublic).IsRequired().HasDefaultValue(false);
+            entity.Property(e => e.UserId).IsRequired();
 
             entity.HasIndex(e => e.Status);
-            entity.HasIndex(e => e.PersonId).IsUnique();
+            entity.HasIndex(e => e.UserId).IsUnique();
 
             entity.HasOne(e => e.CurrentVersion)
                 .WithMany()
@@ -657,6 +639,41 @@ public class MySchedulingDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.LastReviewedByUserId)
                 .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ResumeSection>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.DisplayOrder).IsRequired();
+
+            entity.HasIndex(e => e.ResumeProfileId);
+            entity.HasIndex(e => new { e.UserId, e.DisplayOrder });
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne<ResumeProfile>()
+                .WithMany(r => r.Sections)
+                .HasForeignKey(e => e.ResumeProfileId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<ResumeEntry>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(255);
+
+            entity.HasOne(e => e.ResumeSection)
+                .WithMany(s => s.Entries)
+                .HasForeignKey(e => e.ResumeSectionId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<ResumeVersion>(entity =>
@@ -766,12 +783,12 @@ public class MySchedulingDbContext : DbContext
             entity.Property(e => e.ImportedAt).IsRequired();
             entity.Property(e => e.Status).IsRequired();
 
-            entity.HasIndex(e => new { e.PersonId, e.ImportedAt });
+            entity.HasIndex(e => new { e.UserId, e.ImportedAt });
             entity.HasIndex(e => new { e.ResumeProfileId, e.Status });
 
-            entity.HasOne(e => e.Person)
+            entity.HasOne(e => e.User)
                 .WithMany()
-                .HasForeignKey(e => e.PersonId)
+                .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasOne(e => e.ResumeProfile)
@@ -870,11 +887,11 @@ public class MySchedulingDbContext : DbContext
 
             entity.HasIndex(e => new { e.TenantId, e.IsActive });
             entity.HasIndex(e => new { e.TenantId, e.Type });
-            entity.HasIndex(e => e.OwnerId);
+            entity.HasIndex(e => e.OwnerUserId);
 
             entity.HasOne(e => e.Owner)
                 .WithMany()
-                .HasForeignKey(e => e.OwnerId)
+                .HasForeignKey(e => e.OwnerUserId)
                 .OnDelete(DeleteBehavior.SetNull);
         });
 
@@ -885,9 +902,9 @@ public class MySchedulingDbContext : DbContext
             entity.Property(e => e.AddedDate).IsRequired();
             entity.Property(e => e.IsActive).IsRequired().HasDefaultValue(true);
 
-            // Unique constraint: person can only be in each calendar once
-            entity.HasIndex(e => new { e.TenantId, e.TeamCalendarId, e.PersonId }).IsUnique();
-            entity.HasIndex(e => new { e.PersonId, e.IsActive });
+            // Unique constraint: user can only be in each calendar once
+            entity.HasIndex(e => new { e.TenantId, e.TeamCalendarId, e.UserId }).IsUnique();
+            entity.HasIndex(e => new { e.UserId, e.IsActive });
             entity.HasIndex(e => new { e.TeamCalendarId, e.IsActive });
 
             entity.HasOne(e => e.TeamCalendar)
@@ -895,9 +912,9 @@ public class MySchedulingDbContext : DbContext
                 .HasForeignKey(e => e.TeamCalendarId)
                 .OnDelete(DeleteBehavior.Cascade);
 
-            entity.HasOne(e => e.Person)
+            entity.HasOne(e => e.User)
                 .WithMany()
-                .HasForeignKey(e => e.PersonId)
+                .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
 
             entity.HasOne(e => e.AddedByUser)

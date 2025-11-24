@@ -24,6 +24,7 @@ public class WorkLocationPreferencesController : AuthorizedControllerBase
     [RequiresPermission(Resource = "WorkLocationPreference", Action = PermissionAction.Read)]
     public async Task<ActionResult<IEnumerable<WorkLocationPreference>>> GetWorkLocationPreferences(
         [FromQuery] Guid? personId = null,
+        [FromQuery] Guid? userIdFilter = null,
         [FromQuery] DateOnly? startDate = null,
         [FromQuery] DateOnly? endDate = null,
         [FromQuery] WorkLocationType? locationType = null,
@@ -35,7 +36,7 @@ public class WorkLocationPreferencesController : AuthorizedControllerBase
             var userTenantIds = GetUserTenantIds();
 
             var query = _context.WorkLocationPreferences
-                .Include(w => w.Person)
+                .Include(w => w.User)
                 .Include(w => w.Office)
                 .Include(w => w.Booking)
                     .ThenInclude(b => b!.Space)
@@ -57,9 +58,10 @@ public class WorkLocationPreferencesController : AuthorizedControllerBase
                 query = query.Where(w => userTenantIds.Contains(w.TenantId));
             }
 
-            if (personId.HasValue)
+            var targetUserId = userIdFilter ?? personId;
+            if (targetUserId.HasValue)
             {
-                query = query.Where(w => w.PersonId == personId.Value);
+                query = query.Where(w => w.UserId == targetUserId.Value);
             }
 
             if (startDate.HasValue)
@@ -100,7 +102,7 @@ public class WorkLocationPreferencesController : AuthorizedControllerBase
             var userTenantIds = GetUserTenantIds();
 
             var preference = await _context.WorkLocationPreferences
-                .Include(w => w.Person)
+                .Include(w => w.User)
                 .Include(w => w.Office)
                 .Include(w => w.Booking)
                     .ThenInclude(b => b!.Space)
@@ -137,32 +139,32 @@ public class WorkLocationPreferencesController : AuthorizedControllerBase
             var userId = GetCurrentUserId();
             var userTenantIds = GetUserTenantIds();
 
-            // Get the person to check tenant and ownership
-            var person = await _context.People.FindAsync(preference.PersonId);
-            if (person == null)
+            if (preference.UserId == Guid.Empty)
             {
-                return NotFound("Person not found");
+                return BadRequest("UserId is required");
             }
 
-            // Check tenant access
-            if (!userTenantIds.Contains(person.TenantId) && !IsSystemAdmin())
+            if (preference.TenantId == Guid.Empty)
+            {
+                return BadRequest("TenantId is required");
+            }
+
+            // Tenant check
+            if (!userTenantIds.Contains(preference.TenantId) && !IsSystemAdmin())
             {
                 return StatusCode(403, "You do not have access to this tenant");
             }
 
-            // Users can only create their own preferences unless they are system admin
-            if (person.UserId != userId && !IsSystemAdmin())
+            // Users can only create their own preferences unless system admin
+            if (preference.UserId != userId && !IsSystemAdmin())
             {
                 return StatusCode(403, "Users can only create their own work location preferences");
             }
 
-            // Set the tenant ID from the person record
-            preference.TenantId = person.TenantId;
-
             // Check if preference already exists for this person on this date
             var existing = await _context.WorkLocationPreferences
                 .FirstOrDefaultAsync(w =>
-                    w.PersonId == preference.PersonId &&
+                    w.UserId == preference.UserId &&
                     w.WorkDate == preference.WorkDate &&
                     w.TenantId == preference.TenantId);
 
@@ -220,7 +222,6 @@ public class WorkLocationPreferencesController : AuthorizedControllerBase
             var userTenantIds = GetUserTenantIds();
 
             var existing = await _context.WorkLocationPreferences
-                .Include(w => w.Person)
                 .FirstOrDefaultAsync(w => w.Id == id);
 
             if (existing == null)
@@ -235,7 +236,7 @@ public class WorkLocationPreferencesController : AuthorizedControllerBase
             }
 
             // Users can only update their own preferences unless they are system admin
-            if (existing.Person?.UserId != userId && !IsSystemAdmin())
+            if (existing.UserId != userId && !IsSystemAdmin())
             {
                 return StatusCode(403, "Users can only update their own work location preferences");
             }
@@ -294,7 +295,6 @@ public class WorkLocationPreferencesController : AuthorizedControllerBase
             var userTenantIds = GetUserTenantIds();
 
             var preference = await _context.WorkLocationPreferences
-                .Include(w => w.Person)
                 .FirstOrDefaultAsync(w => w.Id == id);
 
             if (preference == null)
@@ -309,7 +309,7 @@ public class WorkLocationPreferencesController : AuthorizedControllerBase
             }
 
             // Users can only delete their own preferences unless they are system admin
-            if (preference.Person?.UserId != userId && !IsSystemAdmin())
+            if (preference.UserId != userId && !IsSystemAdmin())
             {
                 return StatusCode(403, "Users can only delete their own work location preferences");
             }
@@ -341,21 +341,19 @@ public class WorkLocationPreferencesController : AuthorizedControllerBase
             // Validate all preferences first
             foreach (var preference in preferences)
             {
+                if (preference.UserId == Guid.Empty)
+                {
+                    return BadRequest("UserId is required for each preference");
+                }
+
                 // Check tenant access
                 if (!userTenantIds.Contains(preference.TenantId) && !IsSystemAdmin())
                 {
                     return StatusCode(403, $"You do not have access to tenant {preference.TenantId}");
                 }
 
-                // Get the person to check ownership
-                var person = await _context.People.FindAsync(preference.PersonId);
-                if (person == null)
-                {
-                    return NotFound($"Person with ID {preference.PersonId} not found");
-                }
-
                 // Users can only create their own preferences unless they are system admin
-                if (person.UserId != userId && !IsSystemAdmin())
+                if (preference.UserId != userId && !IsSystemAdmin())
                 {
                     return StatusCode(403, "Users can only create their own work location preferences");
                 }
@@ -367,7 +365,7 @@ public class WorkLocationPreferencesController : AuthorizedControllerBase
                 // Check if preference already exists
                 var existing = await _context.WorkLocationPreferences
                     .FirstOrDefaultAsync(w =>
-                        w.PersonId == preference.PersonId &&
+                        w.UserId == preference.UserId &&
                         w.WorkDate == preference.WorkDate &&
                         w.TenantId == preference.TenantId);
 

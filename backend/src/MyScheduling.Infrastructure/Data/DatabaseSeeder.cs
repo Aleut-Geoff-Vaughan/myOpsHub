@@ -72,19 +72,11 @@ public class DatabaseSeeder
             // Backfill passwords for existing users created before hashing was implemented
             await EnsureDefaultPasswordsAsync();
 
-            // Check if data already exists (check both tenants AND people to ensure complete seeding)
-            if (await _context.Tenants.AnyAsync() && await _context.People.AnyAsync())
+            // Check if data already exists (check both tenants AND users to ensure complete seeding)
+            if (await _context.Tenants.AnyAsync() && await _context.Users.AnyAsync())
             {
                 _logger.LogInformation("Database already contains data. Skipping seed.");
                 return;
-            }
-
-            // If we have tenants but no people, we need to clear and re-seed everything
-            if (await _context.Tenants.AnyAsync())
-            {
-                _logger.LogWarning("Found tenants without people. Clearing partial seed data...");
-                _context.Tenants.RemoveRange(_context.Tenants);
-                await _context.SaveChangesAsync();
             }
 
             // Create test admin user
@@ -112,8 +104,8 @@ public class DatabaseSeeder
             {
                 _logger.LogInformation("Seeding data for tenant: {TenantName}", tenant.Name);
 
-                // Create test user with tenant membership and person record for first tenant
-                Person? testPerson = null;
+                // Create test user with tenant membership for first tenant
+                User? testTenantUser = null;
                 if (tenant == tenants.First())
                 {
                     var testUser = new User
@@ -121,6 +113,11 @@ public class DatabaseSeeder
                         Id = Guid.NewGuid(),
                         Email = "test@test.com",
                         DisplayName = "Test User",
+                        JobTitle = "Project Manager",
+                        LaborCategory = "Management",
+                        Location = "Anchorage, AK",
+                        Status = PersonStatus.Active,
+                        Type = PersonType.Employee,
                         EntraObjectId = Guid.NewGuid().ToString(),
                         IsSystemAdmin = false,
                         PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultDevPassword, workFactor: 10),
@@ -144,37 +141,20 @@ public class DatabaseSeeder
                     _context.TenantMemberships.Add(testMembership);
                     await _context.SaveChangesAsync();
 
-                    // Create Person record for test user
-                    testPerson = new Person
-                    {
-                        Id = Guid.NewGuid(),
-                        TenantId = tenant.Id,
-                        Name = "Test User",
-                        Email = "test@test.com",
-                        JobTitle = "Project Manager",
-                        LaborCategory = "Management",
-                        Location = "Anchorage, AK",
-                        Status = PersonStatus.Active,
-                        Type = PersonType.Employee,
-                        UserId = testUser.Id,
-                        CreatedAt = DateTime.UtcNow,
-                        UpdatedAt = DateTime.UtcNow
-                    };
-                    _context.People.Add(testPerson);
-                    await _context.SaveChangesAsync();
+                    testTenantUser = testUser;
 
-                    _logger.LogInformation("Created test user with tenant access and person record: {Email}", testUser.Email);
+                    _logger.LogInformation("Created test user with tenant access: {Email}", testUser.Email);
                 }
 
-                // Create users and people (50 employees per tenant)
-                var people = await CreatePeopleAsync(tenant.Id, 50);
+                // Create users (50 employees per tenant)
+                var users = await CreateUsersAsync(tenant.Id, 50);
 
-                // Add test person to the people list so they get assignments and bookings
-                if (testPerson != null)
+                // Add test user to the list so they get assignments and bookings
+                if (testTenantUser != null)
                 {
-                    people.Insert(0, testPerson);
+                    users.Insert(0, testTenantUser);
                 }
-                _logger.LogInformation("Created {Count} people for {TenantName}", people.Count, tenant.Name);
+                _logger.LogInformation("Created {Count} users for {TenantName}", users.Count, tenant.Name);
 
                 // Create projects
                 var projects = await CreateProjectsAsync(tenant.Id);
@@ -189,7 +169,7 @@ public class DatabaseSeeder
                 _logger.LogInformation("Created {Count} project roles for {TenantName}", projectRoles.Count, tenant.Name);
 
                 // Create assignments
-                var assignments = await CreateAssignmentsAsync(people, wbsElements, projectRoles);
+                var assignments = await CreateAssignmentsAsync(users, tenant.Id, wbsElements, projectRoles);
                 _logger.LogInformation("Created {Count} assignments for {TenantName}", assignments.Count, tenant.Name);
 
                 // Create offices and spaces
@@ -198,13 +178,13 @@ public class DatabaseSeeder
                 _logger.LogInformation("Created hoteling infrastructure for {TenantName}", tenant.Name);
 
                 // Create bookings
-                var bookings = await CreateBookingsAsync(people, spaces);
+                var bookings = await CreateBookingsAsync(users, spaces);
                 _logger.LogInformation("Created {Count} bookings for {TenantName}", bookings.Count, tenant.Name);
 
                 // Create work location preferences for test user (first tenant only)
-                if (testPerson != null && tenant == tenants.First())
+                if (testTenantUser != null && tenant == tenants.First())
                 {
-                    var workLocationPrefs = await CreateWorkLocationPreferencesAsync(testPerson);
+                    var workLocationPrefs = await CreateWorkLocationPreferencesAsync(testTenantUser, tenant.Id);
                     _logger.LogInformation("Created {Count} work location preferences for test user", workLocationPrefs.Count);
                 }
 
@@ -270,14 +250,13 @@ public class DatabaseSeeder
         return tenants;
     }
 
-    private async Task<List<Person>> CreatePeopleAsync(Guid tenantId, int count)
+    private async Task<List<User>> CreateUsersAsync(Guid tenantId, int count)
     {
-        var allPeople = new List<Person>();
+        var allUsers = new List<User>();
         const int batchSize = 10;
 
         for (int batch = 0; batch < count; batch += batchSize)
         {
-            var people = new List<Person>();
             var users = new List<User>();
             var currentBatchSize = Math.Min(batchSize, count - batch);
 
@@ -293,6 +272,11 @@ public class DatabaseSeeder
                     Id = Guid.NewGuid(),
                     Email = email,
                     DisplayName = $"{firstName} {lastName}",
+                    JobTitle = _jobTitles[_random.Next(_jobTitles.Length)],
+                    LaborCategory = _laborCategories[_random.Next(_laborCategories.Length)],
+                    Location = _locations[_random.Next(_locations.Length)],
+                    Status = GetRandomWeightedPersonStatus(),
+                    Type = PersonType.Employee,
                     EntraObjectId = Guid.NewGuid().ToString(), // Use unique GUID for test data
                     IsSystemAdmin = false,
                     PasswordHash = BCrypt.Net.BCrypt.HashPassword(DefaultDevPassword, workFactor: 10),
@@ -314,36 +298,17 @@ public class DatabaseSeeder
                     UpdatedAt = DateTime.UtcNow
                 };
                 _context.TenantMemberships.Add(membership);
-
-                // Create person
-                var person = new Person
-                {
-                    Id = Guid.NewGuid(),
-                    TenantId = tenantId,
-                    Name = $"{firstName} {lastName}",
-                    Email = email,
-                    JobTitle = _jobTitles[_random.Next(_jobTitles.Length)],
-                    LaborCategory = _laborCategories[_random.Next(_laborCategories.Length)],
-                    Location = _locations[_random.Next(_locations.Length)],
-                    Status = GetRandomWeightedPersonStatus(),
-                    Type = PersonType.Employee,
-                    UserId = user.Id,
-                    CreatedAt = DateTime.UtcNow,
-                    UpdatedAt = DateTime.UtcNow
-                };
-                people.Add(person);
             }
 
             _context.Users.AddRange(users);
-            _context.People.AddRange(people);
             await _context.SaveChangesAsync();
-            allPeople.AddRange(people);
+            allUsers.AddRange(users);
 
-            _logger.LogInformation("Created batch of {Count} people (total: {Total}/{Target})",
-                currentBatchSize, allPeople.Count, count);
+            _logger.LogInformation("Created batch of {Count} users (total: {Total}/{Target})",
+                currentBatchSize, allUsers.Count, count);
         }
 
-        return allPeople;
+        return allUsers;
     }
 
     private PersonStatus GetRandomWeightedPersonStatus()
@@ -464,18 +429,19 @@ public class DatabaseSeeder
     }
 
     private async Task<List<Assignment>> CreateAssignmentsAsync(
-        List<Person> people,
+        List<User> users,
+        Guid tenantId,
         List<WbsElement> wbsElements,
         List<ProjectRole> projectRoles)
     {
         var assignments = new List<Assignment>();
-        var activePeople = people.Where(p => p.Status == PersonStatus.Active).ToList();
+        var activeUsers = users.Where(u => u.Status == PersonStatus.Active).ToList();
 
         // Create 60-80 assignments
         var assignmentCount = _random.Next(60, 81);
         for (int i = 0; i < assignmentCount; i++)
         {
-            var person = activePeople[_random.Next(activePeople.Count)];
+            var user = activeUsers[_random.Next(activeUsers.Count)];
             var wbsElement = wbsElements[_random.Next(wbsElements.Count)];
             var projectRole = projectRoles.Where(pr => pr.WbsElementId == wbsElement.Id).OrderBy(_ => _random.Next()).FirstOrDefault();
 
@@ -487,8 +453,8 @@ public class DatabaseSeeder
             assignments.Add(new Assignment
             {
                 Id = Guid.NewGuid(),
-                TenantId = person.TenantId,
-                PersonId = person.Id,
+                TenantId = tenantId,
+                UserId = user.Id,
                 WbsElementId = wbsElement.Id,
                 ProjectRoleId = projectRole.Id,
                 StartDate = startDate,
@@ -593,10 +559,10 @@ public class DatabaseSeeder
         return spaces;
     }
 
-    private async Task<List<Booking>> CreateBookingsAsync(List<Person> people, List<Space> spaces)
+    private async Task<List<Booking>> CreateBookingsAsync(List<User> users, List<Space> spaces)
     {
         var bookings = new List<Booking>();
-        var activePeople = people.Where(p => p.Status == PersonStatus.Active).ToList();
+        var activeUsers = users.Where(u => u.Status == PersonStatus.Active).ToList();
 
         // Create bookings for the past 14 days and next 14 days
         for (int dayOffset = -14; dayOffset <= 14; dayOffset++)
@@ -607,7 +573,7 @@ public class DatabaseSeeder
             var bookingsPerDay = _random.Next(15, 26);
             for (int i = 0; i < bookingsPerDay; i++)
             {
-                var person = activePeople[_random.Next(activePeople.Count)];
+                var user = activeUsers[_random.Next(activeUsers.Count)];
                 var space = spaces[_random.Next(spaces.Count)];
 
                 var startHour = _random.Next(7, 16); // 7 AM to 4 PM
@@ -616,9 +582,9 @@ public class DatabaseSeeder
                 bookings.Add(new Booking
                 {
                     Id = Guid.NewGuid(),
-                    TenantId = person.TenantId,
+                    TenantId = space.TenantId,
                     SpaceId = space.Id,
-                    PersonId = person.Id,
+                    UserId = user.Id,
                     StartDatetime = date.AddHours(startHour),
                     EndDatetime = date.AddHours(startHour + duration),
                     Status = GetBookingStatus(dayOffset),
@@ -640,7 +606,7 @@ public class DatabaseSeeder
         return BookingStatus.Reserved; // Future bookings
     }
 
-    private async Task<List<WorkLocationPreference>> CreateWorkLocationPreferencesAsync(Person person)
+    private async Task<List<WorkLocationPreference>> CreateWorkLocationPreferencesAsync(User user, Guid tenantId)
     {
         var preferences = new List<WorkLocationPreference>();
 
@@ -670,8 +636,8 @@ public class DatabaseSeeder
             preferences.Add(new WorkLocationPreference
             {
                 Id = Guid.NewGuid(),
-                TenantId = person.TenantId,
-                PersonId = person.Id,
+                TenantId = tenantId,
+                UserId = user.Id,
                 WorkDate = DateOnly.FromDateTime(date),
                 LocationType = locationType,
                 RemoteLocation = locationType == WorkLocationType.RemotePlus ? "Home" : null,

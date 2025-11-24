@@ -7,7 +7,7 @@ using MyScheduling.Infrastructure.Data;
 namespace MyScheduling.Api.Controllers;
 
 [ApiController]
-[Route("api/[controller]")]
+[Route("api/login-audits")]
 public class LoginAuditsController : AuthorizedControllerBase
 {
     private readonly MySchedulingDbContext _context;

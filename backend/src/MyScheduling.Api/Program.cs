@@ -6,6 +6,8 @@ using AspNetCoreRateLimit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Microsoft.EntityFrameworkCore;
+using MyScheduling.Core.Entities;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -148,6 +150,61 @@ builder.Services.AddSwaggerGen(options =>
 });
 
 var app = builder.Build();
+
+// Optional lightweight seeding for login audits to help visualize reports.
+// Runs only if table is empty and environment variable SEED_LOGIN_AUDITS=true.
+if (Environment.GetEnvironmentVariable("SEED_LOGIN_AUDITS")?.Equals("true", StringComparison.OrdinalIgnoreCase) == true)
+{
+    using var scope = app.Services.CreateScope();
+    var context = scope.ServiceProvider.GetRequiredService<MySchedulingDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    try
+    {
+        if (!await context.LoginAudits.AnyAsync())
+        {
+            var now = DateTime.UtcNow;
+            var seedEntries = new List<LoginAudit>
+            {
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    Email = "test@test.com",
+                    IsSuccess = true,
+                    IpAddress = "127.0.0.1",
+                    UserAgent = "Seeded Test Client",
+                    CreatedAt = now.AddMinutes(-30)
+                },
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    Email = "admin@test.com",
+                    IsSuccess = true,
+                    IpAddress = "127.0.0.1",
+                    UserAgent = "Seeded Test Client",
+                    CreatedAt = now.AddMinutes(-25)
+                },
+                new()
+                {
+                    Id = Guid.NewGuid(),
+                    Email = "wrong@test.com",
+                    IsSuccess = false,
+                    IpAddress = "127.0.0.1",
+                    UserAgent = "Seeded Test Client",
+                    CreatedAt = now.AddMinutes(-20)
+                }
+            };
+
+            context.LoginAudits.AddRange(seedEntries);
+            await context.SaveChangesAsync();
+            logger.LogInformation("Seeded login audit entries (3 rows)");
+        }
+    }
+    catch (Exception ex)
+    {
+        logger.LogWarning(ex, "Failed to seed login audits");
+    }
+}
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())

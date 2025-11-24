@@ -487,7 +487,54 @@ export function AdminPage({ viewOverride }: AdminPageProps = {}) {
         <p className="text-gray-600 mt-2">
           Manage tenants, users, and system settings
         </p>
+        {user?.isSystemAdmin && (
+          <div className="mt-4 flex gap-3">
+            <Button
+              variant="primary"
+              onClick={() => {
+                setSelectedView('tenants');
+                setShowAddModal(true);
+              }}
+            >
+              + Add Tenant
+            </Button>
+            <Button variant="ghost" onClick={() => setSelectedView('tenants')}>
+              View Tenants
+            </Button>
+          </div>
+        )}
       </div>
+
+      {/* First-time tenant helper for system admins */}
+      {user?.isSystemAdmin && tenants.length === 0 && (
+        <Card className="mb-6 border border-dashed border-purple-300 bg-purple-50">
+          <CardBody className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <p className="text-lg font-semibold text-purple-900">No tenants yet</p>
+              <p className="text-sm text-purple-800">
+                Create your first tenant to start assigning admins and users.
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                variant="primary"
+                onClick={() => {
+                  setSelectedView('tenants');
+                  setShowAddModal(true);
+                }}
+              >
+                + Add Tenant
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => setSelectedView('tenants')}
+              >
+                Go to Tenants
+              </Button>
+            </div>
+          </CardBody>
+        </Card>
+      )}
 
       {/* Stats */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -1654,9 +1701,9 @@ export function AdminPage({ viewOverride }: AdminPageProps = {}) {
                 </div>
 
                 {/* Tenant Memberships Section */}
-                {(selectedItem as ApiUser).tenantMemberships && (selectedItem as ApiUser).tenantMemberships.length > 0 && (
-                  <div className="col-span-2 pt-4 border-t border-gray-200">
-                    <label className="block text-sm font-medium text-gray-700 mb-3">Tenant Memberships</label>
+                <div className="col-span-2 pt-4 border-t border-gray-200">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">Tenant Memberships</label>
+                  {(selectedItem as ApiUser).tenantMemberships && (selectedItem as ApiUser).tenantMemberships.length > 0 ? (
                     <div className="space-y-3">
                       {(selectedItem as ApiUser).tenantMemberships.map(membership => (
                         <div
@@ -1693,8 +1740,71 @@ export function AdminPage({ viewOverride }: AdminPageProps = {}) {
                         </div>
                       ))}
                     </div>
+                  ) : (
+                    <p className="text-sm text-gray-500 italic">No tenant memberships found</p>
+                  )}
+
+                  <div className="mt-4">
+                    {addingMembershipForUser === (selectedItem as ApiUser).id ? (
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Tenant
+                          </label>
+                          <select
+                            value={newMembershipTenantId}
+                            onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setNewMembershipTenantId(e.target.value)}
+                            className="w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                          >
+                            <option value="" disabled>Select tenant...</option>
+                            {tenants.map(t => (
+                              <option key={t.id} value={t.id}>
+                                {t.name} ({t.code})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Roles
+                          </label>
+                          <RoleSelector
+                            selectedRoles={newMembershipRoles}
+                            onChange={setNewMembershipRoles}
+                            disabled={createMembershipMutation.isPending}
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="primary"
+                            size="sm"
+                            onClick={() => saveMembership((selectedItem as ApiUser).id)}
+                            disabled={createMembershipMutation.isPending}
+                          >
+                            {createMembershipMutation.isPending ? 'Saving...' : 'Add Tenant Access'}
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => setAddingMembershipForUser(null)}
+                            disabled={createMembershipMutation.isPending}
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => startAddMembership((selectedItem as ApiUser).id)}
+                        disabled={createMembershipMutation.isPending}
+                      >
+                        + Add tenant access
+                      </Button>
+                    )}
                   </div>
-                )}
+                </div>
               </>
             )}
           </div>

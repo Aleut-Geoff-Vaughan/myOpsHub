@@ -4,7 +4,7 @@ namespace MyScheduling.Core.Entities;
 
 public class ResumeProfile : BaseEntity
 {
-    public Guid PersonId { get; set; }
+    public Guid UserId { get; set; }
     public string? TemplateConfig { get; set; } // JSON for template metadata
 
     // NEW FIELDS - Enhanced functionality
@@ -17,7 +17,7 @@ public class ResumeProfile : BaseEntity
     public DateTime? LinkedInLastSyncedAt { get; set; }
 
     // Navigation properties
-    public virtual Person Person { get; set; } = null!;
+    public virtual User User { get; set; } = null!;
     public virtual ICollection<ResumeSection> Sections { get; set; } = new List<ResumeSection>();
     public virtual ICollection<ResumeVersion> Versions { get; set; } = new List<ResumeVersion>();
     public virtual ICollection<ResumeDocument> Documents { get; set; } = new List<ResumeDocument>();
@@ -28,12 +28,14 @@ public class ResumeProfile : BaseEntity
 
 public class ResumeSection : BaseEntity
 {
-    public Guid PersonId { get; set; }
+    public Guid ResumeProfileId { get; set; }
+    public Guid UserId { get; set; }
     public ResumeSectionType Type { get; set; }
     public int DisplayOrder { get; set; }
 
     // Navigation properties
-    public virtual Person Person { get; set; } = null!;
+    public virtual ResumeProfile ResumeProfile { get; set; } = null!;
+    public virtual User User { get; set; } = null!;
     public virtual ICollection<ResumeEntry> Entries { get; set; } = new List<ResumeEntry>();
 }
 
@@ -83,13 +85,13 @@ public enum SkillCategory
 
 public class PersonSkill : BaseEntity
 {
-    public Guid PersonId { get; set; }
+    public Guid UserId { get; set; }
     public Guid SkillId { get; set; }
     public ProficiencyLevel ProficiencyLevel { get; set; }
     public DateTime? LastUsedDate { get; set; }
 
     // Navigation properties
-    public virtual Person Person { get; set; } = null!;
+    public virtual User User { get; set; } = null!;
     public virtual Skill Skill { get; set; } = null!;
 }
 
@@ -112,13 +114,13 @@ public class Certification : BaseEntity
 
 public class PersonCertification : BaseEntity
 {
-    public Guid PersonId { get; set; }
+    public Guid UserId { get; set; }
     public Guid CertificationId { get; set; }
     public DateTime IssueDate { get; set; }
     public DateTime? ExpiryDate { get; set; }
     public string? CredentialId { get; set; }
 
     // Navigation properties
-    public virtual Person Person { get; set; } = null!;
+    public virtual User User { get; set; } = null!;
     public virtual Certification Certification { get; set; } = null!;
 }

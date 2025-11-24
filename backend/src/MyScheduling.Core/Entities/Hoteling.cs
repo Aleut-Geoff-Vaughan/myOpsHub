@@ -62,14 +62,14 @@ public enum SpaceType
 public class Booking : TenantEntity
 {
     public Guid SpaceId { get; set; }
-    public Guid PersonId { get; set; }
+    public Guid UserId { get; set; }
     public DateTime StartDatetime { get; set; }
     public DateTime EndDatetime { get; set; }
     public BookingStatus Status { get; set; }
 
     // Navigation properties
     public virtual Space Space { get; set; } = null!;
-    public virtual Person Person { get; set; } = null!;
+    public virtual User User { get; set; } = null!;
     public virtual ICollection<CheckInEvent> CheckInEvents { get; set; } = new List<CheckInEvent>();
 }
 
@@ -159,7 +159,7 @@ public enum MaintenanceStatus
 // Work Location Preferences for tracking where people work each day
 public class WorkLocationPreference : TenantEntity
 {
-    public Guid PersonId { get; set; }
+    public Guid UserId { get; set; }
     public DateOnly WorkDate { get; set; }
     public WorkLocationType LocationType { get; set; }
 
@@ -180,7 +180,7 @@ public class WorkLocationPreference : TenantEntity
 
     // Navigation properties
     [System.Text.Json.Serialization.JsonIgnore]
-    public virtual Person? Person { get; set; }
+    public virtual User User { get; set; } = null!;
     [System.Text.Json.Serialization.JsonIgnore]
     public virtual Office? Office { get; set; }
     [System.Text.Json.Serialization.JsonIgnore]

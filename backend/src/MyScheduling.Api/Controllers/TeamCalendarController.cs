@@ -35,8 +35,10 @@ public class TeamCalendarController : AuthorizedControllerBase
 
             var query = _context.TeamCalendars
                 .Include(tc => tc.Owner)
+                    .ThenInclude(o => o!.Manager)
                 .Include(tc => tc.Members.Where(m => m.IsActive))
-                    .ThenInclude(m => m.Person)
+                    .ThenInclude(m => m.User)
+                        .ThenInclude(u => u!.Manager)
                 .AsQueryable();
 
             // Filter by tenant if specified and user has access
@@ -71,29 +73,15 @@ public class TeamCalendarController : AuthorizedControllerBase
                 Description = tc.Description,
                 Type = tc.Type,
                 IsActive = tc.IsActive,
-                OwnerId = tc.OwnerId,
-                Owner = tc.Owner != null ? new PersonSummary
-                {
-                    Id = tc.Owner.Id,
-                    Name = tc.Owner.Name,
-                    Email = tc.Owner.Email,
-                    JobTitle = tc.Owner.JobTitle,
-                    ManagerId = tc.Owner.ManagerId
-                } : null,
+                OwnerUserId = tc.OwnerUserId,
+                Owner = tc.Owner != null ? ToUserSummary(tc.Owner) : null,
                 MemberCount = tc.Members.Count(m => m.IsActive),
                 Members = tc.Members.Where(m => m.IsActive).Select(m => new TeamCalendarMemberResponse
                 {
                     Id = m.Id,
                     TeamCalendarId = m.TeamCalendarId,
-                    PersonId = m.PersonId,
-                    Person = new PersonSummary
-                    {
-                        Id = m.Person.Id,
-                        Name = m.Person.Name,
-                        Email = m.Person.Email,
-                        JobTitle = m.Person.JobTitle,
-                        ManagerId = m.Person.ManagerId
-                    },
+                    UserId = m.UserId,
+                    User = ToUserSummary(m.User),
                     MembershipType = m.MembershipType,
                     AddedDate = m.AddedDate,
                     AddedByUserId = m.AddedByUserId,
@@ -122,9 +110,10 @@ public class TeamCalendarController : AuthorizedControllerBase
         {
             var calendar = await _context.TeamCalendars
                 .Include(tc => tc.Owner)
+                    .ThenInclude(o => o!.Manager)
                 .Include(tc => tc.Members.Where(m => m.IsActive))
-                    .ThenInclude(m => m.Person)
-                        .ThenInclude(p => p.Manager)
+                    .ThenInclude(m => m.User)
+                        .ThenInclude(u => u!.Manager)
                 .FirstOrDefaultAsync(tc => tc.Id == id);
 
             if (calendar == null)
@@ -140,31 +129,15 @@ public class TeamCalendarController : AuthorizedControllerBase
                 Description = calendar.Description,
                 Type = calendar.Type,
                 IsActive = calendar.IsActive,
-                OwnerId = calendar.OwnerId,
-                Owner = calendar.Owner != null ? new PersonSummary
-                {
-                    Id = calendar.Owner.Id,
-                    Name = calendar.Owner.Name,
-                    Email = calendar.Owner.Email,
-                    JobTitle = calendar.Owner.JobTitle,
-                    ManagerId = calendar.Owner.ManagerId,
-                    ManagerName = calendar.Owner.Manager?.Name
-                } : null,
+                OwnerUserId = calendar.OwnerUserId,
+                Owner = calendar.Owner != null ? ToUserSummary(calendar.Owner, calendar.Owner.Manager) : null,
                 MemberCount = calendar.Members.Count(m => m.IsActive),
                 Members = calendar.Members.Where(m => m.IsActive).Select(m => new TeamCalendarMemberResponse
                 {
                     Id = m.Id,
                     TeamCalendarId = m.TeamCalendarId,
-                    PersonId = m.PersonId,
-                    Person = new PersonSummary
-                    {
-                        Id = m.Person.Id,
-                        Name = m.Person.Name,
-                        Email = m.Person.Email,
-                        JobTitle = m.Person.JobTitle,
-                        ManagerId = m.Person.ManagerId,
-                        ManagerName = m.Person.Manager?.Name
-                    },
+                    UserId = m.UserId,
+                    User = ToUserSummary(m.User, m.User?.Manager),
                     MembershipType = m.MembershipType,
                     AddedDate = m.AddedDate,
                     AddedByUserId = m.AddedByUserId,
@@ -202,14 +175,14 @@ public class TeamCalendarController : AuthorizedControllerBase
             }
 
             // Validate owner if provided
-            if (request.OwnerId.HasValue)
+            if (request.OwnerUserId.HasValue)
             {
-                var ownerExists = await _context.People
-                    .AnyAsync(p => p.Id == request.OwnerId.Value && p.TenantId == request.TenantId);
+                var ownerExists = await _context.TenantMemberships
+                    .AnyAsync(tm => tm.UserId == request.OwnerUserId.Value && tm.TenantId == request.TenantId && tm.IsActive);
 
                 if (!ownerExists)
                 {
-                    return BadRequest(new { error = "Owner person not found in this tenant" });
+                    return BadRequest(new { error = "Owner user not found in this tenant" });
                 }
             }
 
@@ -221,7 +194,7 @@ public class TeamCalendarController : AuthorizedControllerBase
                 Description = request.Description,
                 Type = request.Type,
                 IsActive = request.IsActive,
-                OwnerId = request.OwnerId,
+                OwnerUserId = request.OwnerUserId,
                 CreatedAt = DateTime.UtcNow
             };
 
@@ -240,7 +213,7 @@ public class TeamCalendarController : AuthorizedControllerBase
                 Description = calendar.Description,
                 Type = calendar.Type,
                 IsActive = calendar.IsActive,
-                OwnerId = calendar.OwnerId,
+                OwnerUserId = calendar.OwnerUserId,
                 MemberCount = 0,
                 Members = new List<TeamCalendarMemberResponse>(),
                 CreatedAt = calendar.CreatedAt
@@ -267,6 +240,7 @@ public class TeamCalendarController : AuthorizedControllerBase
             var userId = GetCurrentUserId();
             var calendar = await _context.TeamCalendars
                 .Include(tc => tc.Owner)
+                    .ThenInclude(o => o!.Manager)
                 .FirstOrDefaultAsync(tc => tc.Id == id);
 
             if (calendar == null)
@@ -275,14 +249,14 @@ public class TeamCalendarController : AuthorizedControllerBase
             }
 
             // Validate owner if changed
-            if (request.OwnerId.HasValue)
+            if (request.OwnerUserId.HasValue)
             {
-                var ownerExists = await _context.People
-                    .AnyAsync(p => p.Id == request.OwnerId.Value && p.TenantId == calendar.TenantId);
+                var ownerExists = await _context.TenantMemberships
+                    .AnyAsync(tm => tm.UserId == request.OwnerUserId.Value && tm.TenantId == calendar.TenantId && tm.IsActive);
 
                 if (!ownerExists)
                 {
-                    return BadRequest(new { error = "Owner person not found in this tenant" });
+                    return BadRequest(new { error = "Owner user not found in this tenant" });
                 }
             }
 
@@ -290,7 +264,7 @@ public class TeamCalendarController : AuthorizedControllerBase
             calendar.Description = request.Description;
             calendar.Type = request.Type;
             calendar.IsActive = request.IsActive;
-            calendar.OwnerId = request.OwnerId;
+            calendar.OwnerUserId = request.OwnerUserId;
             calendar.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
@@ -305,15 +279,8 @@ public class TeamCalendarController : AuthorizedControllerBase
                 Description = calendar.Description,
                 Type = calendar.Type,
                 IsActive = calendar.IsActive,
-                OwnerId = calendar.OwnerId,
-                Owner = calendar.Owner != null ? new PersonSummary
-                {
-                    Id = calendar.Owner.Id,
-                    Name = calendar.Owner.Name,
-                    Email = calendar.Owner.Email,
-                    JobTitle = calendar.Owner.JobTitle,
-                    ManagerId = calendar.Owner.ManagerId
-                } : null,
+                OwnerUserId = calendar.OwnerUserId,
+                Owner = calendar.Owner != null ? ToUserSummary(calendar.Owner, calendar.Owner.Manager) : null,
                 MemberCount = await _context.TeamCalendarMembers.CountAsync(m => m.TeamCalendarId == id && m.IsActive),
                 CreatedAt = calendar.CreatedAt
             });
@@ -377,23 +344,31 @@ public class TeamCalendarController : AuthorizedControllerBase
                 return NotFound(new { error = "Team calendar not found" });
             }
 
-            // Check if person exists in the same tenant
-            var person = await _context.People
-                .Include(p => p.Manager)
-                .FirstOrDefaultAsync(p => p.Id == request.PersonId && p.TenantId == calendar.TenantId);
+            // Check if user exists in the same tenant
+            var memberUser = await _context.Users
+                .Include(u => u.Manager)
+                .FirstOrDefaultAsync(u => u.Id == request.UserId);
 
-            if (person == null)
+            if (memberUser == null)
             {
-                return BadRequest(new { error = "Person not found in this tenant" });
+                return BadRequest(new { error = "User not found" });
+            }
+
+            var hasTenantAccess = await _context.TenantMemberships
+                .AnyAsync(tm => tm.UserId == request.UserId && tm.TenantId == calendar.TenantId && tm.IsActive);
+
+            if (!hasTenantAccess)
+            {
+                return BadRequest(new { error = "User is not in this tenant" });
             }
 
             // Check if already a member
             var existingMember = calendar.Members
-                .FirstOrDefault(m => m.PersonId == request.PersonId);
+                .FirstOrDefault(m => m.UserId == request.UserId);
 
             if (existingMember != null && existingMember.IsActive)
             {
-                return BadRequest(new { error = "Person is already a member of this calendar" });
+                return BadRequest(new { error = "User is already a member of this calendar" });
             }
 
             // If previously removed, reactivate
@@ -409,16 +384,8 @@ public class TeamCalendarController : AuthorizedControllerBase
                 {
                     Id = existingMember.Id,
                     TeamCalendarId = existingMember.TeamCalendarId,
-                    PersonId = existingMember.PersonId,
-                    Person = new PersonSummary
-                    {
-                        Id = person.Id,
-                        Name = person.Name,
-                        Email = person.Email,
-                        JobTitle = person.JobTitle,
-                        ManagerId = person.ManagerId,
-                        ManagerName = person.Manager?.Name
-                    },
+                    UserId = existingMember.UserId,
+                    User = ToUserSummary(memberUser, memberUser.Manager),
                     MembershipType = existingMember.MembershipType,
                     AddedDate = existingMember.AddedDate,
                     AddedByUserId = existingMember.AddedByUserId,
@@ -432,7 +399,7 @@ public class TeamCalendarController : AuthorizedControllerBase
                 Id = Guid.NewGuid(),
                 TenantId = calendar.TenantId,
                 TeamCalendarId = id,
-                PersonId = request.PersonId,
+                UserId = request.UserId,
                 MembershipType = request.MembershipType,
                 AddedDate = DateTime.UtcNow,
                 AddedByUserId = userId,
@@ -443,23 +410,15 @@ public class TeamCalendarController : AuthorizedControllerBase
             _context.TeamCalendarMembers.Add(member);
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Person {PersonId} added to team calendar {CalendarId} by user {UserId}",
-                request.PersonId, id, userId);
+            _logger.LogInformation("User {UserId} added to team calendar {CalendarId} by user {RequestingUserId}",
+                request.UserId, id, userId);
 
             return Ok(new TeamCalendarMemberResponse
             {
                 Id = member.Id,
                 TeamCalendarId = member.TeamCalendarId,
-                PersonId = member.PersonId,
-                Person = new PersonSummary
-                {
-                    Id = person.Id,
-                    Name = person.Name,
-                    Email = person.Email,
-                    JobTitle = person.JobTitle,
-                    ManagerId = person.ManagerId,
-                    ManagerName = person.Manager?.Name
-                },
+                UserId = member.UserId,
+                User = ToUserSummary(memberUser, memberUser.Manager),
                 MembershipType = member.MembershipType,
                 AddedDate = member.AddedDate,
                 AddedByUserId = member.AddedByUserId,
@@ -494,23 +453,31 @@ public class TeamCalendarController : AuthorizedControllerBase
                 return NotFound(new { error = "Team calendar not found" });
             }
 
-            // Get all persons in one query
-            var people = await _context.People
-                .Include(p => p.Manager)
-                .Where(p => request.PersonIds.Contains(p.Id) && p.TenantId == calendar.TenantId)
+            // Get all users in one query
+            var users = await _context.Users
+                .Include(u => u.Manager)
+                .Where(u => request.UserIds.Contains(u.Id))
                 .ToListAsync();
 
-            if (people.Count != request.PersonIds.Count)
+            var tenantMemberships = await _context.TenantMemberships
+                .Where(tm => tm.TenantId == calendar.TenantId && request.UserIds.Contains(tm.UserId) && tm.IsActive)
+                .ToListAsync();
+
+            var allowedUsers = users
+                .Where(u => tenantMemberships.Any(tm => tm.UserId == u.Id))
+                .ToList();
+
+            if (allowedUsers.Count != request.UserIds.Count)
             {
-                return BadRequest(new { error = "Some persons not found in this tenant" });
+                return BadRequest(new { error = "Some users not found in this tenant" });
             }
 
             var responses = new List<TeamCalendarMemberResponse>();
 
-            foreach (var person in people)
+            foreach (var user in allowedUsers)
             {
                 var existingMember = calendar.Members
-                    .FirstOrDefault(m => m.PersonId == person.Id);
+                    .FirstOrDefault(m => m.UserId == user.Id);
 
                 if (existingMember != null && existingMember.IsActive)
                 {
@@ -521,30 +488,22 @@ public class TeamCalendarController : AuthorizedControllerBase
                 if (existingMember != null && !existingMember.IsActive)
                 {
                     // Reactivate
-                    existingMember.IsActive = true;
-                    existingMember.MembershipType = request.MembershipType;
-                    existingMember.AddedDate = DateTime.UtcNow;
-                    existingMember.AddedByUserId = userId;
+                        existingMember.IsActive = true;
+                        existingMember.MembershipType = request.MembershipType;
+                        existingMember.AddedDate = DateTime.UtcNow;
+                        existingMember.AddedByUserId = userId;
 
-                    responses.Add(new TeamCalendarMemberResponse
-                    {
-                        Id = existingMember.Id,
-                        TeamCalendarId = existingMember.TeamCalendarId,
-                        PersonId = existingMember.PersonId,
-                        Person = new PersonSummary
+                        responses.Add(new TeamCalendarMemberResponse
                         {
-                            Id = person.Id,
-                            Name = person.Name,
-                            Email = person.Email,
-                            JobTitle = person.JobTitle,
-                            ManagerId = person.ManagerId,
-                            ManagerName = person.Manager?.Name
-                        },
-                        MembershipType = existingMember.MembershipType,
-                        AddedDate = existingMember.AddedDate,
-                        AddedByUserId = existingMember.AddedByUserId,
-                        IsActive = existingMember.IsActive
-                    });
+                            Id = existingMember.Id,
+                            TeamCalendarId = existingMember.TeamCalendarId,
+                            UserId = existingMember.UserId,
+                            User = ToUserSummary(user, user.Manager),
+                            MembershipType = existingMember.MembershipType,
+                            AddedDate = existingMember.AddedDate,
+                            AddedByUserId = existingMember.AddedByUserId,
+                            IsActive = existingMember.IsActive
+                        });
                 }
                 else
                 {
@@ -554,7 +513,7 @@ public class TeamCalendarController : AuthorizedControllerBase
                         Id = Guid.NewGuid(),
                         TenantId = calendar.TenantId,
                         TeamCalendarId = id,
-                        PersonId = person.Id,
+                        UserId = user.Id,
                         MembershipType = request.MembershipType,
                         AddedDate = DateTime.UtcNow,
                         AddedByUserId = userId,
@@ -568,16 +527,8 @@ public class TeamCalendarController : AuthorizedControllerBase
                     {
                         Id = member.Id,
                         TeamCalendarId = member.TeamCalendarId,
-                        PersonId = member.PersonId,
-                        Person = new PersonSummary
-                        {
-                            Id = person.Id,
-                            Name = person.Name,
-                            Email = person.Email,
-                            JobTitle = person.JobTitle,
-                            ManagerId = person.ManagerId,
-                            ManagerName = person.Manager?.Name
-                        },
+                        UserId = member.UserId,
+                        User = ToUserSummary(user, user.Manager),
                         MembershipType = member.MembershipType,
                         AddedDate = member.AddedDate,
                         AddedByUserId = member.AddedByUserId,
@@ -650,9 +601,10 @@ public class TeamCalendarController : AuthorizedControllerBase
         {
             var calendar = await _context.TeamCalendars
                 .Include(tc => tc.Owner)
+                    .ThenInclude(o => o!.Manager)
                 .Include(tc => tc.Members.Where(m => m.IsActive))
-                    .ThenInclude(m => m.Person)
-                        .ThenInclude(p => p.WorkLocationPreferences)
+                    .ThenInclude(m => m.User)
+                        .ThenInclude(u => u!.Manager)
                 .FirstOrDefaultAsync(tc => tc.Id == id);
 
             if (calendar == null)
@@ -664,23 +616,32 @@ public class TeamCalendarController : AuthorizedControllerBase
             var start = startDate ?? DateOnly.FromDateTime(DateTime.Today);
             var end = endDate ?? start.AddDays(13);
 
+            var memberUserIds = calendar.Members.Where(m => m.IsActive).Select(m => m.UserId).ToList();
+
+            var preferences = await _context.WorkLocationPreferences
+                .Where(p => p.TenantId == calendar.TenantId &&
+                            memberUserIds.Contains(p.UserId) &&
+                            p.WorkDate >= start &&
+                            p.WorkDate <= end)
+                .ToListAsync();
+
             var memberSchedules = calendar.Members
                 .Where(m => m.IsActive)
                 .Select(m =>
                 {
-                    var preferences = m.Person.WorkLocationPreferences
-                        .Where(p => p.WorkDate >= start && p.WorkDate <= end)
+                    var userPreferences = preferences
+                        .Where(p => p.UserId == m.UserId)
                         .OrderBy(p => p.WorkDate)
                         .ToList();
 
                     return new TeamMemberSchedule
                     {
-                        PersonId = m.PersonId,
-                        PersonName = m.Person.Name,
-                        PersonEmail = m.Person.Email,
-                        ManagerId = m.Person.ManagerId,
-                        JobTitle = m.Person.JobTitle,
-                        Preferences = preferences.Select(p => new WorkLocationPreferenceResponse
+                        UserId = m.UserId,
+                        UserName = m.User.DisplayName,
+                        UserEmail = m.User.Email,
+                        ManagerUserId = m.User.ManagerId,
+                        JobTitle = m.User.JobTitle,
+                        Preferences = userPreferences.Select(p => new WorkLocationPreferenceResponse
                         {
                             Id = p.Id,
                             WorkDate = p.WorkDate.ToString("yyyy-MM-dd"),
@@ -694,7 +655,7 @@ public class TeamCalendarController : AuthorizedControllerBase
                         }).ToList()
                     };
                 })
-                .OrderBy(ms => ms.PersonName)
+                .OrderBy(ms => ms.UserName)
                 .ToList();
 
             var response = new TeamCalendarViewResponse
@@ -707,15 +668,8 @@ public class TeamCalendarController : AuthorizedControllerBase
                     Description = calendar.Description,
                     Type = calendar.Type,
                     IsActive = calendar.IsActive,
-                    OwnerId = calendar.OwnerId,
-                    Owner = calendar.Owner != null ? new PersonSummary
-                    {
-                        Id = calendar.Owner.Id,
-                        Name = calendar.Owner.Name,
-                        Email = calendar.Owner.Email,
-                        JobTitle = calendar.Owner.JobTitle,
-                        ManagerId = calendar.Owner.ManagerId
-                    } : null,
+                    OwnerUserId = calendar.OwnerUserId,
+                    Owner = calendar.Owner != null ? ToUserSummary(calendar.Owner, calendar.Owner.Manager) : null,
                     MemberCount = calendar.Members.Count(m => m.IsActive),
                     CreatedAt = calendar.CreatedAt
                 },
@@ -738,68 +692,69 @@ public class TeamCalendarController : AuthorizedControllerBase
     /// </summary>
     [HttpGet("manager-view")]
     public async Task<ActionResult<ManagerViewResponse>> GetManagerView(
-        [FromQuery] Guid? managerId = null,
-        [FromQuery] Guid? personId = null,
+        [FromQuery] Guid? managerUserId = null,
+        [FromQuery] Guid? userId = null,
+        [FromQuery] string scope = "direct",
         [FromQuery] DateOnly? startDate = null,
         [FromQuery] DateOnly? endDate = null)
     {
         try
         {
-            Guid effectiveManagerId;
+            Guid effectiveManagerId = managerUserId ?? userId ?? GetCurrentUserId();
 
-            // Determine which manager to use
-            if (managerId.HasValue)
-            {
-                effectiveManagerId = managerId.Value;
-            }
-            else if (personId.HasValue)
-            {
-                // Look up person and use their ID as manager
-                var person = await _context.People.FindAsync(personId.Value);
-                if (person == null)
-                {
-                    return NotFound(new { error = "Person not found" });
-                }
-                effectiveManagerId = person.Id;
-            }
-            else
-            {
-                return BadRequest(new { error = "Either managerId or personId must be provided" });
-            }
-
-            var manager = await _context.People
-                .FirstOrDefaultAsync(p => p.Id == effectiveManagerId);
+            var manager = await _context.Users
+                .Include(u => u.Manager)
+                .FirstOrDefaultAsync(u => u.Id == effectiveManagerId);
 
             if (manager == null)
             {
                 return NotFound(new { error = "Manager not found" });
             }
 
-            // Get direct reports
-            var directReports = await _context.People
-                .Include(p => p.WorkLocationPreferences)
-                .Where(p => p.ManagerId == effectiveManagerId && p.Status == PersonStatus.Active)
-                .ToListAsync();
+            // Normalize scope
+            var useAllReports = string.Equals(scope, "all", StringComparison.OrdinalIgnoreCase) ||
+                                string.Equals(scope, "team", StringComparison.OrdinalIgnoreCase);
+
+            // Get reports (direct or full hierarchy)
+            List<User> reports;
+            if (useAllReports)
+            {
+                var allReports = new List<User>();
+                await GatherAllReportsRecursive(effectiveManagerId, allReports);
+                reports = allReports;
+            }
+            else
+            {
+                reports = await _context.Users
+                    .Where(u => u.ManagerId == effectiveManagerId && u.Status == PersonStatus.Active)
+                    .Include(u => u.Manager)
+                    .ToListAsync();
+            }
 
             // Default to 2 weeks if not specified
             var start = startDate ?? DateOnly.FromDateTime(DateTime.Today);
             var end = endDate ?? start.AddDays(13);
 
-            var memberSchedules = directReports.Select(dr =>
+            var reportIds = reports.Select(r => r.Id).ToList();
+            var preferences = await _context.WorkLocationPreferences
+                .Where(p => reportIds.Contains(p.UserId) && p.WorkDate >= start && p.WorkDate <= end)
+                .ToListAsync();
+
+            var memberSchedules = reports.Select(dr =>
             {
-                var preferences = dr.WorkLocationPreferences
-                    .Where(p => p.WorkDate >= start && p.WorkDate <= end)
+                var userPreferences = preferences
+                    .Where(p => p.UserId == dr.Id)
                     .OrderBy(p => p.WorkDate)
                     .ToList();
 
                 return new TeamMemberSchedule
                 {
-                    PersonId = dr.Id,
-                    PersonName = dr.Name,
-                    PersonEmail = dr.Email,
-                    ManagerId = dr.ManagerId,
+                    UserId = dr.Id,
+                    UserName = dr.DisplayName,
+                    UserEmail = dr.Email,
+                    ManagerUserId = dr.ManagerId,
                     JobTitle = dr.JobTitle,
-                    Preferences = preferences.Select(p => new WorkLocationPreferenceResponse
+                    Preferences = userPreferences.Select(p => new WorkLocationPreferenceResponse
                     {
                         Id = p.Id,
                         WorkDate = p.WorkDate.ToString("yyyy-MM-dd"),
@@ -813,23 +768,16 @@ public class TeamCalendarController : AuthorizedControllerBase
                     }).ToList()
                 };
             })
-            .OrderBy(ms => ms.PersonName)
+            .OrderBy(ms => ms.UserName)
             .ToList();
 
             var response = new ManagerViewResponse
             {
-                Manager = new PersonSummary
-                {
-                    Id = manager.Id,
-                    Name = manager.Name,
-                    Email = manager.Email,
-                    JobTitle = manager.JobTitle,
-                    ManagerId = manager.ManagerId
-                },
+                Manager = ToUserSummary(manager, manager.Manager),
                 DirectReports = memberSchedules,
                 StartDate = start.ToDateTime(TimeOnly.MinValue),
                 EndDate = end.ToDateTime(TimeOnly.MinValue),
-                TotalDirectReports = directReports.Count
+                TotalDirectReports = reports.Count
             };
 
             return Ok(response);
@@ -841,30 +789,64 @@ public class TeamCalendarController : AuthorizedControllerBase
         }
     }
 
+    private static UserSummary ToUserSummary(User user, User? manager = null)
+    {
+        return new UserSummary
+        {
+            Id = user.Id,
+            DisplayName = user.DisplayName,
+            Email = user.Email,
+            JobTitle = user.JobTitle,
+            ManagerUserId = user.ManagerId,
+            ManagerName = manager?.DisplayName
+        };
+    }
+
     /// <summary>
-    /// Get available team calendars for a person to opt into
+    /// Recursively collect all active reports under a manager (manager -> reports -> their reports, etc.)
+    /// </summary>
+    private async Task GatherAllReportsRecursive(Guid managerId, List<User> accumulator)
+    {
+        var directReports = await _context.Users
+            .Where(u => u.ManagerId == managerId && u.Status == PersonStatus.Active)
+            .ToListAsync();
+
+        foreach (var dr in directReports)
+        {
+            accumulator.Add(dr);
+            await GatherAllReportsRecursive(dr.Id, accumulator);
+        }
+    }
+
+    /// <summary>
+    /// Get available team calendars for a user to opt into
     /// </summary>
     [HttpGet("available")]
     public async Task<ActionResult<AvailableTeamCalendarsResponse>> GetAvailableTeamCalendars(
-        [FromQuery] Guid personId)
+        [FromQuery] Guid userId)
     {
         try
         {
-            var person = await _context.People.FindAsync(personId);
-            if (person == null)
+            var memberships = await _context.TenantMemberships
+                .Where(tm => tm.UserId == userId && tm.IsActive)
+                .ToListAsync();
+
+            if (!memberships.Any())
             {
-                return NotFound(new { error = "Person not found" });
+                return NotFound(new { error = "User not found" });
             }
+
+            var tenantIds = memberships.Select(m => m.TenantId).ToList();
 
             // Get all active calendars for this tenant
             var allCalendars = await _context.TeamCalendars
-                .Where(tc => tc.TenantId == person.TenantId && tc.IsActive)
+                .Where(tc => tenantIds.Contains(tc.TenantId) && tc.IsActive)
                 .Include(tc => tc.Members)
                 .ToListAsync();
 
             // Get calendars person is already a member of
             var memberOfIds = await _context.TeamCalendarMembers
-                .Where(m => m.PersonId == personId && m.IsActive)
+                .Where(m => m.UserId == userId && m.IsActive)
                 .Select(m => m.TeamCalendarId)
                 .ToListAsync();
 
@@ -885,7 +867,7 @@ public class TeamCalendarController : AuthorizedControllerBase
                 .Where(c => memberOfIds.Contains(c.Id))
                 .Select(c =>
                 {
-                    var membership = c.Members.First(m => m.PersonId == personId && m.IsActive);
+                    var membership = c.Members.First(m => m.UserId == userId && m.IsActive);
                     return new TeamCalendarSummary
                     {
                         Id = c.Id,
@@ -907,7 +889,7 @@ public class TeamCalendarController : AuthorizedControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving available team calendars for person {PersonId}", personId);
+            _logger.LogError(ex, "Error retrieving available team calendars for user {UserId}", userId);
             return StatusCode(500, new { error = "An error occurred while retrieving available calendars" });
         }
     }

@@ -27,7 +27,7 @@ public enum ProjectRoleStatus
 
 public class Assignment : TenantEntity
 {
-    public Guid PersonId { get; set; }
+    public Guid UserId { get; set; }
     public Guid? ProjectRoleId { get; set; }
     public Guid WbsElementId { get; set; }
     public int AllocationPct { get; set; } // 0-100
@@ -39,7 +39,7 @@ public class Assignment : TenantEntity
     public DateTime? ApprovedAt { get; set; }
 
     // Navigation properties
-    public virtual Person Person { get; set; } = null!;
+    public virtual User User { get; set; } = null!;
     public virtual ProjectRole? ProjectRole { get; set; }
     public virtual WbsElement WbsElement { get; set; } = null!;
     public virtual User? ApprovedByUser { get; set; }

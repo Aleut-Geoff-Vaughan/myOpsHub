@@ -126,7 +126,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("TenantId", "PersonId", "Status")
                         .HasDatabaseName("ix_assignments_tenant_id_person_id_status");
 
-                    b.ToTable("assignments");
+                    b.ToTable("assignments", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.AssignmentHistory", b =>
@@ -210,7 +210,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("AssignmentId", "ChangedAt")
                         .HasDatabaseName("ix_assignment_history_assignment_id_changed_at");
 
-                    b.ToTable("assignment_history");
+                    b.ToTable("assignment_history", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.AuthorizationAuditLog", b =>
@@ -318,7 +318,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("UserId", "Timestamp")
                         .HasDatabaseName("ix_authorization_audit_logs_user_id_timestamp");
 
-                    b.ToTable("authorization_audit_logs");
+                    b.ToTable("authorization_audit_logs", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.Booking", b =>
@@ -399,7 +399,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("SpaceId", "StartDatetime", "EndDatetime")
                         .HasDatabaseName("ix_bookings_space_id_start_datetime_end_datetime");
 
-                    b.ToTable("bookings");
+                    b.ToTable("bookings", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.Certification", b =>
@@ -457,7 +457,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("Name")
                         .HasDatabaseName("ix_certifications_name");
 
-                    b.ToTable("certifications");
+                    b.ToTable("certifications", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.CheckInEvent", b =>
@@ -523,7 +523,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("BookingId")
                         .HasDatabaseName("ix_check_in_events_booking_id");
 
-                    b.ToTable("check_in_events");
+                    b.ToTable("check_in_events", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.CompanyHoliday", b =>
@@ -605,7 +605,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("TenantId", "HolidayDate", "Type")
                         .HasDatabaseName("ix_company_holidays_tenant_id_holiday_date_type");
 
-                    b.ToTable("company_holidays");
+                    b.ToTable("company_holidays", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.DOAActivation", b =>
@@ -700,7 +700,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("TenantId", "DOALetterId", "IsActive")
                         .HasDatabaseName("ix_doaactivations_tenant_id_doaletter_id_is_active");
 
-                    b.ToTable("doaactivations");
+                    b.ToTable("doaactivations", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.DataArchive", b =>
@@ -864,7 +864,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("TenantId", "Status")
                         .HasDatabaseName("ix_data_archives_tenant_id_status");
 
-                    b.ToTable("data_archives");
+                    b.ToTable("data_archives", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.DataArchiveExport", b =>
@@ -968,7 +968,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("TenantId", "Status")
                         .HasDatabaseName("ix_data_archive_exports_tenant_id_status");
 
-                    b.ToTable("data_archive_exports");
+                    b.ToTable("data_archive_exports", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.DelegationOfAuthorityLetter", b =>
@@ -1074,7 +1074,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("TenantId", "DesigneeUserId", "Status")
                         .HasDatabaseName("ix_delegation_of_authority_letters_tenant_id_designee_user_id_~");
 
-                    b.ToTable("delegation_of_authority_letters");
+                    b.ToTable("delegation_of_authority_letters", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.DigitalSignature", b =>
@@ -1164,7 +1164,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("DOALetterId", "Role")
                         .HasDatabaseName("ix_digital_signatures_doaletter_id_role");
 
-                    b.ToTable("digital_signatures");
+                    b.ToTable("digital_signatures", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.FacilityPermission", b =>
@@ -1241,7 +1241,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("OfficeId", "SpaceId", "UserId")
                         .HasDatabaseName("ix_facility_permissions_office_id_space_id_user_id");
 
-                    b.ToTable("facility_permissions");
+                    b.ToTable("facility_permissions", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.FileAccessLog", b =>
@@ -1319,7 +1319,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("StoredFileId", "AccessedAt")
                         .HasDatabaseName("ix_file_access_logs_stored_file_id_accessed_at");
 
-                    b.ToTable("file_access_logs");
+                    b.ToTable("file_access_logs", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.LinkedInImport", b =>
@@ -1411,7 +1411,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("ResumeProfileId", "Status")
                         .HasDatabaseName("ix_linked_in_imports_resume_profile_id_status");
 
-                    b.ToTable("linked_in_imports");
+                    b.ToTable("linked_in_imports", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.Office", b =>
@@ -1485,7 +1485,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("TenantId", "Status")
                         .HasDatabaseName("ix_offices_tenant_id_status");
 
-                    b.ToTable("offices");
+                    b.ToTable("offices", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.Permission", b =>
@@ -1585,7 +1585,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("UserId", "Resource", "Action")
                         .HasDatabaseName("ix_permissions_user_id_resource_action");
 
-                    b.ToTable("permissions");
+                    b.ToTable("permissions", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.Person", b =>
@@ -1694,7 +1694,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("TenantId", "Email")
                         .HasDatabaseName("ix_people_tenant_id_email");
 
-                    b.ToTable("people");
+                    b.ToTable("people", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.PersonCertification", b =>
@@ -1765,7 +1765,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("PersonId", "CertificationId")
                         .HasDatabaseName("ix_person_certifications_person_id_certification_id");
 
-                    b.ToTable("person_certifications");
+                    b.ToTable("person_certifications", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.PersonSkill", b =>
@@ -1833,7 +1833,7 @@ namespace MyScheduling.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_person_skills_person_id_skill_id");
 
-                    b.ToTable("person_skills");
+                    b.ToTable("person_skills", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.Project", b =>
@@ -1914,7 +1914,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("TenantId", "Status")
                         .HasDatabaseName("ix_projects_tenant_id_status");
 
-                    b.ToTable("projects");
+                    b.ToTable("projects", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.ProjectRole", b =>
@@ -2007,7 +2007,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("TenantId", "WbsElementId", "Status")
                         .HasDatabaseName("ix_project_roles_tenant_id_wbs_element_id_status");
 
-                    b.ToTable("project_roles");
+                    b.ToTable("project_roles", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.ResumeApproval", b =>
@@ -2105,7 +2105,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("Status", "RequestedAt")
                         .HasDatabaseName("ix_resume_approvals_status_requested_at");
 
-                    b.ToTable("resume_approvals");
+                    b.ToTable("resume_approvals", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.ResumeDocument", b =>
@@ -2192,7 +2192,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("ResumeProfileId", "GeneratedAt")
                         .HasDatabaseName("ix_resume_documents_resume_profile_id_generated_at");
 
-                    b.ToTable("resume_documents");
+                    b.ToTable("resume_documents", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.ResumeEntry", b =>
@@ -2270,7 +2270,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("ResumeSectionId")
                         .HasDatabaseName("ix_resume_entries_resume_section_id");
 
-                    b.ToTable("resume_entries");
+                    b.ToTable("resume_entries", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.ResumeProfile", b =>
@@ -2368,7 +2368,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("Status")
                         .HasDatabaseName("ix_resume_profiles_status");
 
-                    b.ToTable("resume_profiles");
+                    b.ToTable("resume_profiles", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.ResumeSection", b =>
@@ -2435,7 +2435,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("PersonId", "DisplayOrder")
                         .HasDatabaseName("ix_resume_sections_person_id_display_order");
 
-                    b.ToTable("resume_sections");
+                    b.ToTable("resume_sections", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.ResumeTemplate", b =>
@@ -2530,7 +2530,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("TenantId", "Type", "IsActive")
                         .HasDatabaseName("ix_resume_templates_tenant_id_type_is_active");
 
-                    b.ToTable("resume_templates");
+                    b.ToTable("resume_templates", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.ResumeVersion", b =>
@@ -2612,7 +2612,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("ResumeProfileId", "VersionNumber")
                         .HasDatabaseName("ix_resume_versions_resume_profile_id_version_number");
 
-                    b.ToTable("resume_versions");
+                    b.ToTable("resume_versions", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.RoleAssignment", b =>
@@ -2676,7 +2676,7 @@ namespace MyScheduling.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_role_assignments_tenant_id_user_id_role");
 
-                    b.ToTable("role_assignments");
+                    b.ToTable("role_assignments", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.RolePermissionTemplate", b =>
@@ -2761,7 +2761,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("Role", "Resource")
                         .HasDatabaseName("ix_role_permission_templates_role_resource");
 
-                    b.ToTable("role_permission_templates");
+                    b.ToTable("role_permission_templates", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.SharePointConfiguration", b =>
@@ -2870,7 +2870,7 @@ namespace MyScheduling.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_share_point_configurations_tenant_id_is_active");
 
-                    b.ToTable("share_point_configurations");
+                    b.ToTable("share_point_configurations", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.Skill", b =>
@@ -2929,7 +2929,7 @@ namespace MyScheduling.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_skills_name");
 
-                    b.ToTable("skills");
+                    b.ToTable("skills", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.Space", b =>
@@ -3041,7 +3041,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("TenantId", "OfficeId", "Type")
                         .HasDatabaseName("ix_spaces_tenant_id_office_id_type");
 
-                    b.ToTable("spaces");
+                    b.ToTable("spaces", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.SpaceMaintenanceLog", b =>
@@ -3140,7 +3140,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("SpaceId", "Status")
                         .HasDatabaseName("ix_space_maintenance_logs_space_id_status");
 
-                    b.ToTable("space_maintenance_logs");
+                    b.ToTable("space_maintenance_logs", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.StoredFile", b =>
@@ -3303,7 +3303,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("TenantId", "EntityType", "EntityId")
                         .HasDatabaseName("ix_stored_files_tenant_id_entity_type_entity_id");
 
-                    b.ToTable("stored_files");
+                    b.ToTable("stored_files", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.TeamCalendar", b =>
@@ -3386,7 +3386,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("TenantId", "Type")
                         .HasDatabaseName("ix_team_calendars_tenant_id_type");
 
-                    b.ToTable("team_calendars");
+                    b.ToTable("team_calendars", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.TeamCalendarMember", b =>
@@ -3474,7 +3474,7 @@ namespace MyScheduling.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_team_calendar_members_tenant_id_team_calendar_id_person_id");
 
-                    b.ToTable("team_calendar_members");
+                    b.ToTable("team_calendar_members", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.Tenant", b =>
@@ -3536,7 +3536,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("Name")
                         .HasDatabaseName("ix_tenants_name");
 
-                    b.ToTable("tenants");
+                    b.ToTable("tenants", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.TenantDropdownConfiguration", b =>
@@ -3612,7 +3612,7 @@ namespace MyScheduling.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_tenant_dropdown_configurations_tenant_id_category");
 
-                    b.ToTable("tenant_dropdown_configurations");
+                    b.ToTable("tenant_dropdown_configurations", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.TenantMembership", b =>
@@ -3687,7 +3687,7 @@ namespace MyScheduling.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_tenant_memberships_user_id_tenant_id");
 
-                    b.ToTable("tenant_memberships");
+                    b.ToTable("tenant_memberships", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.User", b =>
@@ -3819,7 +3819,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("TenantId")
                         .HasDatabaseName("ix_users_tenant_id");
 
-                    b.ToTable("users");
+                    b.ToTable("users", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.UserInvitation", b =>
@@ -3880,7 +3880,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("TenantId")
                         .HasDatabaseName("ix_user_invitations_tenant_id");
 
-                    b.ToTable("user_invitations");
+                    b.ToTable("user_invitations", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.ValidationRule", b =>
@@ -3998,7 +3998,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("TenantId", "EntityType", "FieldName", "IsActive")
                         .HasDatabaseName("ix_validation_rules_tenant_id_entity_type_field_name_is_active");
 
-                    b.ToTable("validation_rules");
+                    b.ToTable("validation_rules", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.WbsChangeHistory", b =>
@@ -4082,7 +4082,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("WbsElementId", "ChangedAt")
                         .HasDatabaseName("ix_wbs_change_histories_wbs_element_id_changed_at");
 
-                    b.ToTable("wbs_change_histories");
+                    b.ToTable("wbs_change_histories", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.WbsElement", b =>
@@ -4216,7 +4216,7 @@ namespace MyScheduling.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_wbs_elements_tenant_id_code");
 
-                    b.ToTable("wbs_elements");
+                    b.ToTable("wbs_elements", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.WorkLocationPreference", b =>
@@ -4333,7 +4333,7 @@ namespace MyScheduling.Infrastructure.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_work_location_preferences_tenant_id_person_id_work_date");
 
-                    b.ToTable("work_location_preferences");
+                    b.ToTable("work_location_preferences", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.WorkLocationTemplate", b =>
@@ -4416,7 +4416,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("TenantId", "UserId", "IsShared")
                         .HasDatabaseName("ix_work_location_templates_tenant_id_user_id_is_shared");
 
-                    b.ToTable("work_location_templates");
+                    b.ToTable("work_location_templates", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.WorkLocationTemplateItem", b =>
@@ -4512,7 +4512,7 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("TemplateId", "DayOffset")
                         .HasDatabaseName("ix_work_location_template_items_template_id_day_offset");
 
-                    b.ToTable("work_location_template_items");
+                    b.ToTable("work_location_template_items", (string)null);
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.Assignment", b =>

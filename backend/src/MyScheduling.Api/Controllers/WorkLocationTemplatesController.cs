@@ -292,15 +292,6 @@ public class WorkLocationTemplatesController : AuthorizedControllerBase
                 return StatusCode(403, "You do not have permission to use this template");
             }
 
-            // Get the person associated with this user in the template's tenant
-            var person = await _context.People
-                .FirstOrDefaultAsync(p => p.UserId == userId && p.TenantId == template.TenantId);
-
-            if (person == null)
-            {
-                return NotFound("Person record not found for user in this tenant");
-            }
-
             var createdPreferences = new List<WorkLocationPreference>();
             var startDate = DateOnly.FromDateTime(request.StartDate);
 
@@ -313,7 +304,7 @@ public class WorkLocationTemplatesController : AuthorizedControllerBase
                     // Check if preference already exists
                     var existing = await _context.WorkLocationPreferences
                         .FirstOrDefaultAsync(w =>
-                            w.PersonId == person.Id &&
+                            w.UserId == userId &&
                             w.WorkDate == workDate &&
                             w.TenantId == template.TenantId);
 
@@ -336,7 +327,7 @@ public class WorkLocationTemplatesController : AuthorizedControllerBase
                         var preference = new WorkLocationPreference
                         {
                             Id = Guid.NewGuid(),
-                            PersonId = person.Id,
+                            UserId = userId,
                             TenantId = template.TenantId,
                             WorkDate = workDate,
                             LocationType = item.LocationType,

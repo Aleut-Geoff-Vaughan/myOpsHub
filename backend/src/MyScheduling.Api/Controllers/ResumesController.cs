@@ -37,19 +37,15 @@ public class ResumesController : AuthorizedControllerBase
         try
         {
             var query = _context.ResumeProfiles
-                .Include(r => r.Person)
+                .Include(r => r.User)
                 .Include(r => r.Sections)
                     .ThenInclude(s => s.Entries)
-                .Include(r => r.Person.PersonSkills)
-                    .ThenInclude(ps => ps.Skill)
-                .Include(r => r.Person.PersonCertifications)
-                    .ThenInclude(pc => pc.Certification)
                 .AsQueryable();
 
             // Filter by tenant
             if (tenantId.HasValue)
             {
-                query = query.Where(r => r.Person.TenantId == tenantId.Value);
+                query = query.Where(r => _context.TenantMemberships.Any(tm => tm.UserId == r.UserId && tm.TenantId == tenantId.Value && tm.IsActive));
             }
 
             // Filter by status
@@ -62,8 +58,9 @@ public class ResumesController : AuthorizedControllerBase
             if (!string.IsNullOrEmpty(search))
             {
                 query = query.Where(r =>
-                    r.Person.Name.Contains(search) ||
-                    r.Person.JobTitle.Contains(search) ||
+                    r.User.DisplayName.Contains(search) ||
+                    (r.User.JobTitle != null && r.User.JobTitle.Contains(search)) ||
+                    r.User.Email.Contains(search) ||
                     r.Sections.Any(s => s.Entries.Any(e =>
                         e.Title.Contains(search) ||
                         (e.Description != null && e.Description.Contains(search)))));
@@ -90,13 +87,9 @@ public class ResumesController : AuthorizedControllerBase
         try
         {
             var resume = await _context.ResumeProfiles
-                .Include(r => r.Person)
+                .Include(r => r.User)
                 .Include(r => r.Sections.OrderBy(s => s.DisplayOrder))
                     .ThenInclude(s => s.Entries.OrderByDescending(e => e.StartDate))
-                .Include(r => r.Person.PersonSkills)
-                    .ThenInclude(ps => ps.Skill)
-                .Include(r => r.Person.PersonCertifications)
-                    .ThenInclude(pc => pc.Certification)
                 .Include(r => r.Versions.OrderByDescending(v => v.VersionNumber))
                 .Include(r => r.Documents.OrderByDescending(d => d.GeneratedAt))
                 .Include(r => r.Approvals.OrderByDescending(a => a.RequestedAt))
@@ -125,28 +118,30 @@ public class ResumesController : AuthorizedControllerBase
     {
         try
         {
-            // Validate person exists
-            var person = await _context.People
-                .FirstOrDefaultAsync(p => p.Id == request.PersonId);
-
-            if (person == null)
+            if (request.UserId == Guid.Empty)
             {
-                return BadRequest($"Person with ID {request.PersonId} not found");
+                return BadRequest("UserId is required");
             }
 
-            // Check if resume already exists for this person
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == request.UserId);
+            if (user == null)
+            {
+                return BadRequest($"User with ID {request.UserId} not found");
+            }
+
+            // Check if resume already exists for this user/person
             var existingResume = await _context.ResumeProfiles
-                .FirstOrDefaultAsync(r => r.PersonId == request.PersonId);
+                .FirstOrDefaultAsync(r => r.UserId == request.UserId);
 
             if (existingResume != null)
             {
-                return Conflict($"Resume already exists for person {person.Name}");
+                return Conflict("Resume already exists for this profile");
             }
 
             // Create resume
             var resume = new ResumeProfile
             {
-                PersonId = request.PersonId,
+                UserId = request.UserId,
                 Status = ResumeStatus.Draft,
                 IsPublic = false,
                 TemplateConfig = request.TemplateConfig
@@ -155,13 +150,13 @@ public class ResumesController : AuthorizedControllerBase
             _context.ResumeProfiles.Add(resume);
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Created resume {ResumeId} for person {PersonId}", resume.Id, request.PersonId);
+            _logger.LogInformation("Created resume {ResumeId} for user {UserId}", resume.Id, request.UserId);
 
             return CreatedAtAction(nameof(GetResume), new { id = resume.Id }, resume);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating resume for person {PersonId}", request.PersonId);
+            _logger.LogError(ex, "Error creating resume for user {UserId}", request.UserId);
             return StatusCode(500, "An error occurred while creating the resume");
         }
     }
@@ -247,7 +242,6 @@ public class ResumesController : AuthorizedControllerBase
         {
             var resume = await _context.ResumeProfiles
                 .IgnoreQueryFilters()
-                .Include(r => r.Person)
                 .FirstOrDefaultAsync(r => r.Id == id);
 
             if (resume == null)
@@ -255,10 +249,13 @@ public class ResumesController : AuthorizedControllerBase
                 return NotFound($"Resume with ID {id} not found");
             }
 
+            var membership = await _context.TenantMemberships
+                .FirstOrDefaultAsync(tm => tm.UserId == resume.UserId && tm.IsActive);
+
             var archive = new DataArchive
             {
                 Id = Guid.NewGuid(),
-                TenantId = resume.Person.TenantId,
+                TenantId = membership?.TenantId ?? Guid.Empty,
                 EntityType = "ResumeProfile",
                 EntityId = resume.Id,
                 EntitySnapshot = System.Text.Json.JsonSerializer.Serialize(resume),
@@ -327,7 +324,6 @@ public class ResumesController : AuthorizedControllerBase
         try
         {
             var resume = await _context.ResumeProfiles
-                .Include(r => r.Person)
                 .FirstOrDefaultAsync(r => r.Id == id);
 
             if (resume == null)
@@ -337,7 +333,8 @@ public class ResumesController : AuthorizedControllerBase
 
             var section = new ResumeSection
             {
-                PersonId = resume.PersonId,
+                ResumeProfileId = resume.Id,
+                UserId = resume.UserId,
                 Type = request.Type,
                 DisplayOrder = request.DisplayOrder
             };
@@ -347,7 +344,7 @@ public class ResumesController : AuthorizedControllerBase
 
             _logger.LogInformation("Added section {SectionId} to resume {ResumeId}", section.Id, id);
 
-            return CreatedAtAction(nameof(GetResume), new { id = id }, section);
+            return CreatedAtAction(nameof(GetResume), new { id }, section);
         }
         catch (Exception ex)
         {
@@ -387,7 +384,7 @@ public class ResumesController : AuthorizedControllerBase
 
             _logger.LogInformation("Added entry {EntryId} to section {SectionId}", entry.Id, sectionId);
 
-            return CreatedAtAction(nameof(GetResume), new { id = section.PersonId }, entry);
+            return CreatedAtAction(nameof(GetResume), new { id = section.ResumeProfileId }, entry);
         }
         catch (Exception ex)
         {
@@ -538,18 +535,25 @@ public class ResumesController : AuthorizedControllerBase
         try
         {
             var resume = await _context.ResumeProfiles
+                .Include(r => r.User)
                 .Include(r => r.Sections)
                     .ThenInclude(s => s.Entries)
-                .Include(r => r.Person.PersonSkills)
-                    .ThenInclude(ps => ps.Skill)
-                .Include(r => r.Person.PersonCertifications)
-                    .ThenInclude(pc => pc.Certification)
                 .FirstOrDefaultAsync(r => r.Id == id);
 
             if (resume == null)
             {
                 return NotFound($"Resume with ID {id} not found");
             }
+
+            var userSkills = await _context.PersonSkills
+                .Include(ps => ps.Skill)
+                .Where(ps => ps.UserId == resume.UserId)
+                .ToListAsync();
+
+            var userCertifications = await _context.PersonCertifications
+                .Include(pc => pc.Certification)
+                .Where(pc => pc.UserId == resume.UserId)
+                .ToListAsync();
 
             // Get next version number
             var maxVersionNumber = await _context.ResumeVersions
@@ -559,9 +563,9 @@ public class ResumesController : AuthorizedControllerBase
             // Create snapshot of current resume data
             var contentSnapshot = System.Text.Json.JsonSerializer.Serialize(new
             {
-                resume.Person.Name,
-                resume.Person.JobTitle,
-                resume.Person.Email,
+                resume.User.DisplayName,
+                resume.User.JobTitle,
+                resume.User.Email,
                 Sections = resume.Sections.Select(s => new
                 {
                     s.Type,
@@ -576,13 +580,13 @@ public class ResumesController : AuthorizedControllerBase
                         e.AdditionalFields
                     })
                 }),
-                Skills = resume.Person.PersonSkills.Select(ps => new
+                Skills = userSkills.Select(ps => new
                 {
                     ps.Skill.Name,
                     ps.ProficiencyLevel,
                     ps.LastUsedDate
                 }),
-                Certifications = resume.Person.PersonCertifications.Select(pc => new
+                Certifications = userCertifications.Select(pc => new
                 {
                     pc.Certification.Name,
                     pc.Certification.Issuer,
@@ -706,7 +710,7 @@ public class ResumesController : AuthorizedControllerBase
 // DTOs
 public class CreateResumeRequest
 {
-    public Guid PersonId { get; set; }
+    public Guid UserId { get; set; }
     public string? TemplateConfig { get; set; }
 }
 

@@ -29,12 +29,12 @@ public class TeamCalendar : TenantEntity
     /// <summary>
     /// Optional manager/owner of this calendar (can be used for manager hierarchies)
     /// </summary>
-    public Guid? OwnerId { get; set; }
+    public Guid? OwnerUserId { get; set; }
 
     /// <summary>
-    /// Navigation to the owner person
+    /// Navigation to the owner user
     /// </summary>
-    public virtual Person? Owner { get; set; }
+    public virtual User? Owner { get; set; }
 
     /// <summary>
     /// Members of this team calendar
@@ -53,9 +53,9 @@ public class TeamCalendarMember : TenantEntity
     public Guid TeamCalendarId { get; set; }
 
     /// <summary>
-    /// ID of the person who is a member
+    /// ID of the user who is a member
     /// </summary>
-    public Guid PersonId { get; set; }
+    public Guid UserId { get; set; }
 
     /// <summary>
     /// How this person was added to the calendar
@@ -79,7 +79,7 @@ public class TeamCalendarMember : TenantEntity
 
     // Navigation properties
     public virtual TeamCalendar TeamCalendar { get; set; } = null!;
-    public virtual Person Person { get; set; } = null!;
+    public virtual User User { get; set; } = null!;
     public virtual User? AddedByUser { get; set; }
 }
 
