@@ -149,29 +149,6 @@ builder.Services.AddSwaggerGen(options =>
 
 var app = builder.Build();
 
-// Seed database in development
-if (app.Environment.IsDevelopment())
-{
-    using var scope = app.Services.CreateScope();
-    var seeder = scope.ServiceProvider.GetRequiredService<DatabaseSeeder>();
-    var context = scope.ServiceProvider.GetRequiredService<MySchedulingDbContext>();
-    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
-
-    try
-    {
-        await seeder.SeedAsync();
-        logger.LogInformation("Database seeding completed successfully");
-
-        // Seed role permission templates
-        await MyScheduling.Infrastructure.Data.Seeds.PermissionSeeder.SeedRolePermissionTemplatesAsync(context, logger);
-        logger.LogInformation("Permission templates seeding completed successfully");
-    }
-    catch (Exception ex)
-    {
-        logger.LogError(ex, "An error occurred while seeding the database");
-    }
-}
-
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
