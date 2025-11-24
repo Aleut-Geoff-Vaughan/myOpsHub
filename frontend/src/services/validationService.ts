@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { API_BASE_URL } from '../config/api';
 import type {
   ValidationRule,
   ValidationResult,
@@ -10,7 +11,9 @@ import type {
   SetActiveRequest,
 } from '../types/api';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const http = axios.create({
+  baseURL: API_BASE_URL,
+});
 
 export const validationService = {
   // ==================== VALIDATION RULES CRUD ====================
@@ -24,7 +27,7 @@ export const validationService = {
     fieldName?: string;
     isActive?: boolean;
   }): Promise<ValidationRule[]> {
-    const response = await axios.get(`${API_BASE_URL}/api/validation/rules`, { params });
+    const response = await http.get('/validation/rules', { params });
     return response.data;
   },
 
@@ -32,7 +35,7 @@ export const validationService = {
    * Get a specific validation rule by ID
    */
   async getRuleById(id: string, tenantId: string): Promise<ValidationRule> {
-    const response = await axios.get(`${API_BASE_URL}/api/validation/rules/${id}`, {
+    const response = await http.get(`/validation/rules/${id}`, {
       params: { tenantId },
     });
     return response.data;
@@ -45,11 +48,7 @@ export const validationService = {
     tenantId: string,
     rule: Omit<ValidationRule, 'id' | 'createdAt' | 'updatedAt'>
   ): Promise<ValidationRule> {
-    const response = await axios.post(
-      `${API_BASE_URL}/api/validation/rules`,
-      rule,
-      { params: { tenantId } }
-    );
+    const response = await http.post('/validation/rules', rule, { params: { tenantId } });
     return response.data;
   },
 
@@ -57,18 +56,14 @@ export const validationService = {
    * Update an existing validation rule
    */
   async updateRule(id: string, tenantId: string, rule: ValidationRule): Promise<void> {
-    await axios.put(
-      `${API_BASE_URL}/api/validation/rules/${id}`,
-      rule,
-      { params: { tenantId } }
-    );
+    await http.put(`/validation/rules/${id}`, rule, { params: { tenantId } });
   },
 
   /**
    * Delete a validation rule
    */
   async deleteRule(id: string, tenantId: string): Promise<void> {
-    await axios.delete(`${API_BASE_URL}/api/validation/rules/${id}`, {
+    await http.delete(`/validation/rules/${id}`, {
       params: { tenantId },
     });
   },
@@ -77,11 +72,9 @@ export const validationService = {
    * Activate or deactivate a validation rule
    */
   async setRuleActive(id: string, tenantId: string, isActive: boolean): Promise<void> {
-    await axios.patch(
-      `${API_BASE_URL}/api/validation/rules/${id}/active`,
-      { isActive } as SetActiveRequest,
-      { params: { tenantId } }
-    );
+    await http.patch(`/validation/rules/${id}/active`, { isActive } as SetActiveRequest, {
+      params: { tenantId },
+    });
   },
 
   // ==================== VALIDATION OPERATIONS ====================
@@ -90,11 +83,7 @@ export const validationService = {
    * Validate entity data against all applicable rules
    */
   async validateEntity(tenantId: string, request: ValidateEntityRequest): Promise<ValidationResult> {
-    const response = await axios.post(
-      `${API_BASE_URL}/api/validation/validate`,
-      request,
-      { params: { tenantId } }
-    );
+    const response = await http.post('/validation/validate', request, { params: { tenantId } });
     return response.data;
   },
 
@@ -102,11 +91,9 @@ export const validationService = {
    * Validate a specific field value
    */
   async validateField(tenantId: string, request: ValidateFieldRequest): Promise<ValidationResult> {
-    const response = await axios.post(
-      `${API_BASE_URL}/api/validation/validate-field`,
-      request,
-      { params: { tenantId } }
-    );
+    const response = await http.post('/validation/validate-field', request, {
+      params: { tenantId },
+    });
     return response.data;
   },
 
@@ -114,11 +101,9 @@ export const validationService = {
    * Test a validation rule against sample data
    */
   async testRule(id: string, tenantId: string, testData: Record<string, any>): Promise<ValidationResult> {
-    const response = await axios.post(
-      `${API_BASE_URL}/api/validation/rules/${id}/test`,
-      testData,
-      { params: { tenantId } }
-    );
+    const response = await http.post(`/validation/rules/${id}/test`, testData, {
+      params: { tenantId },
+    });
     return response.data;
   },
 
@@ -126,10 +111,9 @@ export const validationService = {
    * Get all rules for a specific entity type
    */
   async getRulesForEntity(entityType: string, tenantId: string): Promise<ValidationRule[]> {
-    const response = await axios.get(
-      `${API_BASE_URL}/api/validation/rules/entity/${entityType}`,
-      { params: { tenantId } }
-    );
+    const response = await http.get(`/validation/rules/entity/${entityType}`, {
+      params: { tenantId },
+    });
     return response.data;
   },
 
@@ -137,7 +121,7 @@ export const validationService = {
    * Get available entity types that have validation rules
    */
   async getEntityTypes(tenantId: string): Promise<string[]> {
-    const response = await axios.get(`${API_BASE_URL}/api/validation/entity-types`, {
+    const response = await http.get('/validation/entity-types', {
       params: { tenantId },
     });
     return response.data;
@@ -147,10 +131,7 @@ export const validationService = {
    * Validate a rule expression for correctness
    */
   async validateExpression(request: ValidateExpressionRequest): Promise<ExpressionValidationResult> {
-    const response = await axios.post(
-      `${API_BASE_URL}/api/validation/validate-expression`,
-      request
-    );
+    const response = await http.post('/validation/validate-expression', request);
     return response.data;
   },
 
@@ -158,10 +139,6 @@ export const validationService = {
    * Bulk update rule execution orders
    */
   async reorderRules(tenantId: string, updates: RuleOrderUpdate[]): Promise<void> {
-    await axios.patch(
-      `${API_BASE_URL}/api/validation/rules/reorder`,
-      updates,
-      { params: { tenantId } }
-    );
+    await http.patch('/validation/rules/reorder', updates, { params: { tenantId } });
   },
 };

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../stores/authStore';
+import { buildApiUrl } from '../config/api';
 
 interface HealthStatus {
   status: string;
@@ -29,7 +30,7 @@ export function LoginPage() {
     const checkHealth = async () => {
       setIsCheckingHealth(true);
       try {
-        const response = await fetch('/api/health');
+        const response = await fetch(buildApiUrl('/health'));
         if (response.ok) {
           const data = await response.json();
           setHealthStatus(data);

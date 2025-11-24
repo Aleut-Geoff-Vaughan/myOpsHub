@@ -1,4 +1,4 @@
-const API_BASE_URL = '/api';
+import { buildApiUrl } from '../config/api';
 
 export class ApiError extends Error {
   constructor(
@@ -38,7 +38,7 @@ export async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const url = `${API_BASE_URL}${endpoint}`;
+  const url = buildApiUrl(endpoint);
 
   const defaultHeaders: HeadersInit = {
     'Content-Type': 'application/json',

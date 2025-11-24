@@ -292,6 +292,15 @@ export default defineConfig({
 })
 ```
 
+## 🌐 Deploying to Azure Static Web Apps
+
+1. Set a GitHub Actions secret named `VITE_API_URL` to your deployed API root (for example `https://<api-hostname>/api`). The Static Web Apps workflow consumes this at build time so the bundled frontend calls the correct API instead of `/api` on the static host.
+2. In your API hosting environment (App Service/Container), set `ConnectionStrings__DefaultConnection` with the production password and `ASPNETCORE_ENVIRONMENT=Production` so the health check can reach the database.
+3. CORS allows local dev plus `https://proud-ocean-0c7274110.3.azurestaticapps.net` and the future `https://myscheduling.aleutfederal.com` domains; add any new hostnames to `backend/src/MyScheduling.Api/appsettings.json` if you change domains.
+4. Verify after deploy:
+   - Frontend build uses the correct base URL: `echo $VITE_API_URL`
+   - API health: `curl -i https://<api-hostname>/api/health`
+
 ## 🤝 Contributing
 
 1. Create a feature branch from `main`
