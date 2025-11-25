@@ -117,21 +117,20 @@ export enum ProficiencyLevel {
 }
 
 // Entities
+// User-centric profile (Person table removed)
 export interface Person {
   id: string;
-  tenantId: string;
-  firstName: string;
-  lastName: string;
-  displayName: string;
-  name: string;
   email: string;
-  phone?: string;
+  displayName: string;
   jobTitle?: string;
-  laborCategory?: string;
+  department?: string;
+  orgUnit?: string;
   location?: string;
+  laborCategory?: string;
+  costCenter?: string;
   status: PersonStatus;
   type: PersonType;
-  userId?: string;
+  managerId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -152,7 +151,7 @@ export interface Project {
 export interface Assignment {
   id: string;
   tenantId: string;
-  personId: string;
+  userId: string;
   wbsElementId: string;
   projectRoleId: string;
   startDate: string;
@@ -168,7 +167,7 @@ export interface Booking {
   id: string;
   tenantId: string;
   spaceId: string;
-  personId: string;
+  userId: string;
   startDatetime: string;
   endDatetime: string;
   status: BookingStatus;
@@ -222,7 +221,6 @@ export interface User {
   entraObjectId: string;
   isSystemAdmin: boolean;
   isActive: boolean;
-  personId?: string;
   lastLoginAt?: string;
   deactivatedAt?: string;
   deactivatedByUserId?: string;
@@ -339,7 +337,7 @@ export enum WorkLocationType {
 export interface WorkLocationPreference {
   id: string;
   tenantId: string;
-  personId: string;
+  userId: string;
   workDate: string; // ISO date string (YYYY-MM-DD)
   locationType: WorkLocationType;
   officeId?: string;
@@ -349,7 +347,7 @@ export interface WorkLocationPreference {
   state?: string;
   country?: string;
   notes?: string;
-  person?: Person;
+  user?: User;
   office?: Office;
   booking?: Booking;
   createdAt: string;
@@ -420,7 +418,7 @@ export interface SpaceMaintenanceLog {
 
 export interface ResumeProfile {
   id: string;
-  personId: string;
+  userId: string;
   templateConfig?: string;
   status: ResumeStatus;
   currentVersionId?: string;
@@ -429,7 +427,7 @@ export interface ResumeProfile {
   isPublic: boolean;
   linkedInProfileUrl?: string;
   linkedInLastSyncedAt?: string;
-  person?: Person;
+  user?: User;
   sections?: ResumeSection[];
   versions?: ResumeVersion[];
   documents?: ResumeDocument[];
@@ -442,10 +440,10 @@ export interface ResumeProfile {
 
 export interface ResumeSection {
   id: string;
-  personId: string;
+  userId: string;
   type: ResumeSectionType;
   displayOrder: number;
-  person?: Person;
+  user?: User;
   entries?: ResumeEntry[];
   createdAt: string;
   updatedAt?: string;
@@ -551,11 +549,11 @@ export interface Skill {
 
 export interface PersonSkill {
   id: string;
-  personId: string;
+  userId: string;
   skillId: string;
   proficiencyLevel: ProficiencyLevel;
   lastUsedDate?: string;
-  person?: Person;
+  user?: User;
   skill?: Skill;
   createdAt: string;
   updatedAt?: string;
@@ -571,12 +569,12 @@ export interface Certification {
 
 export interface PersonCertification {
   id: string;
-  personId: string;
+  userId: string;
   certificationId: string;
   issueDate: string;
   expiryDate?: string;
   credentialId?: string;
-  person?: Person;
+  user?: User;
   certification?: Certification;
   createdAt: string;
   updatedAt?: string;

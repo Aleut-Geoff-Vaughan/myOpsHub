@@ -10,17 +10,18 @@ import type {
   TeamCalendarType,
   MembershipType,
 } from '../types/teamCalendar';
+import { usersService } from '../services/tenantsService';
 
-interface PersonOption {
+interface UserOption {
   id: string;
-  name: string;
+  displayName: string;
   email: string;
 }
 
 export function TeamCalendarAdminPage() {
   const { user, currentWorkspace } = useAuthStore();
   const [calendars, setCalendars] = useState<TeamCalendarResponse[]>([]);
-  const [people, setPeople] = useState<PersonOption[]>([]);
+  const [people, setPeople] = useState<UserOption[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -33,7 +34,7 @@ export function TeamCalendarAdminPage() {
     name: '',
     description: '',
     type: 0, // TeamCalendarType.Team
-    ownerId: undefined,
+    ownerUserId: undefined,
     isActive: true,
   });
 
@@ -66,12 +67,20 @@ export function TeamCalendarAdminPage() {
   };
 
   const fetchPeople = async () => {
-    // TODO: Replace with actual people API call
-    // For now, using mock data
-    setPeople([
-      { id: '1', name: 'John Doe', email: 'john@example.com' },
-      { id: '2', name: 'Jane Smith', email: 'jane@example.com' },
-    ]);
+    if (!currentWorkspace?.tenantId) return;
+
+    try {
+      const users = await usersService.getAll(currentWorkspace.tenantId);
+      setPeople(
+        users.map((u) => ({
+          id: u.id,
+          displayName: u.displayName || u.name || u.email,
+          email: u.email,
+        }))
+      );
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to load users');
+    }
   };
 
   const handleCreate = async () => {
@@ -100,7 +109,7 @@ export function TeamCalendarAdminPage() {
         name: formData.name,
         description: formData.description,
         type: formData.type,
-        ownerId: formData.ownerId,
+        ownerUserId: formData.ownerUserId,
         isActive: formData.isActive,
       };
 
@@ -135,7 +144,7 @@ export function TeamCalendarAdminPage() {
         selectedCalendar.id,
         user.id,
         {
-          personIds: selectedPeople,
+          userIds: selectedPeople,
           membershipType,
         }
       );
@@ -166,7 +175,7 @@ export function TeamCalendarAdminPage() {
       name: '',
       description: '',
       type: 0,
-      ownerId: undefined,
+      ownerUserId: undefined,
       isActive: true,
     });
     setSelectedCalendar(null);
@@ -178,7 +187,7 @@ export function TeamCalendarAdminPage() {
       name: calendar.name,
       description: calendar.description || '',
       type: calendar.type,
-      ownerId: calendar.ownerId,
+      ownerUserId: calendar.ownerUserId,
       isActive: calendar.isActive,
     });
     setShowEditModal(true);
@@ -268,7 +277,8 @@ export function TeamCalendarAdminPage() {
                       </div>
                       {calendar.owner && (
                         <div>
-                          <span className="font-medium">Owner:</span> {calendar.owner.name}
+                          <span className="font-medium">Owner:</span>{' '}
+                          {calendar.owner.displayName || calendar.owner.email}
                         </div>
                       )}
                     </div>
@@ -285,9 +295,9 @@ export function TeamCalendarAdminPage() {
                             >
                               <div className="flex-1">
                                 <p className="text-sm font-medium text-gray-900">
-                                  {member.person.name}
+                                  {member.user.displayName || member.user.email}
                                 </p>
-                                <p className="text-xs text-gray-600">{member.person.email}</p>
+                                <p className="text-xs text-gray-600">{member.user.email}</p>
                               </div>
                               <div className="flex items-center gap-2">
                                 <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded">
@@ -445,7 +455,7 @@ export function TeamCalendarAdminPage() {
                 >
                   {people.map((person) => (
                     <option key={person.id} value={person.id}>
-                      {person.name} ({person.email})
+                      {person.displayName} ({person.email})
                     </option>
                   ))}
                 </select>

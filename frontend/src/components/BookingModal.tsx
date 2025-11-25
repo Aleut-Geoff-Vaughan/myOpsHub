@@ -5,7 +5,7 @@ import { bookingsService } from '../services/bookingsService';
 import type { Booking } from '../types/api';
 import { BookingStatus } from '../types/api';
 import { useTenants } from '../hooks/useTenants';
-import { usePeople } from '../hooks/usePeople';
+import { useUsers } from '../hooks/useTenants';
 import { useOffices, useSpaces } from '../hooks/useBookings';
 
 interface BookingModalProps {
@@ -18,13 +18,13 @@ interface BookingModalProps {
 export function BookingModal({ isOpen, onClose, booking, mode }: BookingModalProps) {
   const queryClient = useQueryClient();
   const { data: tenants = [] } = useTenants();
-  const { data: people = [] } = usePeople();
+  const { data: users = [] } = useUsers();
   const { data: offices = [] } = useOffices();
 
   const [formData, setFormData] = useState({
     tenantId: '',
     spaceId: '',
-    personId: '',
+    userId: '',
     officeId: '',
     startDate: '',
     startTime: '09:00',
@@ -48,7 +48,7 @@ export function BookingModal({ isOpen, onClose, booking, mode }: BookingModalPro
       setFormData({
         tenantId: booking.tenantId,
         spaceId: booking.spaceId,
-        personId: booking.personId,
+        userId: booking.userId,
         officeId: '',  // We don't have this on the booking object
         startDate: startDT.toISOString().split('T')[0],
         startTime: startDT.toTimeString().substring(0, 5),
@@ -96,7 +96,7 @@ export function BookingModal({ isOpen, onClose, booking, mode }: BookingModalPro
 
     if (!formData.tenantId) newErrors.tenantId = 'Tenant is required';
     if (!formData.spaceId) newErrors.spaceId = 'Space is required';
-    if (!formData.personId) newErrors.personId = 'Person is required';
+    if (!formData.userId) newErrors.userId = 'User is required';
     if (!formData.startDate) newErrors.startDate = 'Start date is required';
     if (!formData.endDate) newErrors.endDate = 'End date is required';
 
@@ -119,7 +119,7 @@ export function BookingModal({ isOpen, onClose, booking, mode }: BookingModalPro
     const bookingData = {
       tenantId: formData.tenantId,
       spaceId: formData.spaceId,
-      personId: formData.personId,
+      userId: formData.userId,
       startDatetime: `${formData.startDate}T${formData.startTime}:00`,
       endDatetime: `${formData.endDate}T${formData.endTime}:00`,
       status: formData.status,
@@ -148,12 +148,10 @@ export function BookingModal({ isOpen, onClose, booking, mode }: BookingModalPro
     label: `${t.name} (${t.code})`,
   }));
 
-  const personOptions = people
-    .filter(p => !formData.tenantId || p.tenantId === formData.tenantId)
-    .map(p => ({
-      value: p.id,
-      label: `${p.displayName} - ${p.email}`,
-    }));
+  const personOptions = users.map(p => ({
+    value: p.id,
+    label: `${p.displayName} - ${p.email}`,
+  }));
 
   const officeOptions = offices.map(o => ({
     value: o.id,
@@ -215,11 +213,11 @@ export function BookingModal({ isOpen, onClose, booking, mode }: BookingModalPro
 
         <FormGroup columns={1} className="mt-4">
           <Select
-            label="Person"
+            label="User"
             options={personOptions}
-            value={formData.personId}
-            onChange={(e) => handleChange('personId', e.target.value)}
-            error={errors.personId}
+            value={formData.userId}
+            onChange={(e) => handleChange('userId', e.target.value)}
+            error={errors.userId}
             required
           />
         </FormGroup>

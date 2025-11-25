@@ -1,10 +1,10 @@
-import type { Person, WorkLocationPreference } from './api';
+import type { User, WorkLocationPreference } from './api';
 
 /**
  * Dashboard data response from API
  */
 export interface DashboardData {
-  person: Person;
+  user: User;
   preferences: WorkLocationPreference[];
   stats: DashboardStats;
   startDate: string;

@@ -3,13 +3,13 @@ import type { WorkLocationPreference } from '../types/api';
 
 export const workLocationService = {
   getAll: async (params?: {
-    personId?: string;
+    userId?: string;
     startDate?: string;
     endDate?: string;
     locationType?: number;
   }): Promise<WorkLocationPreference[]> => {
     const queryParams = new URLSearchParams();
-    if (params?.personId) queryParams.append('personId', params.personId);
+    if (params?.userId) queryParams.append('userId', params.userId);
     if (params?.startDate) queryParams.append('startDate', params.startDate);
     if (params?.endDate) queryParams.append('endDate', params.endDate);
     if (params?.locationType !== undefined) queryParams.append('locationType', params.locationType.toString());

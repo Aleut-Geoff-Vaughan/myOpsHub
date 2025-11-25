@@ -1,5 +1,8 @@
+using System.ComponentModel.DataAnnotations.Schema;
+
 namespace MyScheduling.Core.Entities;
 
+[NotMapped]
 public class Person : TenantEntity
 {
     public Guid? UserId { get; set; }

@@ -4,7 +4,7 @@ import { AssignmentStatus } from '../types/api';
 
 export interface GetAssignmentsParams {
   tenantId?: string;
-  personId?: string;
+  userId?: string;
   projectId?: string;
   status?: AssignmentStatus;
 }
@@ -14,7 +14,7 @@ export const assignmentsService = {
     const searchParams = new URLSearchParams();
 
     if (params?.tenantId) searchParams.append('tenantId', params.tenantId);
-    if (params?.personId) searchParams.append('personId', params.personId);
+    if (params?.userId) searchParams.append('userId', params.userId);
     if (params?.projectId) searchParams.append('projectId', params.projectId);
     if (params?.status !== undefined) searchParams.append('status', params.status.toString());
 

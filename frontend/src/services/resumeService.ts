@@ -34,7 +34,7 @@ export const getResume = async (id: string): Promise<ResumeProfile> => {
 };
 
 export const createResume = async (data: {
-  personId: string;
+  userId: string;
   templateConfig?: string;
 }): Promise<ResumeProfile> => {
   return api.post<ResumeProfile>(`/resumes`, data);

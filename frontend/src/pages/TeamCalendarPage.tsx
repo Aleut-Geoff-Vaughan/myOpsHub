@@ -22,10 +22,10 @@ export function TeamCalendarPage() {
   // Fetch available calendars for the user
   useEffect(() => {
     const fetchAvailableCalendars = async () => {
-      if (!user?.personId) return;
+      if (!user?.id) return;
 
       try {
-        const response = await teamCalendarService.getAvailableCalendars(user.personId);
+        const response = await teamCalendarService.getAvailableCalendars(user.id);
         setAvailableCalendars(response.memberOf);
       } catch (err) {
         console.error('Failed to fetch available calendars:', err);
@@ -33,12 +33,12 @@ export function TeamCalendarPage() {
     };
 
     fetchAvailableCalendars();
-  }, [user?.personId]);
+  }, [user?.id]);
 
   // Fetch calendar data based on mode
   useEffect(() => {
     const fetchCalendarData = async () => {
-      if (!user?.personId) return;
+      if (!user?.id) return;
 
       setIsLoading(true);
       setError(null);
@@ -64,7 +64,7 @@ export function TeamCalendarPage() {
         if (viewMode === 'manager') {
           // Fetch manager view
           const response = await teamCalendarService.getManagerView({
-            personId: user.personId,
+            userId: user.id,
             startDate,
             endDate: endDate.toISOString().split('T')[0],
           });
@@ -86,7 +86,7 @@ export function TeamCalendarPage() {
     };
 
     fetchCalendarData();
-  }, [user?.personId, viewMode, selectedCalendar, referenceDate, selectedView]);
+  }, [user?.id, viewMode, selectedCalendar, referenceDate, selectedView]);
 
   const handlePreviousPeriod = () => {
     const newDate = new Date(referenceDate);
@@ -120,7 +120,8 @@ export function TeamCalendarPage() {
 
   const getTitle = () => {
     if (viewMode === 'manager' && calendarData && 'manager' in calendarData) {
-      return `${calendarData.manager.name}'s Team`;
+      const managerName = calendarData.manager.displayName || calendarData.manager.email || 'Manager';
+      return `${managerName}'s Team`;
     } else if (viewMode === 'team' && calendarData && 'calendar' in calendarData) {
       return calendarData.calendar.name;
     }

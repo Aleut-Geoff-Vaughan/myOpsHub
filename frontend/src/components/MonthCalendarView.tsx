@@ -6,16 +6,16 @@ interface MonthCalendarViewProps {
   referenceDate: Date;
   preferences: WorkLocationPreference[];
   onDayClick: (date: Date) => void;
-  personId: string;
+  userId: string;
 }
 
-export function MonthCalendarView({ referenceDate, preferences, onDayClick, personId }: MonthCalendarViewProps) {
+export function MonthCalendarView({ referenceDate, preferences, onDayClick, userId }: MonthCalendarViewProps) {
   const monthDays = useMemo(() => getMonthWeekdays(referenceDate), [referenceDate]);
   const monthName = useMemo(() => getMonthYear(referenceDate), [referenceDate]);
 
   const getPreferenceForDate = (date: Date): WorkLocationPreference | undefined => {
     const dateStr = date.toISOString().split('T')[0];
-    return preferences.find(p => p.workDate === dateStr && p.personId === personId);
+    return preferences.find(p => p.workDate === dateStr && p.userId === userId);
   };
 
   const getLocationTypeLabel = (type: WorkLocationType): string => {

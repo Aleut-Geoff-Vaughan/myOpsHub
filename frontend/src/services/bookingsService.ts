@@ -3,7 +3,7 @@ import type { Booking, Space, Office } from '../types/api';
 import { BookingStatus, SpaceType } from '../types/api';
 
 export interface GetBookingsParams {
-  personId?: string;
+  userId?: string;
   spaceId?: string;
   officeId?: string;
   startDate?: string;
@@ -20,7 +20,7 @@ export const bookingsService = {
   async getAll(params?: GetBookingsParams): Promise<Booking[]> {
     const searchParams = new URLSearchParams();
 
-    if (params?.personId) searchParams.append('personId', params.personId);
+    if (params?.userId) searchParams.append('userId', params.userId);
     if (params?.spaceId) searchParams.append('spaceId', params.spaceId);
     if (params?.officeId) searchParams.append('officeId', params.officeId);
     if (params?.startDate) searchParams.append('startDate', params.startDate);

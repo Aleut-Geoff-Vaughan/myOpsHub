@@ -4,8 +4,7 @@ import { Modal, Button, Input, Select, FormGroup } from './ui';
 import { assignmentsService } from '../services/assignmentsService';
 import type { Assignment } from '../types/api';
 import { AssignmentStatus } from '../types/api';
-import { useTenants } from '../hooks/useTenants';
-import { usePeople } from '../hooks/usePeople';
+import { useTenants, useUsers } from '../hooks/useTenants';
 
 interface AssignmentModalProps {
   isOpen: boolean;
@@ -17,11 +16,11 @@ interface AssignmentModalProps {
 export function AssignmentModal({ isOpen, onClose, assignment, mode }: AssignmentModalProps) {
   const queryClient = useQueryClient();
   const { data: tenants = [] } = useTenants();
-  const { data: people = [] } = usePeople();
+  const { data: users = [] } = useUsers();
 
   const [formData, setFormData] = useState({
     tenantId: '',
-    personId: '',
+    userId: '',
     wbsElementId: '',
     projectRoleId: '',
     startDate: '',
@@ -36,7 +35,7 @@ export function AssignmentModal({ isOpen, onClose, assignment, mode }: Assignmen
     if (assignment && mode === 'edit') {
       setFormData({
         tenantId: assignment.tenantId,
-        personId: assignment.personId,
+        userId: assignment.userId,
         wbsElementId: assignment.wbsElementId,
         projectRoleId: assignment.projectRoleId,
         startDate: assignment.startDate.split('T')[0],
@@ -81,7 +80,7 @@ export function AssignmentModal({ isOpen, onClose, assignment, mode }: Assignmen
     const newErrors: Record<string, string> = {};
 
     if (!formData.tenantId) newErrors.tenantId = 'Tenant is required';
-    if (!formData.personId) newErrors.personId = 'Person is required';
+    if (!formData.userId) newErrors.userId = 'User is required';
     if (!formData.wbsElementId.trim()) newErrors.wbsElementId = 'WBS Element ID is required';
     if (!formData.projectRoleId.trim()) newErrors.projectRoleId = 'Project Role ID is required';
     if (!formData.startDate) newErrors.startDate = 'Start date is required';
@@ -131,12 +130,10 @@ export function AssignmentModal({ isOpen, onClose, assignment, mode }: Assignmen
     label: `${t.name} (${t.code})`,
   }));
 
-  const personOptions = people
-    .filter(p => !formData.tenantId || p.tenantId === formData.tenantId)
-    .map(p => ({
-      value: p.id,
-      label: `${p.displayName} - ${p.email}`,
-    }));
+  const personOptions = users.map(p => ({
+    value: p.id,
+    label: `${p.displayName} - ${p.email}`,
+  }));
 
   const statusOptions = [
     { value: AssignmentStatus.Draft.toString(), label: 'Draft' },
@@ -186,11 +183,11 @@ export function AssignmentModal({ isOpen, onClose, assignment, mode }: Assignmen
 
         <FormGroup columns={1} className="mt-4">
           <Select
-            label="Person"
+            label="User"
             options={personOptions}
-            value={formData.personId}
-            onChange={(e) => handleChange('personId', e.target.value)}
-            error={errors.personId}
+            value={formData.userId}
+            onChange={(e) => handleChange('userId', e.target.value)}
+            error={errors.userId}
             required
           />
         </FormGroup>

@@ -33,10 +33,7 @@ public class TenantsController : AuthorizedControllerBase
     {
         try
         {
-            var query = _context.Tenants
-                .Include(t => t.Users)
-                .Include(t => t.People)
-                .AsQueryable();
+            var query = _context.Tenants.AsQueryable();
 
             if (status.HasValue)
             {
@@ -64,8 +61,6 @@ public class TenantsController : AuthorizedControllerBase
         try
         {
             var tenant = await _context.Tenants
-                .Include(t => t.Users)
-                .Include(t => t.People)
                 .FirstOrDefaultAsync(t => t.Id == id);
 
             if (tenant == null)

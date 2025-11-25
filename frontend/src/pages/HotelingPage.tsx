@@ -25,10 +25,10 @@ export function HotelingPage() {
 
   const exportToCSV = () => {
     // Create CSV content
-    const headers = ['Booking ID', 'Person ID', 'Space ID', 'Start Time', 'End Time', 'Status'];
+    const headers = ['Booking ID', 'User ID', 'Space ID', 'Start Time', 'End Time', 'Status'];
     const rows = filteredBookings.map(booking => [
       booking.id,
-      booking.personId,
+      booking.userId,
       booking.spaceId,
       new Date(booking.startDatetime).toLocaleString(),
       new Date(booking.endDatetime).toLocaleString(),
@@ -87,10 +87,10 @@ export function HotelingPage() {
 
   const columns = [
     {
-      key: 'personId',
-      header: 'Person ID',
+      key: 'userId',
+      header: 'User ID',
       render: (booking: Booking) => (
-        <div className="font-medium text-gray-900 text-sm">{booking.personId.substring(0, 8)}...</div>
+        <div className="font-medium text-gray-900 text-sm">{booking.userId.substring(0, 8)}...</div>
       )
     },
     {
@@ -124,7 +124,7 @@ export function HotelingPage() {
 
   const filteredBookings = bookings.filter(booking =>
     booking.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    booking.personId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    booking.userId.toLowerCase().includes(searchTerm.toLowerCase()) ||
     booking.spaceId.toLowerCase().includes(searchTerm.toLowerCase())
   );
 

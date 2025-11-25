@@ -12,7 +12,7 @@ interface WorkLocationSelectorProps {
   onClose: () => void;
   selectedDate: Date;
   existingPreference?: WorkLocationPreference;
-  personId: string;
+  userId: string;
 }
 
 export function WorkLocationSelector({
@@ -20,7 +20,7 @@ export function WorkLocationSelector({
   onClose,
   selectedDate,
   existingPreference,
-  personId,
+  userId,
 }: WorkLocationSelectorProps) {
   const queryClient = useQueryClient();
   const { data: tenants = [] } = useTenants();
@@ -78,7 +78,7 @@ export function WorkLocationSelector({
 
     const preferenceData = {
       tenantId,
-      personId,
+      userId,
       workDate,
       locationType,
       officeId: (locationType === WorkLocationType.OfficeNoReservation ||
@@ -112,7 +112,7 @@ export function WorkLocationSelector({
             try {
               // Fetch all preferences for this person and date using the proper API service
               const preferences = await workLocationService.getAll({
-                personId: preferenceData.personId,
+                userId: preferenceData.userId,
               });
 
               // Find the one for this specific date

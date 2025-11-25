@@ -80,7 +80,7 @@ export function DashboardPage() {
     if (!selectedDate || !dashboardData) return undefined;
     const dateStr = selectedDate.toISOString().split('T')[0];
     return dashboardData.preferences.find(
-      p => p.workDate === dateStr && p.personId === dashboardData.person.id
+      p => p.workDate === dateStr && p.userId === dashboardData.user.id
     );
   }, [selectedDate, dashboardData]);
 
@@ -258,7 +258,7 @@ export function DashboardPage() {
                 startDate={getMondayOfWeek(referenceDate)}
                 preferences={dashboardData.preferences}
                 onDayClick={handleDayClick}
-                personId={dashboardData.person.id}
+                userId={dashboardData.user.id}
                 weeksToShow={1}
               />
             )}
@@ -268,7 +268,7 @@ export function DashboardPage() {
                 startDate={getMondayOfWeek(referenceDate)}
                 preferences={dashboardData.preferences}
                 onDayClick={handleDayClick}
-                personId={dashboardData.person.id}
+                userId={dashboardData.user.id}
                 weeksToShow={2}
               />
             )}
@@ -278,7 +278,7 @@ export function DashboardPage() {
                 referenceDate={referenceDate}
                 preferences={dashboardData.preferences}
                 onDayClick={handleDayClick}
-                personId={dashboardData.person.id}
+                userId={dashboardData.user.id}
               />
             )}
           </CardBody>
@@ -327,7 +327,7 @@ export function DashboardPage() {
             }}
             selectedDate={selectedDate}
             existingPreference={existingPreference}
-            personId={dashboardData.person.id}
+            userId={dashboardData.user.id}
           />
         )}
       </div>

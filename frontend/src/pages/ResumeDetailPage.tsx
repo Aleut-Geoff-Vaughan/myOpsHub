@@ -168,9 +168,11 @@ export function ResumeDetailPage() {
             </button>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">
-                {resume.person ? `${resume.person.firstName} ${resume.person.lastName}` : 'Resume'}
+                {resume.user
+                  ? resume.user.displayName || resume.user.name || resume.user.email
+                  : 'Resume'}
               </h1>
-              <p className="text-gray-500">{resume.person?.jobTitle}</p>
+              <p className="text-gray-500">{resume.user?.jobTitle}</p>
             </div>
           </div>
           <div className="flex items-center space-x-3">
@@ -289,7 +291,7 @@ export function ResumeDetailPage() {
               </div>
             )}
 
-            {resume.person && (
+            {resume.user && (
               <div className="border-t pt-6">
                 <h3 className="text-lg font-semibold mb-4">Contact Information</h3>
                 <div className="grid grid-cols-2 gap-6">
@@ -297,13 +299,15 @@ export function ResumeDetailPage() {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Email
                     </label>
-                    <p className="text-gray-900">{resume.person.email}</p>
+                    <p className="text-gray-900">{resume.user.email}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Phone
                     </label>
-                    <p className="text-gray-900">{resume.person.phone || 'Not provided'}</p>
+                    <p className="text-gray-900">
+                      {resume.user.phoneNumber || 'Not provided'}
+                    </p>
                   </div>
                 </div>
               </div>

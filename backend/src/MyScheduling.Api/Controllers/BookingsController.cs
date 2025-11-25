@@ -130,7 +130,7 @@ public class BookingsController : AuthorizedControllerBase
     {
         try
         {
-            if (!booking.UserId.HasValue || booking.UserId == Guid.Empty)
+            if (booking.UserId == Guid.Empty)
             {
                 return BadRequest("UserId is required");
             }

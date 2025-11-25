@@ -36,7 +36,7 @@ public static class PermissionSeeder
         // Full access within tenant
         templates.AddRange(new[]
         {
-            Create(AppRole.TenantAdmin, "Person", PermissionAction.Manage, PermissionScope.Tenant),
+            Create(AppRole.TenantAdmin, "User", PermissionAction.Manage, PermissionScope.Tenant),
             Create(AppRole.TenantAdmin, "Project", PermissionAction.Manage, PermissionScope.Tenant),
             Create(AppRole.TenantAdmin, "WbsElement", PermissionAction.Manage, PermissionScope.Tenant),
             Create(AppRole.TenantAdmin, "Assignment", PermissionAction.Manage, PermissionScope.Tenant),
@@ -53,7 +53,7 @@ public static class PermissionSeeder
         // ==================== EXECUTIVE ====================
         templates.AddRange(new[]
         {
-            Create(AppRole.Executive, "Person", PermissionAction.Read, PermissionScope.Tenant),
+            Create(AppRole.Executive, "User", PermissionAction.Read, PermissionScope.Tenant),
             Create(AppRole.Executive, "Project", PermissionAction.Read, PermissionScope.Tenant),
             Create(AppRole.Executive, "WbsElement", PermissionAction.Read, PermissionScope.Tenant),
             Create(AppRole.Executive, "Assignment", PermissionAction.Read, PermissionScope.Tenant),
@@ -64,7 +64,7 @@ public static class PermissionSeeder
         // ==================== RESOURCE MANAGER ====================
         templates.AddRange(new[]
         {
-            Create(AppRole.ResourceManager, "Person", PermissionAction.Manage, PermissionScope.Tenant),
+            Create(AppRole.ResourceManager, "User", PermissionAction.Manage, PermissionScope.Tenant),
             Create(AppRole.ResourceManager, "Assignment", PermissionAction.Manage, PermissionScope.Tenant),
             Create(AppRole.ResourceManager, "Project", PermissionAction.Read, PermissionScope.Tenant),
             Create(AppRole.ResourceManager, "WbsElement", PermissionAction.Read, PermissionScope.Tenant),
@@ -77,14 +77,14 @@ public static class PermissionSeeder
             Create(AppRole.ProjectManager, "Project", PermissionAction.Manage, PermissionScope.Individual),
             Create(AppRole.ProjectManager, "WbsElement", PermissionAction.Manage, PermissionScope.Individual),
             Create(AppRole.ProjectManager, "Assignment", PermissionAction.Approve, PermissionScope.Individual),
-            Create(AppRole.ProjectManager, "Person", PermissionAction.Read, PermissionScope.Tenant),
+            Create(AppRole.ProjectManager, "User", PermissionAction.Read, PermissionScope.Tenant),
             Create(AppRole.ProjectManager, "ResumeProfile", PermissionAction.Read, PermissionScope.Tenant),
         });
 
         // ==================== TEAM LEAD ====================
         templates.AddRange(new[]
         {
-            Create(AppRole.TeamLead, "Person", PermissionAction.Read, PermissionScope.Department),
+            Create(AppRole.TeamLead, "User", PermissionAction.Read, PermissionScope.Department),
             Create(AppRole.TeamLead, "Assignment", PermissionAction.Read, PermissionScope.Department),
             Create(AppRole.TeamLead, "Booking", PermissionAction.Read, PermissionScope.Department),
             Create(AppRole.TeamLead, "WorkLocationPreference", PermissionAction.Read, PermissionScope.Department),
@@ -98,7 +98,7 @@ public static class PermissionSeeder
             Create(AppRole.OfficeManager, "Space", PermissionAction.Manage, PermissionScope.Individual),
             Create(AppRole.OfficeManager, "Booking", PermissionAction.Manage, PermissionScope.Tenant),
             Create(AppRole.OfficeManager, "SpaceMaintenanceLog", PermissionAction.Manage, PermissionScope.Tenant),
-            Create(AppRole.OfficeManager, "Person", PermissionAction.Read, PermissionScope.Tenant),
+            Create(AppRole.OfficeManager, "User", PermissionAction.Read, PermissionScope.Tenant),
         });
 
         // ==================== OVERRIDE APPROVER ====================
@@ -112,8 +112,8 @@ public static class PermissionSeeder
         // ==================== EMPLOYEE ====================
         templates.AddRange(new[]
         {
-            Create(AppRole.Employee, "Person", PermissionAction.Read, PermissionScope.Owner),
-            Create(AppRole.Employee, "Person", PermissionAction.Update, PermissionScope.Owner),
+            Create(AppRole.Employee, "User", PermissionAction.Read, PermissionScope.Owner),
+            Create(AppRole.Employee, "User", PermissionAction.Update, PermissionScope.Owner),
             Create(AppRole.Employee, "Assignment", PermissionAction.Read, PermissionScope.Owner),
             Create(AppRole.Employee, "Booking", PermissionAction.Create, PermissionScope.Owner),
             Create(AppRole.Employee, "Booking", PermissionAction.Read, PermissionScope.Owner),
@@ -129,7 +129,7 @@ public static class PermissionSeeder
         // ==================== VIEW ONLY ====================
         templates.AddRange(new[]
         {
-            Create(AppRole.ViewOnly, "Person", PermissionAction.Read, PermissionScope.Tenant),
+            Create(AppRole.ViewOnly, "User", PermissionAction.Read, PermissionScope.Tenant),
             Create(AppRole.ViewOnly, "Project", PermissionAction.Read, PermissionScope.Tenant),
             Create(AppRole.ViewOnly, "WbsElement", PermissionAction.Read, PermissionScope.Tenant),
             Create(AppRole.ViewOnly, "Assignment", PermissionAction.Read, PermissionScope.Tenant),
@@ -141,7 +141,6 @@ public static class PermissionSeeder
         // ==================== SUPPORT ====================
         templates.AddRange(new[]
         {
-            Create(AppRole.Support, "Person", PermissionAction.Read, PermissionScope.System),
             Create(AppRole.Support, "User", PermissionAction.Read, PermissionScope.System),
             Create(AppRole.Support, "Tenant", PermissionAction.Read, PermissionScope.System),
             Create(AppRole.Support, "AuthorizationAuditLog", PermissionAction.Read, PermissionScope.System),
@@ -153,7 +152,7 @@ public static class PermissionSeeder
             Create(AppRole.Auditor, "AuthorizationAuditLog", PermissionAction.Read, PermissionScope.System),
             Create(AppRole.Auditor, "WbsChangeHistory", PermissionAction.Read, PermissionScope.System),
             Create(AppRole.Auditor, "AssignmentHistory", PermissionAction.Read, PermissionScope.System),
-            Create(AppRole.Auditor, "Person", PermissionAction.Read, PermissionScope.System),
+            Create(AppRole.Auditor, "User", PermissionAction.Read, PermissionScope.System),
             Create(AppRole.Auditor, "Assignment", PermissionAction.Read, PermissionScope.System),
         });
 
@@ -184,7 +183,7 @@ public static class PermissionSeeder
     {
         var resources = new[]
         {
-            "Person", "User", "Tenant", "TenantMembership",
+            "User", "Tenant", "TenantMembership",
             "Project", "WbsElement", "Assignment", "ProjectRole",
             "Booking", "Office", "Space", "WorkLocationPreference",
             "ResumeProfile", "ResumeSection", "ResumeEntry", "ResumeVersion", "ResumeApproval",

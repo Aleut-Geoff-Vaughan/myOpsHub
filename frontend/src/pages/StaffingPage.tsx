@@ -46,10 +46,10 @@ export function StaffingPage() {
 
   const columns = [
     {
-      key: 'personId',
-      header: 'Person ID',
+      key: 'userId',
+      header: 'User ID',
       render: (assignment: Assignment) => (
-        <div className="font-medium text-gray-900 text-sm">{assignment.personId.substring(0, 8)}...</div>
+        <div className="font-medium text-gray-900 text-sm">{assignment.userId.substring(0, 8)}...</div>
       )
     },
     {
@@ -99,7 +99,7 @@ export function StaffingPage() {
 
   const filteredAssignments = assignments.filter(assignment =>
     assignment.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    assignment.personId.toLowerCase().includes(searchTerm.toLowerCase())
+    assignment.userId.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const stats = useMemo(() => {
@@ -263,15 +263,15 @@ export function StaffingPage() {
               subtitle="Person utilization over time"
             />
             <CardBody>
-              {/* Group assignments by person */}
+              {/* Group assignments by user */}
               {(() => {
-                // Group active assignments by personId
+                // Group active assignments by userId
                 const personMap = new Map<string, Assignment[]>();
                 assignments
                   .filter(a => a.status === AssignmentStatus.Active)
                   .forEach(assignment => {
-                    const existing = personMap.get(assignment.personId) || [];
-                    personMap.set(assignment.personId, [...existing, assignment]);
+                    const existing = personMap.get(assignment.userId) || [];
+                    personMap.set(assignment.userId, [...existing, assignment]);
                   });
 
                 // Convert to array and display
@@ -287,18 +287,18 @@ export function StaffingPage() {
 
                 return (
                   <div className="space-y-6">
-                    {personEntries.slice(0, 10).map(([personId, personAssignments]) => {
+                    {personEntries.slice(0, 10).map(([userId, personAssignments]) => {
                       const totalAllocation = personAssignments.reduce((sum, a) => sum + a.allocation, 0);
                       const isOverAllocated = totalAllocation > 100;
                       const isUnderAllocated = totalAllocation < 80;
 
                       return (
-                        <div key={personId} className="border-b pb-4 last:border-b-0">
+                        <div key={userId} className="border-b pb-4 last:border-b-0">
                           {/* Person Header */}
                           <div className="flex items-center justify-between mb-3">
                             <div className="flex items-center gap-3">
                               <div className="font-medium text-gray-900">
-                                Person {personId.substring(0, 8)}...
+                                User {userId.substring(0, 8)}...
                               </div>
                               <div className={`text-sm font-semibold ${
                                 isOverAllocated ? 'text-red-600' :

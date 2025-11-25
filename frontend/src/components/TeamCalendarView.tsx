@@ -15,13 +15,13 @@ export function TeamCalendarView({ memberSchedules, startDate, weeksToShow = 2 }
   // Generate weekdays for the date range
   const weekDays = useMemo(() => getWeekdays(startDate, weeksToShow), [startDate, weeksToShow]);
 
-  const toggleMemberExpansion = (personId: string) => {
+  const toggleMemberExpansion = (userId: string) => {
     setExpandedMembers(prev => {
       const newSet = new Set(prev);
-      if (newSet.has(personId)) {
-        newSet.delete(personId);
+      if (newSet.has(userId)) {
+        newSet.delete(userId);
       } else {
-        newSet.add(personId);
+        newSet.add(userId);
       }
       return newSet;
     });
@@ -115,18 +115,18 @@ export function TeamCalendarView({ memberSchedules, startDate, weeksToShow = 2 }
 
       {/* Team Member Rows */}
       {memberSchedules.map((member) => {
-        const isExpanded = expandedMembers.has(member.personId);
+        const isExpanded = expandedMembers.has(member.userId);
 
         return (
           <div
-            key={member.personId}
+            key={member.userId}
             className="border border-gray-200 rounded-lg overflow-hidden hover:border-gray-300 transition"
           >
             {/* Member Header Row */}
             <div className="grid grid-cols-[200px_1fr] gap-2 bg-gray-50 p-3">
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => toggleMemberExpansion(member.personId)}
+                  onClick={() => toggleMemberExpansion(member.userId)}
                   className="text-gray-600 hover:text-gray-900"
                 >
                   <svg
@@ -139,7 +139,7 @@ export function TeamCalendarView({ memberSchedules, startDate, weeksToShow = 2 }
                   </svg>
                 </button>
                 <div className="flex-1 min-w-0">
-                  <div className="font-semibold text-gray-900 text-sm truncate">{member.personName}</div>
+                  <div className="font-semibold text-gray-900 text-sm truncate">{member.userName}</div>
                   {member.jobTitle && (
                     <div className="text-xs text-gray-600 truncate">{member.jobTitle}</div>
                   )}
@@ -178,7 +178,7 @@ export function TeamCalendarView({ memberSchedules, startDate, weeksToShow = 2 }
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="font-medium text-gray-700">Email:</span>{' '}
-                      <span className="text-gray-900">{member.personEmail}</span>
+                      <span className="text-gray-900">{member.userEmail}</span>
                     </div>
                     {member.jobTitle && (
                       <div>

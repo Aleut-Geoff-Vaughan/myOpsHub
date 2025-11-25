@@ -31,7 +31,7 @@ public class ResumeApprovalsController : AuthorizedControllerBase
         {
             var query = _context.ResumeApprovals
                 .Include(a => a.ResumeProfile)
-                    .ThenInclude(r => r.Person)
+                    .ThenInclude(r => r.User)
                 .Include(a => a.ResumeVersion)
                 .Include(a => a.RequestedBy)
                 .Include(a => a.ReviewedBy)
@@ -71,7 +71,7 @@ public class ResumeApprovalsController : AuthorizedControllerBase
         {
             var approval = await _context.ResumeApprovals
                 .Include(a => a.ResumeProfile)
-                    .ThenInclude(r => r.Person)
+                    .ThenInclude(r => r.User)
                 .Include(a => a.ResumeVersion)
                 .Include(a => a.RequestedBy)
                 .Include(a => a.ReviewedBy)
@@ -100,7 +100,7 @@ public class ResumeApprovalsController : AuthorizedControllerBase
         {
             // Validate resume exists
             var resume = await _context.ResumeProfiles
-                .Include(r => r.Person)
+                .Include(r => r.User)
                 .FirstOrDefaultAsync(r => r.Id == request.ResumeProfileId);
 
             if (resume == null)
@@ -313,14 +313,14 @@ public class ResumeApprovalsController : AuthorizedControllerBase
         {
             var query = _context.ResumeApprovals
                 .Include(a => a.ResumeProfile)
-                    .ThenInclude(r => r.Person)
+                    .ThenInclude(r => r.User)
                 .Include(a => a.RequestedBy)
                 .Where(a => a.Status == ApprovalStatus.Pending);
 
             // Filter by tenant if specified
             if (tenantId.HasValue)
             {
-                query = query.Where(a => a.ResumeProfile.Person.TenantId == tenantId.Value);
+                query = query.Where(a => _context.TenantMemberships.Any(tm => tm.UserId == a.ResumeProfile.UserId && tm.TenantId == tenantId.Value && tm.IsActive));
             }
 
             var approvals = await query
@@ -347,7 +347,7 @@ public class ResumeApprovalsController : AuthorizedControllerBase
 
             var approvals = await _context.ResumeApprovals
                 .Include(a => a.ResumeProfile)
-                    .ThenInclude(r => r.Person)
+                    .ThenInclude(r => r.User)
                 .Include(a => a.ReviewedBy)
                 .Where(a => a.RequestedByUserId == userId)
                 .OrderByDescending(a => a.RequestedAt)

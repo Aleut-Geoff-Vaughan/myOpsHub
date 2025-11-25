@@ -22,7 +22,6 @@ interface User {
   email: string;
   displayName: string;
   isSystemAdmin: boolean;
-  personId?: string;
   profilePhotoUrl?: string;
 }
 

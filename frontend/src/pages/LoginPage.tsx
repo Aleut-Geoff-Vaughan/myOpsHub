@@ -132,6 +132,7 @@ export function LoginPage() {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
                 placeholder="you@company.com"
                 disabled={isLoading}
+                autoComplete="username"
               />
             </div>
 
@@ -148,6 +149,7 @@ export function LoginPage() {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent transition"
                 placeholder="••••••••"
                 disabled={isLoading}
+                autoComplete="current-password"
               />
             </div>
 

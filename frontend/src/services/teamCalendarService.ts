@@ -158,17 +158,17 @@ export const teamCalendarService = {
    * Get manager view - shows direct reports and their schedules
    */
   getManagerView: async (params: {
-    managerId?: string;
-    personId?: string;
+    managerUserId?: string;
+    userId?: string;
     startDate?: string; // ISO date format YYYY-MM-DD
     endDate?: string; // ISO date format YYYY-MM-DD
   }): Promise<ManagerViewResponse> => {
     const queryParams = new URLSearchParams();
-    if (params.managerId) {
-      queryParams.append('managerId', params.managerId);
+    if (params.managerUserId) {
+      queryParams.append('managerUserId', params.managerUserId);
     }
-    if (params.personId) {
-      queryParams.append('personId', params.personId);
+    if (params.userId) {
+      queryParams.append('userId', params.userId);
     }
     if (params.startDate) {
       queryParams.append('startDate', params.startDate);
@@ -183,11 +183,11 @@ export const teamCalendarService = {
   },
 
   /**
-   * Get available team calendars for a person to opt into
+   * Get available team calendars for a user to opt into
    */
-  getAvailableCalendars: async (personId: string): Promise<AvailableTeamCalendarsResponse> => {
+  getAvailableCalendars: async (userId: string): Promise<AvailableTeamCalendarsResponse> => {
     const queryParams = new URLSearchParams();
-    queryParams.append('personId', personId);
+    queryParams.append('userId', userId);
 
     return api.get<AvailableTeamCalendarsResponse>(
       `/teamcalendar/available?${queryParams.toString()}`

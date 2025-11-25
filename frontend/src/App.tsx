@@ -7,7 +7,6 @@ import { WorkspaceSelectorPage } from './pages/WorkspaceSelectorPage';
 import { DashboardLayout } from './components/layout/DashboardLayout';
 import { AdminLayout } from './components/layout/AdminLayout';
 import { DashboardPage } from './pages/DashboardPage';
-import { PeoplePage } from './pages/PeoplePage';
 import { ProjectsPage } from './pages/ProjectsPage';
 import { WbsPage } from './pages/WbsPage';
 import { StaffingPage } from './pages/StaffingPage';
@@ -109,7 +108,6 @@ function App() {
               }
             >
               <Route index element={<DashboardPage />} />
-              <Route path="people" element={<PeoplePage />} />
               <Route path="projects" element={<ProjectsPage />} />
               <Route path="wbs" element={<WbsPage />} />
               <Route path="staffing" element={<StaffingPage />} />

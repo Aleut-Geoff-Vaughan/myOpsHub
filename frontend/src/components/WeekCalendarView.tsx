@@ -6,17 +6,17 @@ interface WeekCalendarViewProps {
   startDate: Date;
   preferences: WorkLocationPreference[];
   onDayClick: (date: Date) => void;
-  personId: string;
+  userId: string;
   weeksToShow?: 1 | 2; // Optional: show 1 or 2 weeks (default 2)
 }
 
-export function WeekCalendarView({ startDate, preferences, onDayClick, personId, weeksToShow = 2 }: WeekCalendarViewProps) {
+export function WeekCalendarView({ startDate, preferences, onDayClick, userId, weeksToShow = 2 }: WeekCalendarViewProps) {
   // Use date utility to generate weekdays
   const weekDays = useMemo(() => getWeekdays(startDate, weeksToShow), [startDate, weeksToShow]);
 
   const getPreferenceForDate = (date: Date): WorkLocationPreference | undefined => {
     const dateStr = date.toISOString().split('T')[0];
-    return preferences.find(p => p.workDate === dateStr && p.personId === personId);
+    return preferences.find(p => p.workDate === dateStr && p.userId === userId);
   };
 
   const getLocationTypeLabel = (type: WorkLocationType): string => {

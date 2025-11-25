@@ -7,8 +7,7 @@ import {
   useUpdateDOALetter,
 } from '../hooks/useDOA';
 import type { CreateDOALetterRequest } from '../types/doa';
-import { useQuery } from '@tanstack/react-query';
-import { peopleService } from '../services/peopleService';
+import { useUsers } from '../hooks/useTenants';
 
 interface DOAEditorProps {
   doaId: string | null;
@@ -18,10 +17,7 @@ interface DOAEditorProps {
 export function DOAEditor({ doaId, onClose }: DOAEditorProps) {
   const isEdit = !!doaId;
   const { data: doa, isLoading: isLoadingDOA } = useDOALetter(doaId!);
-  const { data: people } = useQuery({
-    queryKey: ['people'],
-    queryFn: () => peopleService.getAll(),
-  });
+  const { data: users = [] } = useUsers();
 
   const createMutation = useCreateDOALetter();
   const updateMutation = useUpdateDOALetter();
@@ -100,9 +96,6 @@ export function DOAEditor({ doaId, onClose }: DOAEditorProps) {
     );
   }
 
-  // Get users from people who have a userId
-  const users = people?.filter((person) => person.userId) || [];
-
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
@@ -143,8 +136,8 @@ export function DOAEditor({ doaId, onClose }: DOAEditorProps) {
             >
               <option value="">Select a designee...</option>
               {users.map((person) => (
-                <option key={person.userId} value={person.userId}>
-                  {person.name} ({person.email})
+                <option key={person.id} value={person.id}>
+                  {person.displayName || person.name || person.email} ({person.email})
                 </option>
               ))}
             </select>

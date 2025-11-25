@@ -3,7 +3,7 @@ import { workLocationService } from '../services/workLocationService';
 import type { WorkLocationPreference } from '../types/api';
 
 export function useWorkLocationPreferences(params?: {
-  personId?: string;
+  userId?: string;
   startDate?: string;
   endDate?: string;
   locationType?: number;
@@ -49,7 +49,7 @@ export function useCreateWorkLocationPreference() {
 
       // Optimistically update cache
       queryClient.setQueryData(
-        ['workLocationPreferences', { personId: newPreference.personId }],
+        ['workLocationPreferences', { userId: newPreference.userId }],
         (old: WorkLocationPreference[] | undefined) => {
           if (!old) return old;
           return [...old, { ...newPreference, id: 'temp-' + Date.now(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() } as WorkLocationPreference];
@@ -104,7 +104,7 @@ export function useUpdateWorkLocationPreference() {
       // Optimistically update cache
       queryClient.setQueryData(['workLocationPreference', id], preference);
       queryClient.setQueryData(
-        ['workLocationPreferences', { personId: preference.personId }],
+        ['workLocationPreferences', { userId: preference.userId }],
         (old: WorkLocationPreference[] | undefined) => {
           if (!old) return old;
           return old.map(p => p.id === id ? preference : p);
@@ -210,10 +210,10 @@ export function useCreateBulkWorkLocationPreferences() {
       });
 
       // Optimistically add all preferences
-      const personId = newPreferences[0]?.personId;
-      if (personId) {
+      const userId = newPreferences[0]?.userId;
+      if (userId) {
         queryClient.setQueryData(
-          ['workLocationPreferences', { personId }],
+          ['workLocationPreferences', { userId }],
           (old: WorkLocationPreference[] | undefined) => {
             if (!old) return old;
             const tempPreferences = newPreferences.map((pref, index) => ({

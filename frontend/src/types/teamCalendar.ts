@@ -16,20 +16,20 @@ export enum MembershipType {
   Automatic = 2,
 }
 
-export interface PersonSummary {
+export interface UserSummary {
   id: string;
-  name: string;
+  displayName: string;
   email: string;
   jobTitle?: string;
-  managerId?: string;
+  managerUserId?: string;
   managerName?: string;
 }
 
 export interface TeamCalendarMemberResponse {
   id: string;
   teamCalendarId: string;
-  personId: string;
-  person: PersonSummary;
+  userId: string;
+  user: UserSummary;
   membershipType: MembershipType;
   addedDate: string; // ISO date string
   addedByUserId?: string;
@@ -44,8 +44,8 @@ export interface TeamCalendarResponse {
   description?: string;
   type: TeamCalendarType;
   isActive: boolean;
-  ownerId?: string;
-  owner?: PersonSummary;
+  ownerUserId?: string;
+  owner?: UserSummary;
   memberCount: number;
   members: TeamCalendarMemberResponse[];
   createdAt: string; // ISO date string
@@ -55,7 +55,7 @@ export interface CreateTeamCalendarRequest {
   name: string;
   description?: string;
   type: TeamCalendarType;
-  ownerId?: string;
+  ownerUserId?: string;
   isActive: boolean;
 }
 
@@ -63,17 +63,17 @@ export interface UpdateTeamCalendarRequest {
   name: string;
   description?: string;
   type: TeamCalendarType;
-  ownerId?: string;
+  ownerUserId?: string;
   isActive: boolean;
 }
 
 export interface AddTeamCalendarMemberRequest {
-  personId: string;
+  userId: string;
   membershipType: MembershipType;
 }
 
 export interface BulkAddMembersRequest {
-  personIds: string[];
+  userIds: string[];
   membershipType: MembershipType;
 }
 
@@ -91,10 +91,10 @@ export interface WorkLocationPreferenceResponse {
 }
 
 export interface TeamMemberSchedule {
-  personId: string;
-  personName: string;
-  personEmail?: string;
-  managerId?: string;
+  userId: string;
+  userName: string;
+  userEmail?: string;
+  managerUserId?: string;
   jobTitle?: string;
   preferences: WorkLocationPreferenceResponse[];
 }
@@ -107,13 +107,13 @@ export interface TeamCalendarViewResponse {
 }
 
 export interface ManagerViewRequest {
-  managerId?: string;
+  managerUserId?: string;
   startDate?: string; // ISO date string
   endDate?: string; // ISO date string
 }
 
 export interface ManagerViewResponse {
-  manager: PersonSummary;
+  manager: UserSummary;
   directReports: TeamMemberSchedule[];
   startDate: string; // ISO date string
   endDate: string; // ISO date string
