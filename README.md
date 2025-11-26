@@ -42,7 +42,7 @@ cd frontend && npm run build
 cd backend  && dotnet build
 ```
 
-Sample accounts (dev seed): `admin@test.com`, `test@test.com` (password per your seed/setup).
+Sample accounts: `admin@admin.com`.
 
 ## Data, Roles, Auth
 - Tenants: isolation enforced in code; JWT claims carry tenant IDs and roles.

@@ -29,6 +29,28 @@ appsettings.*.json
 # TypeScript cache
 *.tsbuildinfo
 
+# .NET build artifacts
+bin/
+obj/
+*.dll
+*.exe
+*.pdb
+*.user
+*.suo
+*.cache
+*.vsidx
+*.vspscc
+*.sln.docstates
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.publishproj
+*.azurePubxml
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
 # Logs
 npm-debug.log*
 yarn-debug.log*
