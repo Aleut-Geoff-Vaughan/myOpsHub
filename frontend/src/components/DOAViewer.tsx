@@ -17,7 +17,7 @@ export function DOAViewer({ doaId, onClose }: DOAViewerProps) {
   const signMutation = useSignDOALetter();
   const [showSignaturePad, setShowSignaturePad] = useState(false);
 
-  const handleSign = async (signatureData: string) => {
+  const handleSign = async (signatureData: string, signatureType: number, typedSignature?: string) => {
     try {
       // Remove the data:image/png;base64, prefix if present
       const base64Data = signatureData.split(',')[1] || signatureData;
@@ -26,6 +26,8 @@ export function DOAViewer({ doaId, onClose }: DOAViewerProps) {
         id: doaId,
         request: {
           signatureData: base64Data,
+          signatureType,
+          typedSignature,
         },
       });
       toast.success('DOA letter signed successfully');
@@ -140,18 +142,12 @@ export function DOAViewer({ doaId, onClose }: DOAViewerProps) {
               </div>
             </div>
 
-            <div className="mt-4 flex gap-2">
-              {doa.isFinancialAuthority && (
-                <span className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-blue-100 text-blue-800">
-                  Financial Authority
-                </span>
-              )}
-              {doa.isOperationalAuthority && (
-                <span className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-purple-100 text-purple-800">
-                  Operational Authority
-                </span>
-              )}
-            </div>
+            {doa.subjectLine && (
+              <div className="mt-4">
+                <div className="text-sm text-gray-500">Subject</div>
+                <div className="font-medium text-gray-900">{doa.subjectLine}</div>
+              </div>
+            )}
           </div>
 
           {/* Letter Content */}

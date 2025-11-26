@@ -48,16 +48,16 @@ export function ProjectModal({ isOpen, onClose, project, mode }: ProjectModalPro
         status: project.status,
         approverGroupId: (project as any).approverGroupId || '',
       });
-    } else {
-      // Set default tenant if available
+    } else if (mode === 'create' && tenants.length > 0 && !formData.tenantId) {
+      // Only set default tenant once when creating
       setFormData(prev => ({
         ...prev,
-        tenantId: tenants[0]?.id || '',
+        tenantId: tenants[0].id,
         startDate: new Date().toISOString().split('T')[0],
         approverGroupId: '',
       }));
     }
-  }, [project, mode, tenants]);
+  }, [project, mode, tenants, formData.tenantId]);
 
   const createMutation = useMutation({
     mutationFn: (data: Omit<Project, 'id' | 'createdAt' | 'updatedAt'>) =>
@@ -134,7 +134,9 @@ export function ProjectModal({ isOpen, onClose, project, mode }: ProjectModalPro
   const statusOptions = [
     { value: ProjectStatus.Draft.toString(), label: 'Draft' },
     { value: ProjectStatus.Active.toString(), label: 'Active' },
-    { value: ProjectStatus.Closed.toString(), label: 'Closed' },
+    { value: ProjectStatus.Completed.toString(), label: 'Completed' },
+    { value: ProjectStatus.OnHold.toString(), label: 'On Hold' },
+    { value: ProjectStatus.Cancelled.toString(), label: 'Cancelled' },
   ];
   const approverGroupOptions = [{ value: '', label: 'None' }].concat(
     approverGroups.map((g) => ({ value: g.id, label: g.name }))

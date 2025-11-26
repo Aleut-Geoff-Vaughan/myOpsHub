@@ -79,7 +79,8 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   label?: string;
   error?: string;
   helper?: string;
-  options: { value: string; label: string }[];
+  options?: { value: string; label: string }[];
+  children?: React.ReactNode;
 }
 
 export const Select: React.FC<SelectProps> = ({
@@ -87,6 +88,7 @@ export const Select: React.FC<SelectProps> = ({
   error,
   helper,
   options,
+  children,
   className = '',
   ...props
 }) => {
@@ -104,11 +106,15 @@ export const Select: React.FC<SelectProps> = ({
         } ${props.disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'} ${className}`}
         {...props}
       >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
+        {options ? (
+          options.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))
+        ) : (
+          children
+        )}
       </select>
       {helper && !error && (
         <p className="mt-1 text-sm text-gray-500">{helper}</p>
@@ -143,19 +149,58 @@ interface FormGroupProps {
   children: React.ReactNode;
   columns?: 1 | 2 | 3 | 4;
   className?: string;
+  label?: string;
+  error?: string;
+  required?: boolean;
+  helpText?: string;
 }
 
-export const FormGroup: React.FC<FormGroupProps> = ({ children, columns = 1, className = '' }) => {
-  const gridClasses = {
-    1: 'grid-cols-1',
-    2: 'grid-cols-1 md:grid-cols-2',
-    3: 'grid-cols-1 md:grid-cols-3',
-    4: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'
-  };
+export const FormGroup: React.FC<FormGroupProps> = ({
+  children,
+  columns,
+  className = '',
+  label,
+  error,
+  required,
+  helpText
+}) => {
+  // If columns is specified, use grid layout (original behavior)
+  if (columns) {
+    const gridClasses = {
+      1: 'grid-cols-1',
+      2: 'grid-cols-1 md:grid-cols-2',
+      3: 'grid-cols-1 md:grid-cols-3',
+      4: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'
+    };
 
-  return (
-    <div className={`grid ${gridClasses[columns]} gap-4 ${className}`}>
-      {children}
-    </div>
-  );
+    return (
+      <div className={`grid ${gridClasses[columns]} gap-4 ${className}`}>
+        {children}
+      </div>
+    );
+  }
+
+  // If label is specified, wrap with label/error display (new behavior)
+  if (label || error || helpText) {
+    return (
+      <div className={`w-full ${className}`}>
+        {label && (
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            {label}
+            {required && <span className="text-red-500 ml-1">*</span>}
+          </label>
+        )}
+        {children}
+        {helpText && !error && (
+          <p className="mt-1 text-sm text-gray-500">{helpText}</p>
+        )}
+        {error && (
+          <p className="mt-1 text-sm text-red-600">{error}</p>
+        )}
+      </div>
+    );
+  }
+
+  // Default: just render children
+  return <>{children}</>;
 };

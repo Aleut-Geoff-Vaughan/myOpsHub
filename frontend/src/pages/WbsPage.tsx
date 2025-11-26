@@ -63,16 +63,14 @@ export function WbsPage() {
 
   const getTypeLabel = (type: WbsType): string => {
     switch (type) {
-      case WbsType.Billable:
-        return 'Billable';
-      case WbsType.NonBillable:
-        return 'Non-Billable';
-      case WbsType.BidAndProposal:
-        return 'B&P';
-      case WbsType.Overhead:
-        return 'Overhead';
-      case WbsType.GeneralAndAdmin:
-        return 'G&A';
+      case WbsType.TaskOrder:
+        return 'Task Order';
+      case WbsType.ProjectCode:
+        return 'Project Code';
+      case WbsType.SubTask:
+        return 'Sub Task';
+      case WbsType.Internal:
+        return 'Internal';
       default:
         return 'Unknown';
     }
@@ -80,14 +78,13 @@ export function WbsPage() {
 
   const getTypeVariant = (type: WbsType): 'success' | 'warning' | 'default' | 'info' => {
     switch (type) {
-      case WbsType.Billable:
+      case WbsType.TaskOrder:
         return 'success';
-      case WbsType.NonBillable:
+      case WbsType.ProjectCode:
         return 'info';
-      case WbsType.BidAndProposal:
+      case WbsType.SubTask:
         return 'warning';
-      case WbsType.Overhead:
-      case WbsType.GeneralAndAdmin:
+      case WbsType.Internal:
         return 'default';
       default:
         return 'default';
@@ -197,9 +194,9 @@ export function WbsPage() {
     const approved = filteredWbsElements.filter(w => w.approvalStatus === WbsApprovalStatus.Approved).length;
     const pending = filteredWbsElements.filter(w => w.approvalStatus === WbsApprovalStatus.PendingApproval).length;
     const draft = filteredWbsElements.filter(w => w.approvalStatus === WbsApprovalStatus.Draft).length;
-    const billable = filteredWbsElements.filter(w => w.type === WbsType.Billable).length;
+    const taskOrders = filteredWbsElements.filter(w => w.type === WbsType.TaskOrder).length;
 
-    return { total, approved, pending, draft, billable };
+    return { total, approved, pending, draft, taskOrders };
   }, [filteredWbsElements]);
 
   if (error) {
@@ -254,8 +251,8 @@ export function WbsPage() {
         </Card>
         <Card padding="sm">
           <div className="text-center">
-            <div className="text-3xl font-bold text-emerald-600">{stats.billable}</div>
-            <div className="text-sm text-gray-600 mt-1">Billable</div>
+            <div className="text-3xl font-bold text-emerald-600">{stats.taskOrders}</div>
+            <div className="text-sm text-gray-600 mt-1">Task Orders</div>
           </div>
         </Card>
       </div>
@@ -285,39 +282,32 @@ export function WbsPage() {
                   All
                 </Button>
                 <Button
-                  variant={selectedTypeFilter === WbsType.Billable ? 'primary' : 'ghost'}
-                  onClick={() => setSelectedTypeFilter(WbsType.Billable)}
+                  variant={selectedTypeFilter === WbsType.TaskOrder ? 'primary' : 'ghost'}
+                  onClick={() => setSelectedTypeFilter(WbsType.TaskOrder)}
                   size="sm"
                 >
-                  Billable
+                  Task Order
                 </Button>
                 <Button
-                  variant={selectedTypeFilter === WbsType.NonBillable ? 'primary' : 'ghost'}
-                  onClick={() => setSelectedTypeFilter(WbsType.NonBillable)}
+                  variant={selectedTypeFilter === WbsType.ProjectCode ? 'primary' : 'ghost'}
+                  onClick={() => setSelectedTypeFilter(WbsType.ProjectCode)}
                   size="sm"
                 >
-                  Non-Billable
+                  Project Code
                 </Button>
                 <Button
-                  variant={selectedTypeFilter === WbsType.BidAndProposal ? 'primary' : 'ghost'}
-                  onClick={() => setSelectedTypeFilter(WbsType.BidAndProposal)}
+                  variant={selectedTypeFilter === WbsType.SubTask ? 'primary' : 'ghost'}
+                  onClick={() => setSelectedTypeFilter(WbsType.SubTask)}
                   size="sm"
                 >
-                  B&P
+                  Sub Task
                 </Button>
                 <Button
-                  variant={selectedTypeFilter === WbsType.Overhead ? 'primary' : 'ghost'}
-                  onClick={() => setSelectedTypeFilter(WbsType.Overhead)}
+                  variant={selectedTypeFilter === WbsType.Internal ? 'primary' : 'ghost'}
+                  onClick={() => setSelectedTypeFilter(WbsType.Internal)}
                   size="sm"
                 >
-                  Overhead
-                </Button>
-                <Button
-                  variant={selectedTypeFilter === WbsType.GeneralAndAdmin ? 'primary' : 'ghost'}
-                  onClick={() => setSelectedTypeFilter(WbsType.GeneralAndAdmin)}
-                  size="sm"
-                >
-                  G&A
+                  Internal
                 </Button>
               </div>
             </div>

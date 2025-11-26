@@ -34,8 +34,14 @@ export function ResumeDetailPage() {
   const [showSectionModal, setShowSectionModal] = useState(false);
 
   useEffect(() => {
-    if (id) {
+    if (id && id !== 'new') {
       loadResumeData();
+    } else if (id === 'new') {
+      // Initialize empty resume for creation
+      setLoading(false);
+      setResume(null);
+      setSections([]);
+      setVersions([]);
     }
   }, [id]);
 
@@ -138,6 +144,29 @@ export function ResumeDetailPage() {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-gray-500">Loading resume...</div>
+      </div>
+    );
+  }
+
+  if (id === 'new') {
+    return (
+      <div className="p-8">
+        <div className="max-w-2xl mx-auto">
+          <h1 className="text-3xl font-bold text-gray-900 mb-6">Create New Resume</h1>
+          <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-3 rounded mb-6">
+            <p className="font-medium">Resume Creation Not Fully Implemented</p>
+            <p className="mt-1 text-sm">
+              The resume creation feature is currently under development.
+              Please use the API or contact your administrator to create a resume profile.
+            </p>
+          </div>
+          <button
+            onClick={() => navigate('/resumes')}
+            className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+          >
+            Back to Resumes
+          </button>
+        </div>
       </div>
     );
   }

@@ -43,7 +43,7 @@ export function WbsDetailModal({ isOpen, onClose, wbs, mode }: WbsDetailModalPro
     description: '',
     validFrom: '',
     validTo: '',
-    type: WbsType.Billable,
+    type: WbsType.TaskOrder,
     ownerUserId: '',
     approverUserId: '',
     approverGroupId: '',
@@ -64,20 +64,14 @@ export function WbsDetailModal({ isOpen, onClose, wbs, mode }: WbsDetailModalPro
         approverUserId: wbs.approverUserId || '',
         approverGroupId: wbs.approverGroupId || '',
       });
-    } else {
-      setFormData({
-        projectId: projects[0]?.id || '',
-        code: '',
-        description: '',
-        validFrom: new Date().toISOString().split('T')[0],
-        validTo: '',
-        type: WbsType.Billable,
-        ownerUserId: '',
-        approverUserId: '',
-        approverGroupId: '',
-      });
+    } else if (mode === 'create' && projects.length > 0 && !formData.projectId) {
+      // Only set default project once when creating
+      setFormData(prev => ({
+        ...prev,
+        projectId: projects[0].id,
+      }));
     }
-  }, [wbs, mode, projects]);
+  }, [wbs, mode, projects, formData.projectId]);
 
   const createMutation = useMutation({
     mutationFn: (data: any) => wbsService.createWbs(data),
@@ -218,11 +212,10 @@ export function WbsDetailModal({ isOpen, onClose, wbs, mode }: WbsDetailModalPro
   }));
 
   const typeOptions = [
-    { value: WbsType.Billable.toString(), label: 'Billable' },
-    { value: WbsType.NonBillable.toString(), label: 'Non-Billable' },
-    { value: WbsType.BidAndProposal.toString(), label: 'Bid & Proposal (B&P)' },
-    { value: WbsType.Overhead.toString(), label: 'Overhead (OH)' },
-    { value: WbsType.GeneralAndAdmin.toString(), label: 'General & Admin (G&A)' },
+    { value: WbsType.TaskOrder.toString(), label: 'Task Order' },
+    { value: WbsType.ProjectCode.toString(), label: 'Project Code' },
+    { value: WbsType.SubTask.toString(), label: 'Sub Task' },
+    { value: WbsType.Internal.toString(), label: 'Internal' },
   ];
   const approverGroupOptions = [{ value: '', label: 'None' }].concat(
     approverGroups.map((g) => ({ value: g.id, label: g.name }))

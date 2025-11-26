@@ -17,37 +17,74 @@ interface DOAEditorProps {
 export function DOAEditor({ doaId, onClose }: DOAEditorProps) {
   const isEdit = !!doaId;
   const { data: doa, isLoading: isLoadingDOA } = useDOALetter(doaId!);
-  const { data: users = [] } = useUsers();
+  const { data: users = [], isLoading: isLoadingUsers, error: usersError } = useUsers();
 
   const createMutation = useCreateDOALetter();
   const updateMutation = useUpdateDOALetter();
 
+  // Search state for designee
+  const [searchTerm, setSearchTerm] = useState('');
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+
   const [formData, setFormData] = useState<CreateDOALetterRequest>({
     designeeUserId: '',
+    subjectLine: '',
     letterContent: '',
     effectiveStartDate: format(new Date(), 'yyyy-MM-dd'),
     effectiveEndDate: format(
-      new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+      new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Default to 7 days (1 week)
       'yyyy-MM-dd'
     ),
-    isFinancialAuthority: false,
-    isOperationalAuthority: false,
     notes: '',
+  });
+
+  // Filter users based on search term
+  const filteredUsers = users.filter((user) => {
+    const searchLower = searchTerm.toLowerCase();
+    const displayName = user.displayName || user.name || '';
+    const email = user.email || '';
+    return (
+      displayName.toLowerCase().includes(searchLower) ||
+      email.toLowerCase().includes(searchLower)
+    );
   });
 
   useEffect(() => {
     if (doa) {
       setFormData({
         designeeUserId: doa.designeeUserId,
+        subjectLine: doa.subjectLine || '',
         letterContent: doa.letterContent,
         effectiveStartDate: format(new Date(doa.effectiveStartDate), 'yyyy-MM-dd'),
         effectiveEndDate: format(new Date(doa.effectiveEndDate), 'yyyy-MM-dd'),
-        isFinancialAuthority: doa.isFinancialAuthority,
-        isOperationalAuthority: doa.isOperationalAuthority,
         notes: doa.notes || '',
       });
+      // Set the selected user for display
+      const user = users.find(u => u.id === doa.designeeUserId);
+      if (user) {
+        setSelectedUser(user);
+        setSearchTerm(user.displayName || user.name || user.email);
+      }
     }
-  }, [doa]);
+  }, [doa, users]);
+
+  const handleSelectUser = (user: any) => {
+    setSelectedUser(user);
+    setSearchTerm(user.displayName || user.name || user.email);
+    setFormData({ ...formData, designeeUserId: user.id });
+    setShowDropdown(false);
+  };
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+    setShowDropdown(true);
+    // Clear selection if user is typing
+    if (selectedUser && e.target.value !== (selectedUser.displayName || selectedUser.name || selectedUser.email)) {
+      setSelectedUser(null);
+      setFormData({ ...formData, designeeUserId: '' });
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -57,13 +94,13 @@ export function DOAEditor({ doaId, onClose }: DOAEditorProps) {
       return;
     }
 
-    if (!formData.letterContent.trim()) {
-      toast.error('Please enter letter content');
+    if (!formData.subjectLine.trim()) {
+      toast.error('Please enter a subject line');
       return;
     }
 
-    if (!formData.isFinancialAuthority && !formData.isOperationalAuthority) {
-      toast.error('Please select at least one authority type');
+    if (!formData.letterContent.trim()) {
+      toast.error('Please enter letter content');
       return;
     }
 
@@ -122,28 +159,54 @@ export function DOAEditor({ doaId, onClose }: DOAEditorProps) {
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
           {/* Designee Selection */}
-          <div>
+          <div className="relative">
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Designee <span className="text-red-500">*</span>
             </label>
-            <select
-              value={formData.designeeUserId}
-              onChange={(e) =>
-                setFormData({ ...formData, designeeUserId: e.target.value })
-              }
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={handleSearchChange}
+              onFocus={() => setShowDropdown(true)}
+              onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+              placeholder={isLoadingUsers ? 'Loading users...' : 'Search by name or email...'}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              disabled={isLoadingUsers}
               required
-            >
-              <option value="">Select a designee...</option>
-              {users.map((person) => (
-                <option key={person.id} value={person.id}>
-                  {person.displayName || person.name || person.email} ({person.email})
-                </option>
-              ))}
-            </select>
-            <p className="mt-1 text-sm text-gray-500">
-              Person to whom authority will be delegated
-            </p>
+            />
+            {/* Dropdown */}
+            {showDropdown && !isLoadingUsers && filteredUsers.length > 0 && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                {filteredUsers.map((user) => (
+                  <button
+                    key={user.id}
+                    type="button"
+                    onClick={() => handleSelectUser(user)}
+                    className="w-full px-3 py-2 text-left hover:bg-blue-50 focus:bg-blue-50 focus:outline-none"
+                  >
+                    <div className="font-medium text-gray-900">
+                      {user.displayName || user.name || user.email}
+                    </div>
+                    <div className="text-sm text-gray-500">{user.email}</div>
+                  </button>
+                ))}
+              </div>
+            )}
+            {showDropdown && !isLoadingUsers && searchTerm && filteredUsers.length === 0 && (
+              <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg p-3 text-sm text-gray-500">
+                No users found matching "{searchTerm}"
+              </div>
+            )}
+            {usersError && (
+              <p className="mt-1 text-sm text-red-600">
+                Error loading users. Please try refreshing the page.
+              </p>
+            )}
+            {!usersError && !isLoadingUsers && (
+              <p className="mt-1 text-sm text-gray-500">
+                Person to whom authority will be delegated ({users.length} users available)
+              </p>
+            )}
           </div>
 
           {/* Date Range */}
@@ -179,45 +242,24 @@ export function DOAEditor({ doaId, onClose }: DOAEditorProps) {
             </div>
           </div>
 
-          {/* Authority Types */}
+          {/* Subject Line */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Authority Type <span className="text-red-500">*</span>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Subject Line <span className="text-red-500">*</span>
             </label>
-            <div className="space-y-2">
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.isFinancialAuthority}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      isFinancialAuthority: e.target.checked,
-                    })
-                  }
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <span className="ml-2 text-sm text-gray-700">
-                  Financial Authority
-                </span>
-              </label>
-              <label className="flex items-center">
-                <input
-                  type="checkbox"
-                  checked={formData.isOperationalAuthority}
-                  onChange={(e) =>
-                    setFormData({
-                      ...formData,
-                      isOperationalAuthority: e.target.checked,
-                    })
-                  }
-                  className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                />
-                <span className="ml-2 text-sm text-gray-700">
-                  Operational Authority
-                </span>
-              </label>
-            </div>
+            <input
+              type="text"
+              value={formData.subjectLine}
+              onChange={(e) =>
+                setFormData({ ...formData, subjectLine: e.target.value })
+              }
+              placeholder="e.g., Financial Authority, Operational Authority, Signing Authority..."
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              required
+            />
+            <p className="mt-1 text-sm text-gray-500">
+              Brief description of the authority being delegated
+            </p>
           </div>
 
           {/* Letter Content */}

@@ -30,11 +30,13 @@ public class DelegationOfAuthorityController : AuthorizedControllerBase
             var userId = GetCurrentUserId();
             var tenantIds = GetUserTenantIds();
 
+            // Optimize: Don't load Signatures and Activations in list view - they're heavy collections
+            // They can be loaded on-demand when viewing individual letters
             var query = _context.DelegationOfAuthorityLetters
                 .Include(d => d.DelegatorUser)
                 .Include(d => d.DesigneeUser)
-                .Include(d => d.Signatures)
-                .Include(d => d.Activations)
+                // Removed: .Include(d => d.Signatures) - Load on demand for detail view
+                // Removed: .Include(d => d.Activations) - Load on demand for detail view
                 .Where(d => tenantIds.Contains(d.TenantId))
                 .AsNoTracking();
 
@@ -105,7 +107,7 @@ public class DelegationOfAuthorityController : AuthorizedControllerBase
     // POST: api/delegationofauthority
     [HttpPost]
     [RequiresPermission(Resource = "DelegationOfAuthority", Action = PermissionAction.Create)]
-    public async Task<ActionResult<DelegationOfAuthorityLetter>> CreateDOALetter(DelegationOfAuthorityLetter letter)
+    public async Task<ActionResult<DelegationOfAuthorityLetter>> CreateDOALetter(CreateDOALetterRequest request)
     {
         try
         {
@@ -114,7 +116,7 @@ public class DelegationOfAuthorityController : AuthorizedControllerBase
             var tenantId = tenantIds.FirstOrDefault();
 
             // Validate dates
-            if (letter.EffectiveEndDate <= letter.EffectiveStartDate)
+            if (request.EffectiveEndDate <= request.EffectiveStartDate)
             {
                 return BadRequest("Effective end date must be after start date");
             }
@@ -122,7 +124,7 @@ public class DelegationOfAuthorityController : AuthorizedControllerBase
             // Validate designee exists
             var designee = await _context.Users
                 .Include(u => u.TenantMemberships)
-                .FirstOrDefaultAsync(u => u.Id == letter.DesigneeUserId);
+                .FirstOrDefaultAsync(u => u.Id == request.DesigneeUserId);
 
             if (designee == null)
             {
@@ -135,12 +137,23 @@ public class DelegationOfAuthorityController : AuthorizedControllerBase
                 return BadRequest("Designee does not have access to this tenant");
             }
 
-            // Set IDs and metadata
-            letter.Id = Guid.NewGuid();
-            letter.DelegatorUserId = userId;
-            letter.TenantId = tenantId;
-            letter.Status = DOAStatus.Draft;
-            letter.CreatedAt = DateTime.UtcNow;
+            // Create the letter entity from the request
+            var letter = new DelegationOfAuthorityLetter
+            {
+                Id = Guid.NewGuid(),
+                DelegatorUserId = userId,
+                DesigneeUserId = request.DesigneeUserId,
+                TenantId = tenantId,
+                SubjectLine = request.SubjectLine,
+                LetterContent = request.LetterContent,
+                EffectiveStartDate = DateTime.SpecifyKind(request.EffectiveStartDate, DateTimeKind.Utc),
+                EffectiveEndDate = DateTime.SpecifyKind(request.EffectiveEndDate, DateTimeKind.Utc),
+                IsFinancialAuthority = request.IsFinancialAuthority, // Kept for backward compatibility
+                IsOperationalAuthority = request.IsOperationalAuthority, // Kept for backward compatibility
+                Notes = request.Notes,
+                Status = DOAStatus.Draft,
+                CreatedAt = DateTime.UtcNow
+            };
 
             _context.DelegationOfAuthorityLetters.Add(letter);
             await _context.SaveChangesAsync();
@@ -160,9 +173,9 @@ public class DelegationOfAuthorityController : AuthorizedControllerBase
     // PUT: api/delegationofauthority/{id}
     [HttpPut("{id}")]
     [RequiresPermission(Resource = "DelegationOfAuthority", Action = PermissionAction.Update)]
-    public async Task<IActionResult> UpdateDOALetter(Guid id, DelegationOfAuthorityLetter letter)
+    public async Task<IActionResult> UpdateDOALetter(Guid id, UpdateDOALetterRequest request)
     {
-        if (id != letter.Id)
+        if (id != request.Id)
         {
             return BadRequest("ID mismatch");
         }
@@ -192,13 +205,31 @@ public class DelegationOfAuthorityController : AuthorizedControllerBase
                 return BadRequest("Only draft DOA letters can be modified");
             }
 
+            // Validate designee exists
+            var designee = await _context.Users
+                .Include(u => u.TenantMemberships)
+                .FirstOrDefaultAsync(u => u.Id == request.DesigneeUserId);
+
+            if (designee == null)
+            {
+                return BadRequest("Designee user not found");
+            }
+
+            // Verify designee has access to tenant
+            if (!designee.TenantMemberships.Any(tm => tm.TenantId == tenantId && tm.IsActive))
+            {
+                return BadRequest("Designee does not have access to this tenant");
+            }
+
             // Update properties
-            existing.LetterContent = letter.LetterContent;
-            existing.EffectiveStartDate = letter.EffectiveStartDate;
-            existing.EffectiveEndDate = letter.EffectiveEndDate;
-            existing.IsFinancialAuthority = letter.IsFinancialAuthority;
-            existing.IsOperationalAuthority = letter.IsOperationalAuthority;
-            existing.Notes = letter.Notes;
+            existing.DesigneeUserId = request.DesigneeUserId;
+            existing.SubjectLine = request.SubjectLine;
+            existing.LetterContent = request.LetterContent;
+            existing.EffectiveStartDate = DateTime.SpecifyKind(request.EffectiveStartDate, DateTimeKind.Utc);
+            existing.EffectiveEndDate = DateTime.SpecifyKind(request.EffectiveEndDate, DateTimeKind.Utc);
+            existing.IsFinancialAuthority = request.IsFinancialAuthority; // Kept for backward compatibility
+            existing.IsOperationalAuthority = request.IsOperationalAuthority; // Kept for backward compatibility
+            existing.Notes = request.Notes;
             existing.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
@@ -492,6 +523,25 @@ public class DelegationOfAuthorityController : AuthorizedControllerBase
             return StatusCode(500, "An error occurred while retrieving active DOA activations");
         }
     }
+}
+
+public class CreateDOALetterRequest
+{
+    public Guid DesigneeUserId { get; set; }
+    public string SubjectLine { get; set; } = string.Empty;
+    public string LetterContent { get; set; } = string.Empty;
+    public DateTime EffectiveStartDate { get; set; }
+    public DateTime EffectiveEndDate { get; set; }
+    public string? Notes { get; set; }
+
+    // Deprecated - kept for backward compatibility during transition
+    public bool IsFinancialAuthority { get; set; }
+    public bool IsOperationalAuthority { get; set; }
+}
+
+public class UpdateDOALetterRequest : CreateDOALetterRequest
+{
+    public Guid Id { get; set; }
 }
 
 public class SignatureRequest

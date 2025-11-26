@@ -36,11 +36,17 @@ public class PeopleController : AuthorizedControllerBase
     {
         try
         {
-            var query = _context.Users.AsQueryable();
+            // Optimize: Add AsNoTracking and use proper Include to avoid N+1 query
+            var query = _context.Users
+                .AsNoTracking()
+                .AsQueryable();
 
             if (tenantId.HasValue)
             {
-                query = query.Where(u => _context.TenantMemberships.Any(tm => tm.UserId == u.Id && tm.TenantId == tenantId.Value && tm.IsActive));
+                // Use Include with filtered collection instead of Any() subquery to avoid N+1
+                query = query
+                    .Include(u => u.TenantMemberships.Where(tm => tm.TenantId == tenantId.Value && tm.IsActive))
+                    .Where(u => u.TenantMemberships.Any(tm => tm.TenantId == tenantId.Value && tm.IsActive));
             }
 
             if (status.HasValue)
@@ -76,7 +82,9 @@ public class PeopleController : AuthorizedControllerBase
     {
         try
         {
+            // Optimize: Add AsNoTracking for read-only detail query
             var user = await _context.Users
+                .AsNoTracking()
                 .Include(u => u.Manager)
                 .Include(u => u.TenantMemberships)
                 .FirstOrDefaultAsync(u => u.Id == id);
@@ -107,7 +115,9 @@ public class PeopleController : AuthorizedControllerBase
     {
         try
         {
+            // Optimize: Add AsNoTracking for read-only query
             var user = await _context.Users
+                .AsNoTracking()
                 .Include(u => u.Manager)
                 .FirstOrDefaultAsync(u => u.Id == userId);
 
@@ -135,7 +145,9 @@ public class PeopleController : AuthorizedControllerBase
     {
         try
         {
+            // Optimize: Add AsNoTracking for read-only query
             var resume = await _context.ResumeProfiles
+                .AsNoTracking()
                 .FirstOrDefaultAsync(r => r.UserId == id);
 
             if (resume == null)

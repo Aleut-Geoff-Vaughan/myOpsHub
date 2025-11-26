@@ -133,6 +133,8 @@ public class AssignmentRequestsController : AuthorizedControllerBase
             }
         }
 
+        Guid? approverGroupId = request.ApproverGroupId;
+
         if (request.ApproverGroupId.HasValue)
         {
             var groupValid = await _context.Groups.AnyAsync(g =>
@@ -143,6 +145,23 @@ public class AssignmentRequestsController : AuthorizedControllerBase
             if (!groupValid)
             {
                 return BadRequest("Approver group is invalid for this tenant.");
+            }
+        }
+        else
+        {
+            // Default to System Admins group if no approver group is specified
+            var systemAdminGroup = await _context.Groups
+                .Where(g => g.Name == "System Administrators" && g.TenantId == tenantId && !g.IsDeleted)
+                .FirstOrDefaultAsync();
+
+            if (systemAdminGroup != null)
+            {
+                approverGroupId = systemAdminGroup.Id;
+                _logger.LogInformation("Assignment request defaulting to System Administrators group {GroupId}", systemAdminGroup.Id);
+            }
+            else
+            {
+                _logger.LogWarning("No System Administrators group found for tenant {TenantId}. Assignment request will have no approver group.", tenantId);
             }
         }
 
@@ -162,7 +181,7 @@ public class AssignmentRequestsController : AuthorizedControllerBase
             AllocationPct = allocation,
             Notes = request.Notes,
             Status = AssignmentRequestStatus.Pending,
-            ApproverGroupId = request.ApproverGroupId,
+            ApproverGroupId = approverGroupId,
             CreatedAt = DateTime.UtcNow
         };
 

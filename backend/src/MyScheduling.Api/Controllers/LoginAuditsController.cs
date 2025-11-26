@@ -36,7 +36,10 @@ public class LoginAuditsController : AuthorizedControllerBase
         page = page < 1 ? 1 : page;
         pageSize = Math.Clamp(pageSize, 1, 200);
 
-        var query = _context.LoginAudits.AsQueryable();
+        // Optimize: Add AsNoTracking for read-only paginated query
+        var query = _context.LoginAudits
+            .AsNoTracking()
+            .AsQueryable();
 
         if (!string.IsNullOrWhiteSpace(email))
         {

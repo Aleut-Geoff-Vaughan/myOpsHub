@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using MyScheduling.Infrastructure.Data;
 using MyScheduling.Core.Interfaces;
 using MyScheduling.Infrastructure.Services;
@@ -6,19 +7,26 @@ using AspNetCoreRateLimit;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
-using Microsoft.EntityFrameworkCore;
 using MyScheduling.Core.Entities;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 
-// Database - Simple password authentication
+// Database - Simple password authentication with query splitting to prevent cartesian explosion
 builder.Services.AddDbContext<MySchedulingDbContext>(options =>
+{
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("DefaultConnection"),
-        npgsqlOptions => npgsqlOptions.MigrationsAssembly("MyScheduling.Infrastructure")
-    ));
+        npgsqlOptions =>
+        {
+            npgsqlOptions.MigrationsAssembly("MyScheduling.Infrastructure");
+            // Use query splitting by default to prevent cartesian explosion
+            npgsqlOptions.UseQuerySplittingBehavior(QuerySplittingBehavior.SplitQuery);
+        })
+        // Suppress the multiple collection warning since we're using split queries
+        .ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.MultipleCollectionIncludeWarning));
+});
 
 // JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"] ?? "MyScheduling-Super-Secret-Key-For-Development-Only-Change-In-Production-2024";

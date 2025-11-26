@@ -325,11 +325,43 @@ public class DatabaseSeeder
     private async Task<List<Project>> CreateProjectsAsync(Guid tenantId)
     {
         var projects = new List<Project>();
+        var baseDate = DateTime.UtcNow;
 
         for (int i = 0; i < _projectNames.Length; i++)
         {
-            var startDate = DateTime.UtcNow.AddMonths(-_random.Next(1, 24));
-            var endDate = _random.Next(10) < 7 ? startDate.AddMonths(_random.Next(6, 36)) : (DateTime?)null;
+            // Create more realistic project timelines with varied scenarios:
+            // - Some projects started in the past and ongoing
+            // - Some starting in the near future
+            // - Some completed in the past
+            // - Mix of short-term (6 months) and long-term (2-3 years) projects
+
+            DateTime startDate;
+            DateTime? endDate;
+
+            var scenario = i % 5; // Cycle through 5 different scenarios
+            switch (scenario)
+            {
+                case 0: // Long-term ongoing project (started 1 year ago, ends in 2 years)
+                    startDate = baseDate.AddMonths(-12);
+                    endDate = baseDate.AddMonths(24);
+                    break;
+                case 1: // Recent project (started 3 months ago, ends in 9 months)
+                    startDate = baseDate.AddMonths(-3);
+                    endDate = baseDate.AddMonths(9);
+                    break;
+                case 2: // Future project (starts in 1 month, ends in 1 year)
+                    startDate = baseDate.AddMonths(1);
+                    endDate = baseDate.AddMonths(13);
+                    break;
+                case 3: // Completed project (started 18 months ago, ended 3 months ago)
+                    startDate = baseDate.AddMonths(-18);
+                    endDate = baseDate.AddMonths(-3);
+                    break;
+                default: // Indefinite/ongoing project (started 6 months ago, no end date)
+                    startDate = baseDate.AddMonths(-6);
+                    endDate = null;
+                    break;
+            }
 
             projects.Add(new Project
             {
@@ -362,6 +394,7 @@ public class DatabaseSeeder
     private async Task<List<WbsElement>> CreateWbsElementsAsync(List<Project> projects)
     {
         var wbsElements = new List<WbsElement>();
+        var wbsTypeValues = Enum.GetValues<WbsType>();
 
         foreach (var project in projects)
         {
@@ -369,8 +402,59 @@ public class DatabaseSeeder
             var wbsCount = _random.Next(3, 6);
             for (int i = 0; i < wbsCount; i++)
             {
-                var startDate = project.StartDate.AddMonths(_random.Next(0, 3));
-                var endDate = project.EndDate?.AddMonths(-_random.Next(0, 3));
+                // ValidFrom/ValidTo = when this WBS is available for use (effective dates)
+                // These are constrained within the project timeline
+                var validFrom = project.StartDate.AddDays(_random.Next(0, 30));
+                DateTime? validTo;
+
+                if (project.EndDate.HasValue)
+                {
+                    // WBS effective period ends within project timeline
+                    var daysBeforeProjectEnd = _random.Next(0, 60);
+                    var potentialValidTo = project.EndDate.Value.AddDays(-daysBeforeProjectEnd);
+                    validTo = potentialValidTo > validFrom ? potentialValidTo : project.EndDate;
+                }
+                else
+                {
+                    // Project has no end date - some WBS might still have an end date
+                    validTo = _random.Next(10) < 3 ? validFrom.AddMonths(_random.Next(12, 36)) : null;
+                }
+
+                // StartDate/EndDate = actual work period (when people can be assigned)
+                // These fall within the ValidFrom/ValidTo range
+                var startDate = validFrom.AddDays(_random.Next(0, 14));
+                DateTime? endDate;
+
+                if (validTo.HasValue)
+                {
+                    var daysBeforeValidTo = _random.Next(0, 30);
+                    var potentialEndDate = validTo.Value.AddDays(-daysBeforeValidTo);
+                    endDate = potentialEndDate > startDate ? potentialEndDate : validTo;
+                }
+                else
+                {
+                    // No validity end date - work period might still end
+                    endDate = _random.Next(10) < 4 ? startDate.AddMonths(_random.Next(6, 24)) : null;
+                }
+
+                // Determine WBS type and set IsBillable for backwards compatibility
+                var wbsType = wbsTypeValues[_random.Next(wbsTypeValues.Length)];
+                bool isBillable = wbsType == WbsType.Billable || wbsType == WbsType.NonBillable;
+
+                // Weight distribution: 70% Billable, 10% NonBillable, 10% B&P, 5% OH, 5% G&A
+                var typeRoll = _random.Next(100);
+                if (typeRoll < 70)
+                    wbsType = WbsType.Billable;
+                else if (typeRoll < 80)
+                    wbsType = WbsType.NonBillable;
+                else if (typeRoll < 90)
+                    wbsType = WbsType.BidAndProposal;
+                else if (typeRoll < 95)
+                    wbsType = WbsType.Overhead;
+                else
+                    wbsType = WbsType.GeneralAndAdmin;
+
+                isBillable = wbsType == WbsType.Billable || wbsType == WbsType.NonBillable;
 
                 wbsElements.Add(new WbsElement
                 {
@@ -379,10 +463,14 @@ public class DatabaseSeeder
                     ProjectId = project.Id,
                     Code = $"{project.ProgramCode}-WBS{i + 1:D2}",
                     Description = $"Work package {i + 1} for {project.Name}",
+                    ValidFrom = validFrom,
+                    ValidTo = validTo,
                     StartDate = startDate,
                     EndDate = endDate,
+                    Type = wbsType,
                     Status = project.Status == ProjectStatus.Closed ? WbsStatus.Closed : WbsStatus.Active,
-                    IsBillable = _random.Next(10) < 8, // 80% billable
+                    IsBillable = isBillable,
+                    ApprovalStatus = WbsApprovalStatus.Approved, // Seed data starts approved
                     CreatedAt = DateTime.UtcNow,
                     UpdatedAt = DateTime.UtcNow
                 });

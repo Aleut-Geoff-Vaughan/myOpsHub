@@ -33,7 +33,10 @@ public class TenantsController : AuthorizedControllerBase
     {
         try
         {
-            var query = _context.Tenants.AsQueryable();
+            // Optimize: Add AsNoTracking for read-only list query
+            var query = _context.Tenants
+                .AsNoTracking()
+                .AsQueryable();
 
             if (status.HasValue)
             {
@@ -60,7 +63,9 @@ public class TenantsController : AuthorizedControllerBase
     {
         try
         {
+            // Optimize: Add AsNoTracking for read-only detail query
             var tenant = await _context.Tenants
+                .AsNoTracking()
                 .FirstOrDefaultAsync(t => t.Id == id);
 
             if (tenant == null)
@@ -84,8 +89,9 @@ public class TenantsController : AuthorizedControllerBase
     {
         try
         {
-            // Check for duplicate name
+            // Check for duplicate name - AsNoTracking for read-only check
             var existingTenant = await _context.Tenants
+                .AsNoTracking()
                 .FirstOrDefaultAsync(t => t.Name == tenant.Name);
 
             if (existingTenant != null)
@@ -192,7 +198,9 @@ public class TenantsController : AuthorizedControllerBase
     {
         try
         {
+            // Optimize: Add AsNoTracking for read-only query
             var users = await _context.Users
+                .AsNoTracking()
                 .Where(u => u.TenantMemberships.Any(tm => tm.TenantId == id && tm.IsActive))
                 .Include(u => u.TenantMemberships.Where(tm => tm.TenantId == id))
                 .OrderBy(u => u.DisplayName)

@@ -15,6 +15,10 @@ import { FacilitiesPage } from './pages/FacilitiesPage';
 import { ResumesPage } from './pages/ResumesPage';
 import { ResumeDetailPage } from './pages/ResumeDetailPage';
 import { AdminPage } from './pages/AdminPage';
+import { AdminProjectsPage } from './pages/AdminProjectsPage';
+import { AdminWbsPage } from './pages/AdminWbsPage';
+import { AdminProjectAssignmentsPage } from './pages/AdminProjectAssignmentsPage';
+import { AdminAssignmentsPage } from './pages/AdminAssignmentsPage';
 import { TeamCalendarPage } from './pages/TeamCalendarPage';
 import { TeamCalendarAdminPage } from './pages/TeamCalendarAdminPage';
 import { UserProfilePage } from './pages/UserProfilePage';
@@ -29,12 +33,18 @@ import InboxPage from './pages/InboxPage';
 import ManagementStaffingPage from './pages/ManagementStaffingPage';
 import StaffingAdminPage from './pages/StaffingAdminPage';
 import AdminGroupsPage from './pages/AdminGroupsPage';
+import { AdminDOATemplatesPage } from './pages/AdminDOATemplatesPage';
+import { AdminTenantSettingsPage } from './pages/AdminTenantSettingsPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       staleTime: 1000 * 60 * 5, // 5 minutes
+      gcTime: 1000 * 60 * 10, // 10 minutes (formerly cacheTime)
       retry: 1,
+      refetchOnWindowFocus: false, // Don't refetch when switching tabs
+      refetchOnMount: false, // Don't refetch on every mount if data is fresh
+      refetchOnReconnect: false, // Don't refetch on network reconnect
     },
   },
 });
@@ -105,6 +115,12 @@ function App() {
               <Route path="groups" element={<AdminGroupsPage />} />
               <Route path="settings" element={<AdminPage viewOverride="settings" />} />
               <Route path="logins" element={<AdminLoginReport />} />
+              <Route path="data/projects" element={<AdminProjectsPage />} />
+              <Route path="data/wbs" element={<AdminWbsPage />} />
+              <Route path="data/project-assignments" element={<AdminProjectAssignmentsPage />} />
+              <Route path="data/assignments" element={<AdminAssignmentsPage />} />
+              <Route path="doa-templates" element={<AdminDOATemplatesPage />} />
+              <Route path="tenant-settings" element={<AdminTenantSettingsPage />} />
             </Route>
 
             {/* Main Application Routes */}

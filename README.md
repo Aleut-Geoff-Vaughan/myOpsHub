@@ -9,6 +9,7 @@ Enterprise staffing, work-location management, hoteling, WBS workflow, resumes, 
 - Hoteling: spaces/bookings with check-in tracking UI.
 - Resumes: profiles, sections, versions, approvals (needs full E2E testing).
 - Admin portal: users/tenants/roles, invitations, profile editing (manager hierarchy), groups for approvers, login reports.
+- Delegation of Authority (DOA): letter creation/management with flexible subject lines, digital signatures (drawn/typed), template library, tenant branding settings with logo upload, and print preview configuration.
 
 ## Architecture & Stack
 - Backend: .NET 8 Web API, EF Core, PostgreSQL, Swagger.
@@ -52,13 +53,21 @@ Sample accounts: `admin@admin.com`.
 
 ## Key Modules
 - Dashboard: reusable view (self or reports) with calendars, stats, and quick links.
-- People: tiles/list, filters (all/direct/direct+indirect), supervisor display, inline edit (permissions), full-record modal edit.
+- People: tiles/list, filters (all/direct/direct+indirect), supervisor display, inline edit (permissions), full-record modal edit, default delegate setting.
 - Work Location Templates: CRUD/apply; dashboard/cache refresh polish in progress.
 - Staffing: assignments, capacity timeline, tenant-scoped assignment requests with approvals/inbox, CSV export, and admin/manager views.
 - WBS/Projects: workflow, approvals, history, bulk operations.
 - Hoteling: spaces/bookings with check-in UI.
 - Resumes: CRUD + versions/approvals; needs thorough testing.
-- Admin: user/tenant/role management, invitations, profile editing (searchable manager), groups for approvers, login reports.
+- Admin: user/tenant/role management, invitations, profile editing (searchable manager), groups for approvers, login reports, DOA templates library, tenant branding/settings.
+- Delegation of Authority (DOA):
+  - Letter creation with flexible subject line (replaces fixed authority types)
+  - Default duration: 7 days (configurable)
+  - Digital signatures: draw on canvas or type full name (converted to signature format)
+  - Template library: reusable letter content with placeholders, sortable, default template selection
+  - Tenant settings: logo upload (PNG/JPEG/SVG, max 2MB), company information, print template configuration (header/footer/letterhead), styling options (colors, fonts)
+  - Status workflow: Draft → Pending Signatures → Active/Expired/Revoked
+  - Admin routes: `/admin/doa-templates`, `/admin/tenant-settings`
 
 ## Known Risks & TODO Highlights
 - Authorization coverage incomplete: remaining controllers to secure include WorkLocationPreferences, WBS, Facilities, Invitations, TenantMemberships, ResumeApprovals/Templates, Holidays, DelegationOfAuthority, Validation.

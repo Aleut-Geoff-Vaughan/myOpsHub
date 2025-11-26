@@ -37,10 +37,10 @@ export function AssignmentModal({ isOpen, onClose, assignment, mode }: Assignmen
         tenantId: assignment.tenantId,
         userId: assignment.userId,
         wbsElementId: assignment.wbsElementId,
-        projectRoleId: assignment.projectRoleId,
+        projectRoleId: assignment.projectRoleId || '',
         startDate: assignment.startDate.split('T')[0],
-        endDate: assignment.endDate.split('T')[0],
-        allocation: assignment.allocation,
+        endDate: assignment.endDate?.split('T')[0] || '',
+        allocation: assignment.allocation || 100,
         status: assignment.status,
       });
     } else {

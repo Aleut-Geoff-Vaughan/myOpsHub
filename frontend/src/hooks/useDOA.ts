@@ -12,6 +12,11 @@ export const useDOALetters = (filter: DOAFilter = 'all') => {
   return useQuery({
     queryKey: ['doaLetters', filter],
     queryFn: () => doaService.getDOALetters(filter),
+    // Optimize: Add caching to prevent excessive refetching
+    staleTime: 2 * 60 * 1000, // DOA letters don't change frequently - 2 minutes
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
+    refetchOnWindowFocus: false, // Don't refetch on tab switch
+    refetchOnMount: false, // Use cached data if available and fresh
   });
 };
 
@@ -20,6 +25,10 @@ export const useDOALetter = (id: string) => {
     queryKey: ['doaLetters', id],
     queryFn: () => doaService.getDOALetter(id),
     enabled: !!id,
+    // Optimize: Add caching for individual DOA letter details
+    staleTime: 3 * 60 * 1000, // Details can be cached longer
+    gcTime: 15 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 };
 
@@ -98,5 +107,10 @@ export const useActiveActivations = (date?: string) => {
   return useQuery({
     queryKey: ['doaActivations', 'active', date],
     queryFn: () => doaService.getActiveActivations(date),
+    // Optimize: Add caching for activations
+    staleTime: 2 * 60 * 1000, // Activations don't change frequently - 2 minutes
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
 };

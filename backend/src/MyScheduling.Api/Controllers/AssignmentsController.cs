@@ -85,13 +85,15 @@ public class AssignmentsController : AuthorizedControllerBase
     {
         try
         {
+            // Optimize: Don't load History collection for single assignment view
+            // History is a heavy collection and should be loaded separately if needed
             var assignment = await _context.Assignments
                 .Include(a => a.User)
                 .Include(a => a.WbsElement)
                     .ThenInclude(w => w.Project)
                 .Include(a => a.ProjectRole)
                 .Include(a => a.ApprovedByUser)
-                .Include(a => a.History)
+                .AsNoTracking()
                 .FirstOrDefaultAsync(a => a.Id == id);
 
             if (assignment == null)

@@ -46,7 +46,7 @@ export default function ManagementStaffingPage() {
     const totalMs = sixMonthsOut.getTime() - now.getTime();
     return teamAssignments.map((a) => {
       const start = new Date(a.startDate);
-      const end = new Date(a.endDate);
+      const end = new Date(a.endDate || a.startDate);
       const clampedStart = start < now ? now : start;
       const clampedEnd = end > sixMonthsOut ? sixMonthsOut : end;
       const leftPct = ((clampedStart.getTime() - now.getTime()) / totalMs) * 100;

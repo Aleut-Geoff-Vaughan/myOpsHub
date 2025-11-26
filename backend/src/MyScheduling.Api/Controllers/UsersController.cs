@@ -45,8 +45,9 @@ public class UsersController : AuthorizedControllerBase
                 return BadRequest("Email is required");
             }
 
-            // Check duplicate email (other users)
+            // Check duplicate email (other users) - AsNoTracking for read-only check
             var existingUser = await _context.Users
+                .AsNoTracking()
                 .Where(u => u.Id != id)
                 .FirstOrDefaultAsync(u => u.Email == request.Email);
             if (existingUser != null)
@@ -96,9 +97,11 @@ public class UsersController : AuthorizedControllerBase
     {
         try
         {
+            // Optimize: Add AsNoTracking for read-only list query
             var query = _context.Users
                 .Include(u => u.TenantMemberships)
                     .ThenInclude(tm => tm.Tenant)
+                .AsNoTracking()
                 .AsQueryable();
 
             // Filter by tenant if specified (Tenant Admin view)
@@ -137,9 +140,11 @@ public class UsersController : AuthorizedControllerBase
     {
         try
         {
+            // Optimize: Add AsNoTracking for read-only detail query
             var user = await _context.Users
                 .Include(u => u.TenantMemberships)
                     .ThenInclude(tm => tm.Tenant)
+                .AsNoTracking()
                 .FirstOrDefaultAsync(u => u.Id == id);
 
             if (user == null)
@@ -169,7 +174,9 @@ public class UsersController : AuthorizedControllerBase
 
         take = Math.Clamp(take, 1, 100);
 
+        // Optimize: Add AsNoTracking for read-only audit query
         var query = _context.LoginAudits
+            .AsNoTracking()
             .Where(l => l.UserId == id)
             .OrderByDescending(l => l.CreatedAt);
 

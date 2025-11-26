@@ -20,9 +20,9 @@ export function useDashboard(
     queryKey: ['dashboard', userId, startDate, endDate],
     queryFn: () => dashboardService.getDashboard(userId!, startDate, endDate),
     enabled: !!userId,
-    staleTime: 0, // Always consider data stale - refetch on mount
-    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes (formerly cacheTime)
+    staleTime: 2 * 60 * 1000, // Data is fresh for 2 minutes (was 0, causing excessive refetching)
+    gcTime: 10 * 60 * 1000, // Keep in cache for 10 minutes
     refetchOnWindowFocus: false, // Don't refetch on tab switch
-    refetchOnMount: true, // Always refetch when component mounts
+    refetchOnMount: false, // Use cached data if available and fresh (was true)
   });
 }

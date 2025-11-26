@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { Card, CardHeader, CardBody, Button, Table, StatusBadge, Input, Modal, FormGroup, Select } from '../components/ui';
@@ -7,6 +7,8 @@ import { RoleSelector } from '../components/RoleSelector';
 import { RoleTemplates } from '../components/RoleTemplates';
 import { InviteUserModal } from '../components/InviteUserModal';
 import { PendingInvitations } from '../components/PendingInvitations';
+// import { AdminUserRow } from '../components/AdminUserRow';
+import { Pagination } from '../components/Pagination';
 import { useAuthStore } from '../stores/authStore';
 import type { Tenant as ApiTenant, User as ApiUser } from '../types/api';
 import { TenantStatus, AppRole } from '../types/api';
@@ -43,6 +45,10 @@ export function AdminPage({ viewOverride }: AdminPageProps = {}) {
   const [loginHistory, setLoginHistory] = useState<Record<string, any>>({});
   const [isEditingUserDetail, setIsEditingUserDetail] = useState(false);
   const [userDetailForm, setUserDetailForm] = useState<Partial<ApiUser> | null>(null);
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
 
   // Update selected view when viewOverride changes
   useEffect(() => {
@@ -480,6 +486,20 @@ export function AdminPage({ viewOverride }: AdminPageProps = {}) {
     user?.email?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Paginated users
+  const paginatedUsers = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredUsers.slice(startIndex, endIndex);
+  }, [filteredUsers, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
+
+  // Reset to page 1 when search term changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
   return (
     <div className="p-6">
       <div className="mb-6">
@@ -793,7 +813,7 @@ export function AdminPage({ viewOverride }: AdminPageProps = {}) {
                     </td>
                   </tr>
                 ) : (
-                  filteredUsers.map(user => (
+                  paginatedUsers.map(user => (
                     <React.Fragment key={user.id}>
                       <tr
                         onClick={() => {
@@ -1176,6 +1196,14 @@ export function AdminPage({ viewOverride }: AdminPageProps = {}) {
               </tbody>
             </table>
           </div>
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredUsers.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={setCurrentPage}
+            onItemsPerPageChange={setItemsPerPage}
+          />
         </Card>
       )}
 

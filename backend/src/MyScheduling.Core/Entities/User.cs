@@ -27,11 +27,13 @@ public class User : BaseEntity
     public PersonType Type { get; set; } = PersonType.Employee;
     public PersonStatus Status { get; set; } = PersonStatus.Active;
     public Guid? ManagerId { get; set; }
+    public Guid? DefaultDelegateUserId { get; set; }  // Default delegate for DOA letters
 
     // Navigation properties
     public virtual ICollection<TenantMembership> TenantMemberships { get; set; } = new List<TenantMembership>();
     public virtual User? Manager { get; set; }
     public virtual ICollection<User> DirectReports { get; set; } = new List<User>();
+    public virtual User? DefaultDelegate { get; set; }
 
     // Deprecated - will be removed in migration
     public virtual ICollection<RoleAssignment> RoleAssignments { get; set; } = new List<RoleAssignment>();

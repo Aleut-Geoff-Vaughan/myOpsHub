@@ -15,6 +15,12 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
+    watch: {
+      usePolling: false,
+    },
+    hmr: {
+      overlay: false,
+    },
   },
   build: {
     chunkSizeWarningLimit: 700,

@@ -5,11 +5,15 @@ public class DelegationOfAuthorityLetter : BaseEntity
     public Guid TenantId { get; set; }
     public Guid DelegatorUserId { get; set; }
     public Guid DesigneeUserId { get; set; }
+    public string SubjectLine { get; set; } = string.Empty;  // Replaced IsFinancialAuthority/IsOperationalAuthority
     public string LetterContent { get; set; } = string.Empty;
     public DateTime EffectiveStartDate { get; set; }
     public DateTime EffectiveEndDate { get; set; }
+
+    // Deprecated - will be removed after migration
     public bool IsFinancialAuthority { get; set; }
     public bool IsOperationalAuthority { get; set; }
+
     public DOAStatus Status { get; set; }
     public string? Notes { get; set; }
 

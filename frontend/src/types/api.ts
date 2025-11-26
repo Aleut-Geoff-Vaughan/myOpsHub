@@ -16,7 +16,9 @@ export enum PersonType {
 export enum ProjectStatus {
   Draft = 0,
   Active = 1,
-  Closed = 2,
+  OnHold = 2,
+  Completed = 3,
+  Cancelled = 4,
 }
 
 export enum AssignmentStatus {
@@ -56,11 +58,10 @@ export enum SpaceType {
 }
 
 export enum WbsType {
-  Billable = 0,
-  NonBillable = 1,
-  BidAndProposal = 2,
-  Overhead = 3,
-  GeneralAndAdmin = 4,
+  TaskOrder = 0,
+  ProjectCode = 1,
+  SubTask = 2,
+  Internal = 3,
 }
 
 export enum WbsApprovalStatus {
@@ -140,6 +141,7 @@ export interface Project {
   id: string;
   tenantId: string;
   name: string;
+  description?: string;
   programCode?: string;
   customer?: string;
   startDate: string;
@@ -150,15 +152,40 @@ export interface Project {
   updatedAt: string;
 }
 
+export enum ProjectAssignmentStatus {
+  Draft = 0,
+  PendingApproval = 1,
+  Active = 2,
+  Completed = 3,
+  Cancelled = 4,
+}
+
+export interface ProjectAssignment {
+  id: string;
+  tenantId: string;
+  userId: string;
+  projectId: string;
+  startDate: string;
+  endDate?: string;
+  status: ProjectAssignmentStatus;
+  notes?: string;
+  approvedByUserId?: string;
+  approvedAt?: string;
+  createdAt: string;
+  updatedAt?: string;
+}
+
 export interface Assignment {
   id: string;
   tenantId: string;
   userId: string;
   wbsElementId: string;
-  projectRoleId: string;
+  projectRoleId?: string;
+  projectAssignmentId?: string;
   startDate: string;
-  endDate: string;
-  allocation: number;
+  endDate?: string;
+  allocation?: number;
+  hoursPerWeek?: number;
   status: AssignmentStatus;
   approvedByUserId?: string;
   createdAt: string;

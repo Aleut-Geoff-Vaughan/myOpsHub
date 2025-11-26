@@ -186,18 +186,12 @@ export function DOACard({ doa, onView, onEdit }: DOACardProps) {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2 pt-2">
-          {doa.isFinancialAuthority && (
-            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
-              Financial Authority
-            </span>
-          )}
-          {doa.isOperationalAuthority && (
-            <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-purple-100 text-purple-800">
-              Operational Authority
-            </span>
-          )}
-        </div>
+        {doa.subjectLine && (
+          <div className="pt-2">
+            <div className="text-xs text-gray-500">Subject</div>
+            <div className="font-medium text-gray-900">{doa.subjectLine}</div>
+          </div>
+        )}
 
         {/* Signature Status */}
         {doa.signatures && doa.signatures.length > 0 && (

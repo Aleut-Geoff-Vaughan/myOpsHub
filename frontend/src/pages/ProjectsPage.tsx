@@ -22,8 +22,8 @@ export function ProjectsPage() {
         return 'Draft';
       case ProjectStatus.Active:
         return 'Active';
-      case ProjectStatus.Closed:
-        return 'Closed';
+      case ProjectStatus.Completed:
+        return 'Completed';
       default:
         return 'Unknown';
     }
@@ -35,7 +35,7 @@ export function ProjectsPage() {
         return 'success';
       case ProjectStatus.Draft:
         return 'info';
-      case ProjectStatus.Closed:
+      case ProjectStatus.Completed:
         return 'default';
       default:
         return 'warning';
@@ -86,9 +86,9 @@ export function ProjectsPage() {
     const total = projects.length;
     const active = projects.filter(p => p.status === ProjectStatus.Active).length;
     const draft = projects.filter(p => p.status === ProjectStatus.Draft).length;
-    const closed = projects.filter(p => p.status === ProjectStatus.Closed).length;
+    const completed = projects.filter(p => p.status === ProjectStatus.Completed).length;
 
-    return { total, active, draft, closed };
+    return { total, active, draft, completed };
   }, [projects]);
 
   if (error) {
@@ -137,8 +137,8 @@ export function ProjectsPage() {
         </Card>
         <Card padding="sm">
           <div className="text-center">
-            <div className="text-3xl font-bold text-gray-600">{stats.closed}</div>
-            <div className="text-sm text-gray-600 mt-1">Closed</div>
+            <div className="text-3xl font-bold text-gray-600">{stats.completed}</div>
+            <div className="text-sm text-gray-600 mt-1">Completed</div>
           </div>
         </Card>
       </div>
@@ -174,10 +174,10 @@ export function ProjectsPage() {
                 Draft
               </Button>
               <Button
-                variant={selectedFilter === ProjectStatus.Closed ? 'primary' : 'ghost'}
-                onClick={() => setSelectedFilter(ProjectStatus.Closed)}
+                variant={selectedFilter === ProjectStatus.Completed ? 'primary' : 'ghost'}
+                onClick={() => setSelectedFilter(ProjectStatus.Completed)}
               >
-                Closed
+                Completed
               </Button>
             </div>
             <Button variant="primary" onClick={() => setIsModalOpen(true)}>

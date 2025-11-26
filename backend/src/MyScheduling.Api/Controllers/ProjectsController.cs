@@ -36,8 +36,10 @@ public class ProjectsController : AuthorizedControllerBase
     {
         try
         {
+            // Optimize: Don't load WbsElements collection in list view - causes cartesian explosion
+            // They can be loaded on-demand when viewing individual projects
             var query = _context.Projects
-                .Include(p => p.WbsElements)
+                .AsNoTracking()
                 .AsQueryable();
 
             if (tenantId.HasValue)
@@ -271,10 +273,11 @@ public class ProjectsController : AuthorizedControllerBase
     {
         try
         {
+            // Optimize: Don't load ProjectRoles and Assignments collections - causes cartesian explosion
+            // These heavy collections can be loaded on-demand
             var wbsElements = await _context.WbsElements
                 .Where(w => w.ProjectId == id)
-                .Include(w => w.ProjectRoles)
-                .Include(w => w.Assignments)
+                .AsNoTracking()
                 .OrderBy(w => w.Code)
                 .ToListAsync();
 

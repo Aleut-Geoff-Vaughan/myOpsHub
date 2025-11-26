@@ -34,6 +34,9 @@ function getAuthToken(): string | null {
   return null;
 }
 
+// Request timeout in milliseconds (30 seconds)
+const REQUEST_TIMEOUT = 30000;
+
 export async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
@@ -53,16 +56,22 @@ export async function apiRequest<T>(
     defaultHeaders['Authorization'] = `Bearer ${token}`;
   }
 
+  // Create AbortController for timeout
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+
   const config: RequestInit = {
     ...options,
     headers: {
       ...defaultHeaders,
       ...options.headers,
     },
+    signal: controller.signal,
   };
 
   try {
     const response = await fetch(url, config);
+    clearTimeout(timeoutId);
 
     if (!response.ok) {
       // Handle 401 Unauthorized - token expired or invalid
@@ -83,9 +92,17 @@ export async function apiRequest<T>(
 
     return await response.json();
   } catch (error) {
+    clearTimeout(timeoutId);
+
     if (error instanceof ApiError) {
       throw error;
     }
+
+    // Handle abort errors (timeout)
+    if (error instanceof Error && error.name === 'AbortError') {
+      throw new Error('Request timeout - please try again');
+    }
+
     throw new Error(`Network error: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }

@@ -56,10 +56,13 @@ public class WbsController : AuthorizedControllerBase
             if (pageSize < 1) pageSize = 50;
             if (pageSize > 200) pageSize = 200;
 
+            // Optimize: Don't load ChangeHistory collection in list view - causes cartesian explosion
+            // ChangeHistory is a heavy collection and should be loaded on-demand using GET /api/wbs/{id}/history
             var query = _context.WbsElements
                 .Include(w => w.Project)
                 .Include(w => w.Owner)
                 .Include(w => w.Approver)
+                .AsNoTracking()
                 .AsQueryable();
 
             if (projectId.HasValue)
@@ -87,11 +90,8 @@ public class WbsController : AuthorizedControllerBase
                 query = query.Where(w => w.ApprovalStatus == approvalStatus.Value);
             }
 
-            if (includeHistory)
-            {
-                query = query.Include(w => w.ChangeHistory)
-                    .ThenInclude(h => h.ChangedBy);
-            }
+            // Note: includeHistory parameter ignored - history should always be fetched separately
+            // Use GET /api/wbs/{id}/history endpoint for change history to avoid performance issues
 
             // Get total count before pagination
             var totalCount = await query.CountAsync();

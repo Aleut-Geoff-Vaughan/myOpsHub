@@ -43,6 +43,7 @@ public class MySchedulingDbContext : DbContext
 
     // Staffing & Assignments
     public DbSet<ProjectRole> ProjectRoles => Set<ProjectRole>();
+    public DbSet<ProjectAssignment> ProjectAssignments => Set<ProjectAssignment>();
     public DbSet<Assignment> Assignments => Set<Assignment>();
     public DbSet<AssignmentHistory> AssignmentHistory => Set<AssignmentHistory>();
     public DbSet<AssignmentRequest> AssignmentRequests => Set<AssignmentRequest>();
@@ -65,6 +66,8 @@ public class MySchedulingDbContext : DbContext
     public DbSet<DelegationOfAuthorityLetter> DelegationOfAuthorityLetters => Set<DelegationOfAuthorityLetter>();
     public DbSet<DigitalSignature> DigitalSignatures => Set<DigitalSignature>();
     public DbSet<DOAActivation> DOAActivations => Set<DOAActivation>();
+    public DbSet<DOATemplate> DOATemplates => Set<DOATemplate>();
+    public DbSet<TenantSettings> TenantSettings => Set<TenantSettings>();
 
     // Team Calendars
     public DbSet<TeamCalendar> TeamCalendars => Set<TeamCalendar>();
@@ -305,12 +308,39 @@ public class MySchedulingDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
+        // Project Assignment (Step 1 of two-step assignment)
+        modelBuilder.Entity<ProjectAssignment>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.HasIndex(e => new { e.TenantId, e.UserId, e.Status });
+            entity.HasIndex(e => new { e.ProjectId, e.Status });
+            entity.HasIndex(e => new { e.StartDate, e.EndDate });
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Project)
+                .WithMany()
+                .HasForeignKey(e => e.ProjectId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.ApprovedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.ApprovedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // Assignment (Step 2 of two-step assignment - WBS level)
         modelBuilder.Entity<Assignment>(entity =>
         {
             entity.HasKey(e => e.Id);
 
             entity.HasIndex(e => new { e.TenantId, e.UserId, e.Status });
             entity.HasIndex(e => new { e.WbsElementId, e.Status });
+            entity.HasIndex(e => new { e.ProjectAssignmentId, e.Status });
             entity.HasIndex(e => new { e.StartDate, e.EndDate });
 
             entity.HasOne(e => e.User)
@@ -327,6 +357,12 @@ public class MySchedulingDbContext : DbContext
                 .WithMany(w => w.Assignments)
                 .HasForeignKey(e => e.WbsElementId)
                 .OnDelete(DeleteBehavior.Restrict);
+
+            // Link to ProjectAssignment (nullable for backwards compatibility)
+            entity.HasOne(e => e.ProjectAssignment)
+                .WithMany(pa => pa.WbsAssignments)
+                .HasForeignKey(e => e.ProjectAssignmentId)
+                .OnDelete(DeleteBehavior.SetNull);
 
             entity.HasOne(e => e.ApprovedByUser)
                 .WithMany()

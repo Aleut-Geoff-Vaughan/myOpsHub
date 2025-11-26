@@ -36,10 +36,11 @@ public class ResumesController : AuthorizedControllerBase
     {
         try
         {
+            // Optimize: Don't load Sections and Entries collections in list view - causes massive data payloads
+            // These nested collections should be loaded on-demand for detail view only
             var query = _context.ResumeProfiles
                 .Include(r => r.User)
-                .Include(r => r.Sections)
-                    .ThenInclude(s => s.Entries)
+                .AsNoTracking()
                 .AsQueryable();
 
             // Filter by tenant
@@ -54,16 +55,13 @@ public class ResumesController : AuthorizedControllerBase
                 query = query.Where(r => r.Status == status.Value);
             }
 
-            // Search
+            // Search (optimized - only search User fields to avoid loading heavy collections)
             if (!string.IsNullOrEmpty(search))
             {
                 query = query.Where(r =>
                     r.User.DisplayName.Contains(search) ||
                     (r.User.JobTitle != null && r.User.JobTitle.Contains(search)) ||
-                    r.User.Email.Contains(search) ||
-                    r.Sections.Any(s => s.Entries.Any(e =>
-                        e.Title.Contains(search) ||
-                        (e.Description != null && e.Description.Contains(search)))));
+                    r.User.Email.Contains(search));
             }
 
             var resumes = await query

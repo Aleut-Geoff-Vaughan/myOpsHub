@@ -73,6 +73,10 @@ namespace MyScheduling.Infrastructure.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("is_pto_or_training");
 
+                    b.Property<Guid?>("ProjectAssignmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("project_assignment_id");
+
                     b.Property<Guid?>("ProjectRoleId")
                         .HasColumnType("uuid")
                         .HasColumnName("project_role_id");
@@ -116,6 +120,9 @@ namespace MyScheduling.Infrastructure.Migrations
 
                     b.HasIndex("UserId")
                         .HasDatabaseName("ix_assignments_user_id");
+
+                    b.HasIndex("ProjectAssignmentId", "Status")
+                        .HasDatabaseName("ix_assignments_project_assignment_id_status");
 
                     b.HasIndex("StartDate", "EndDate")
                         .HasDatabaseName("ix_assignments_start_date_end_date");
@@ -840,6 +847,85 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.ToTable("doaactivations");
                 });
 
+            modelBuilder.Entity("MyScheduling.Core.Entities.DOATemplate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_by_user_id");
+
+                    b.Property<string>("DeletionReason")
+                        .HasColumnType("text")
+                        .HasColumnName("deletion_reason");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_default");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("LetterContent")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("letter_content");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("name");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_doatemplates");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_doatemplates_tenant_id");
+
+                    b.ToTable("doatemplates");
+                });
+
             modelBuilder.Entity("MyScheduling.Core.Entities.DataArchive", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1181,6 +1267,11 @@ namespace MyScheduling.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("status");
 
+                    b.Property<string>("SubjectLine")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("subject_line");
+
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
                         .HasColumnName("tenant_id");
@@ -1270,6 +1361,10 @@ namespace MyScheduling.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("signature_data");
 
+                    b.Property<int>("SignatureType")
+                        .HasColumnType("integer")
+                        .HasColumnName("signature_type");
+
                     b.Property<DateTime>("SignedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("signed_at");
@@ -1277,6 +1372,10 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.Property<Guid>("SignerUserId")
                         .HasColumnType("uuid")
                         .HasColumnName("signer_user_id");
+
+                    b.Property<string>("TypedSignature")
+                        .HasColumnType("text")
+                        .HasColumnName("typed_signature");
 
                     b.Property<DateTime?>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -2164,6 +2263,102 @@ namespace MyScheduling.Infrastructure.Migrations
                         .HasDatabaseName("ix_projects_tenant_id_status");
 
                     b.ToTable("projects");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.ProjectAssignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("approved_at");
+
+                    b.Property<Guid?>("ApprovedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("approved_by_user_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_by_user_id");
+
+                    b.Property<string>("DeletionReason")
+                        .HasColumnType("text")
+                        .HasColumnName("deletion_reason");
+
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("end_date");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text")
+                        .HasColumnName("notes");
+
+                    b.Property<Guid>("ProjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("project_id");
+
+                    b.Property<DateTime>("StartDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("start_date");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasColumnName("status");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_project_assignments");
+
+                    b.HasIndex("ApprovedByUserId")
+                        .HasDatabaseName("ix_project_assignments_approved_by_user_id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_project_assignments_user_id");
+
+                    b.HasIndex("ProjectId", "Status")
+                        .HasDatabaseName("ix_project_assignments_project_id_status");
+
+                    b.HasIndex("StartDate", "EndDate")
+                        .HasDatabaseName("ix_project_assignments_start_date_end_date");
+
+                    b.HasIndex("TenantId", "UserId", "Status")
+                        .HasDatabaseName("ix_project_assignments_tenant_id_user_id_status");
+
+                    b.ToTable("project_assignments");
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.ProjectRole", b =>
@@ -3946,6 +4141,122 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.ToTable("tenant_memberships");
                 });
 
+            modelBuilder.Entity("MyScheduling.Core.Entities.TenantSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("CompanyAddress")
+                        .HasColumnType("text")
+                        .HasColumnName("company_address");
+
+                    b.Property<string>("CompanyEmail")
+                        .HasColumnType("text")
+                        .HasColumnName("company_email");
+
+                    b.Property<string>("CompanyName")
+                        .HasColumnType("text")
+                        .HasColumnName("company_name");
+
+                    b.Property<string>("CompanyPhone")
+                        .HasColumnType("text")
+                        .HasColumnName("company_phone");
+
+                    b.Property<string>("CompanyWebsite")
+                        .HasColumnType("text")
+                        .HasColumnName("company_website");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<string>("DOAPrintFooterContent")
+                        .HasColumnType("text")
+                        .HasColumnName("doaprint_footer_content");
+
+                    b.Property<string>("DOAPrintHeaderContent")
+                        .HasColumnType("text")
+                        .HasColumnName("doaprint_header_content");
+
+                    b.Property<string>("DOAPrintLetterhead")
+                        .HasColumnType("text")
+                        .HasColumnName("doaprint_letterhead");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_by_user_id");
+
+                    b.Property<string>("DeletionReason")
+                        .HasColumnType("text")
+                        .HasColumnName("deletion_reason");
+
+                    b.Property<string>("FontFamily")
+                        .HasColumnType("text")
+                        .HasColumnName("font_family");
+
+                    b.Property<int?>("FontSize")
+                        .HasColumnType("integer")
+                        .HasColumnName("font_size");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("LogoFileName")
+                        .HasColumnType("text")
+                        .HasColumnName("logo_file_name");
+
+                    b.Property<int?>("LogoHeight")
+                        .HasColumnType("integer")
+                        .HasColumnName("logo_height");
+
+                    b.Property<string>("LogoUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("logo_url");
+
+                    b.Property<int?>("LogoWidth")
+                        .HasColumnType("integer")
+                        .HasColumnName("logo_width");
+
+                    b.Property<string>("PrimaryColor")
+                        .HasColumnType("text")
+                        .HasColumnName("primary_color");
+
+                    b.Property<string>("SecondaryColor")
+                        .HasColumnType("text")
+                        .HasColumnName("secondary_color");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_tenant_settings");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_tenant_settings_tenant_id");
+
+                    b.ToTable("tenant_settings");
+                });
+
             modelBuilder.Entity("MyScheduling.Core.Entities.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3972,6 +4283,14 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.Property<Guid?>("DeactivatedByUserId")
                         .HasColumnType("uuid")
                         .HasColumnName("deactivated_by_user_id");
+
+                    b.Property<Guid?>("DefaultDelegateId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("default_delegate_id");
+
+                    b.Property<Guid?>("DefaultDelegateUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("default_delegate_user_id");
 
                     b.Property<DateTime?>("DeletedAt")
                         .HasColumnType("timestamp with time zone")
@@ -4091,6 +4410,9 @@ namespace MyScheduling.Infrastructure.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_users");
+
+                    b.HasIndex("DefaultDelegateId")
+                        .HasDatabaseName("ix_users_default_delegate_id");
 
                     b.HasIndex("Email")
                         .IsUnique()
@@ -4817,6 +5139,12 @@ namespace MyScheduling.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("fk_assignments__users_approved_by_user_id");
 
+                    b.HasOne("MyScheduling.Core.Entities.ProjectAssignment", "ProjectAssignment")
+                        .WithMany("WbsAssignments")
+                        .HasForeignKey("ProjectAssignmentId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_assignments__project_assignments_project_assignment_id");
+
                     b.HasOne("MyScheduling.Core.Entities.ProjectRole", "ProjectRole")
                         .WithMany("Assignments")
                         .HasForeignKey("ProjectRoleId")
@@ -4845,6 +5173,8 @@ namespace MyScheduling.Infrastructure.Migrations
                         .HasConstraintName("fk_assignments__wbs_elements_wbs_element_id");
 
                     b.Navigation("ApprovedByUser");
+
+                    b.Navigation("ProjectAssignment");
 
                     b.Navigation("ProjectRole");
 
@@ -5028,6 +5358,18 @@ namespace MyScheduling.Infrastructure.Migrations
                         .HasConstraintName("fk_doaactivations__tenants_tenant_id");
 
                     b.Navigation("DOALetter");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.DOATemplate", b =>
+                {
+                    b.HasOne("MyScheduling.Core.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_doatemplates__tenants_tenant_id");
 
                     b.Navigation("Tenant");
                 });
@@ -5343,6 +5685,44 @@ namespace MyScheduling.Infrastructure.Migrations
                         .HasConstraintName("fk_projects__tenants_tenant_id");
 
                     b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.ProjectAssignment", b =>
+                {
+                    b.HasOne("MyScheduling.Core.Entities.User", "ApprovedByUser")
+                        .WithMany()
+                        .HasForeignKey("ApprovedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_project_assignments__users_approved_by_user_id");
+
+                    b.HasOne("MyScheduling.Core.Entities.Project", "Project")
+                        .WithMany()
+                        .HasForeignKey("ProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_project_assignments_projects_project_id");
+
+                    b.HasOne("MyScheduling.Core.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_project_assignments__tenants_tenant_id");
+
+                    b.HasOne("MyScheduling.Core.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_project_assignments__users_user_id");
+
+                    b.Navigation("ApprovedByUser");
+
+                    b.Navigation("Project");
+
+                    b.Navigation("Tenant");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.ProjectRole", b =>
@@ -5770,8 +6150,25 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("MyScheduling.Core.Entities.TenantSettings", b =>
+                {
+                    b.HasOne("MyScheduling.Core.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_tenant_settings_tenants_tenant_id");
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("MyScheduling.Core.Entities.User", b =>
                 {
+                    b.HasOne("MyScheduling.Core.Entities.User", "DefaultDelegate")
+                        .WithMany()
+                        .HasForeignKey("DefaultDelegateId")
+                        .HasConstraintName("fk_users_users_default_delegate_id");
+
                     b.HasOne("MyScheduling.Core.Entities.User", "Manager")
                         .WithMany("DirectReports")
                         .HasForeignKey("ManagerId")
@@ -5782,6 +6179,8 @@ namespace MyScheduling.Infrastructure.Migrations
                         .WithMany("Users")
                         .HasForeignKey("TenantId")
                         .HasConstraintName("fk_users_tenants_tenant_id");
+
+                    b.Navigation("DefaultDelegate");
 
                     b.Navigation("Manager");
                 });
@@ -6002,6 +6401,11 @@ namespace MyScheduling.Infrastructure.Migrations
             modelBuilder.Entity("MyScheduling.Core.Entities.Project", b =>
                 {
                     b.Navigation("WbsElements");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.ProjectAssignment", b =>
+                {
+                    b.Navigation("WbsAssignments");
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.ProjectRole", b =>

@@ -25,11 +25,19 @@ public enum ProjectRoleStatus
     Closed
 }
 
+/// <summary>
+/// Represents a user's assignment to a specific WBS element (Step 2 of two-step assignment model).
+/// This must be associated with a ProjectAssignment, and dates must fall within the ProjectAssignment range.
+/// </summary>
 public class Assignment : TenantEntity
 {
     public Guid UserId { get; set; }
     public Guid? ProjectRoleId { get; set; }
     public Guid WbsElementId { get; set; }
+
+    // Two-step assignment: Link to parent ProjectAssignment (nullable for backwards compatibility)
+    public Guid? ProjectAssignmentId { get; set; }
+
     public int AllocationPct { get; set; } // 0-100
     public DateTime StartDate { get; set; }
     public DateTime? EndDate { get; set; }
@@ -42,6 +50,7 @@ public class Assignment : TenantEntity
     public virtual User User { get; set; } = null!;
     public virtual ProjectRole? ProjectRole { get; set; }
     public virtual WbsElement WbsElement { get; set; } = null!;
+    public virtual ProjectAssignment? ProjectAssignment { get; set; }
     public virtual User? ApprovedByUser { get; set; }
     public virtual ICollection<AssignmentHistory> History { get; set; } = new List<AssignmentHistory>();
 }

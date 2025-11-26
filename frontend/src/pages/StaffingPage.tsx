@@ -1,28 +1,91 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Card, CardHeader, CardBody, Button, Input } from '../components/ui';
 import { useAssignments } from '../hooks/useAssignments';
-import type { Assignment } from '../types/api';
-import { AssignmentStatus } from '../types/api';
+import { useProjectAssignments } from '../hooks/useProjectAssignments';
+import type { Assignment, ProjectAssignment } from '../types/api';
+import { AssignmentStatus, ProjectAssignmentStatus } from '../types/api';
 import { assignmentRequestService, type CreateAssignmentRequest } from '../services/assignmentRequestService';
+import { assignmentsService } from '../services/assignmentsService';
+import { projectAssignmentsService } from '../services/projectAssignmentsService';
+import { projectsService } from '../services/projectsService';
+import wbsService from '../services/wbsService';
 import toast from 'react-hot-toast';
 import { useAuthStore } from '../stores/authStore';
-import { groupService } from '../services/groupService';
+import { AssignmentRequestModal } from '../components/AssignmentRequestModal';
+import { ProjectAssignmentModal } from '../components/ProjectAssignmentModal';
+
+type TimelineRange = '2months' | '6months' | '1year' | '3years';
 
 export function StaffingPage() {
   const { user, currentWorkspace } = useAuthStore();
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedView, setSelectedView] = useState<'assignments' | 'capacity'>('assignments');
+  const [selectedView, setSelectedView] = useState<'assignments' | 'projectAssignments' | 'capacity'>('assignments');
   const [requesting, setRequesting] = useState(false);
-  const [approverGroupId, setApproverGroupId] = useState('');
+  const [showRequestModal, setShowRequestModal] = useState(false);
+  const [showProjectAssignmentModal, setShowProjectAssignmentModal] = useState(false);
+  const [editingProjectAssignment, setEditingProjectAssignment] = useState<ProjectAssignment | null>(null);
+  const [timelineRange, setTimelineRange] = useState<TimelineRange>('6months');
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set());
+  const [editingAssignment, setEditingAssignment] = useState<string | null>(null);
+  const [editedDates, setEditedDates] = useState<{ startDate: string; endDate: string; allocation: number } | null>(null);
 
   const { data: assignments = [], error } = useAssignments(user ? { userId: user.id } : undefined);
-  const { data: approverGroups = [] } = useQuery({
-    queryKey: ['groups', currentWorkspace?.tenantId, 'active'],
-    queryFn: () => groupService.list({ tenantId: currentWorkspace?.tenantId, isActive: true }),
+  const { data: projectAssignments = [] } = useProjectAssignments(user ? { userId: user.id } : undefined);
+
+  // Fetch all projects for the current tenant
+  const { data: projects = [] } = useQuery({
+    queryKey: ['projects', currentWorkspace?.tenantId],
+    queryFn: () => projectsService.getAll({ tenantId: currentWorkspace?.tenantId }),
     enabled: !!currentWorkspace?.tenantId,
-    staleTime: 60_000,
+    // Optimize: Add caching configuration
+    staleTime: 2 * 60 * 1000, // Projects don't change frequently
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   });
+
+  // Fetch all WBS elements for the current tenant
+  // OPTIMIZE: This loads 1000 WBS elements - heavy query
+  // Consider loading only WBS elements referenced by assignments if performance becomes an issue
+  const { data: wbsResponse } = useQuery({
+    queryKey: ['wbs-all', currentWorkspace?.tenantId],
+    queryFn: () => wbsService.getWbsElements({ pageSize: 1000 }),
+    enabled: !!currentWorkspace?.tenantId,
+    // Optimize: Add aggressive caching since this is a heavy query
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes - WBS doesn't change frequently
+    gcTime: 15 * 60 * 1000, // Keep in cache for 15 minutes
+    refetchOnWindowFocus: false, // Don't refetch on tab switch
+    refetchOnMount: false, // Use cached data if available and fresh
+  });
+
+  const wbsElements = wbsResponse?.items || [];
+
+  // Create lookup maps for quick access
+  const projectMap = useMemo(() => {
+    const map = new Map();
+    projects.forEach(p => map.set(p.id, p));
+    return map;
+  }, [projects]);
+
+  const wbsMap = useMemo(() => {
+    const map = new Map();
+    wbsElements.forEach(w => map.set(w.id, w));
+    return map;
+  }, [wbsElements]);
+
+  const toggleProject = (projectId: string) => {
+    setExpandedProjects(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(projectId)) {
+        newSet.delete(projectId);
+      } else {
+        newSet.add(projectId);
+      }
+      return newSet;
+    });
+  };
 
   const getStatusLabel = (status: AssignmentStatus): string => {
     switch (status) {
@@ -53,32 +116,204 @@ export function StaffingPage() {
     }
   };
 
+  const handleEditClick = (assignment: Assignment) => {
+    setEditingAssignment(assignment.id);
+    setEditedDates({
+      startDate: assignment.startDate.split('T')[0],
+      endDate: assignment.endDate?.split('T')[0] || '',
+      allocation: assignment.allocation || 0,
+    });
+  };
+
+  const handleSaveEdit = async (assignment: Assignment) => {
+    if (!editedDates) return;
+
+    try {
+      await assignmentsService.update(assignment.id, {
+        ...assignment,
+        startDate: new Date(editedDates.startDate).toISOString(),
+        endDate: new Date(editedDates.endDate).toISOString(),
+        allocation: editedDates.allocation,
+      });
+
+      await queryClient.invalidateQueries({ queryKey: ['assignments'] });
+      toast.success('Assignment updated successfully');
+      setEditingAssignment(null);
+      setEditedDates(null);
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to update assignment');
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingAssignment(null);
+    setEditedDates(null);
+  };
+
+  const handleDelete = async (assignmentId: string) => {
+    if (!confirm('Are you sure you want to delete this assignment?')) return;
+
+    try {
+      await assignmentsService.delete(assignmentId);
+      await queryClient.invalidateQueries({ queryKey: ['assignments'] });
+      toast.success('Assignment deleted successfully');
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to delete assignment');
+    }
+  };
+
+  const handleCreateProjectAssignment = async (projectAssignment: Partial<ProjectAssignment>) => {
+    try {
+      await projectAssignmentsService.create(projectAssignment as any);
+      await queryClient.invalidateQueries({ queryKey: ['projectAssignments'] });
+      toast.success('Project assignment created successfully');
+      setShowProjectAssignmentModal(false);
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to create project assignment');
+      throw err;
+    }
+  };
+
+  const handleUpdateProjectAssignment = async (projectAssignment: Partial<ProjectAssignment>) => {
+    if (!editingProjectAssignment) return;
+
+    try {
+      await projectAssignmentsService.update(editingProjectAssignment.id, {
+        ...editingProjectAssignment,
+        ...projectAssignment,
+      } as ProjectAssignment);
+      await queryClient.invalidateQueries({ queryKey: ['projectAssignments'] });
+      toast.success('Project assignment updated successfully');
+      setShowProjectAssignmentModal(false);
+      setEditingProjectAssignment(null);
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to update project assignment');
+      throw err;
+    }
+  };
+
+  const handleDeleteProjectAssignment = async (projectAssignmentId: string) => {
+    if (!confirm('Are you sure you want to delete this project assignment? This may affect associated WBS assignments.')) return;
+
+    try {
+      await projectAssignmentsService.delete(projectAssignmentId);
+      await queryClient.invalidateQueries({ queryKey: ['projectAssignments'] });
+      toast.success('Project assignment deleted successfully');
+    } catch (err: any) {
+      toast.error(err?.message ?? 'Failed to delete project assignment');
+    }
+  };
+
+  const handleEditProjectAssignment = (projectAssignment: ProjectAssignment) => {
+    setEditingProjectAssignment(projectAssignment);
+    setShowProjectAssignmentModal(true);
+  };
+
+  const getProjectAssignmentStatusLabel = (status: ProjectAssignmentStatus): string => {
+    switch (status) {
+      case ProjectAssignmentStatus.Draft:
+        return 'Draft';
+      case ProjectAssignmentStatus.PendingApproval:
+        return 'Pending Approval';
+      case ProjectAssignmentStatus.Active:
+        return 'Active';
+      case ProjectAssignmentStatus.Completed:
+        return 'Completed';
+      case ProjectAssignmentStatus.Cancelled:
+        return 'Cancelled';
+      default:
+        return 'Unknown';
+    }
+  };
+
   const stats = useMemo(() => {
   const total = assignments.length;
   const active = assignments.filter(a => a.status === AssignmentStatus.Active).length;
   const pending = assignments.filter(a => a.status === AssignmentStatus.PendingApproval).length;
   const avgAllocation = assignments.length > 0
-    ? Math.round(assignments.reduce((sum, a) => sum + a.allocation, 0) / assignments.length)
+    ? Math.round(assignments.reduce((sum, a) => sum + (a.allocation || 0), 0) / assignments.length)
     : 0;
 
   return { total, active, pending, avgAllocation };
 }, [assignments]);
 
-  const timeline = useMemo(() => {
-    const now = new Date();
-    const sixMonthsOut = new Date();
-    sixMonthsOut.setMonth(now.getMonth() + 6);
-    const totalMs = sixMonthsOut.getTime() - now.getTime();
-    return assignments.map((a) => {
-      const start = new Date(a.startDate);
-      const end = new Date(a.endDate);
-      const clampedStart = start < now ? now : start;
-      const clampedEnd = end > sixMonthsOut ? sixMonthsOut : end;
-      const leftPct = ((clampedStart.getTime() - now.getTime()) / totalMs) * 100;
-      const widthPct = ((clampedEnd.getTime() - clampedStart.getTime()) / totalMs) * 100;
-      return { ...a, leftPct: Math.max(0, leftPct), widthPct: Math.max(2, widthPct) };
+  const getTimelineEndDate = (range: TimelineRange): Date => {
+    const endDate = new Date();
+    switch (range) {
+      case '2months':
+        endDate.setMonth(endDate.getMonth() + 2);
+        break;
+      case '6months':
+        endDate.setMonth(endDate.getMonth() + 6);
+        break;
+      case '1year':
+        endDate.setFullYear(endDate.getFullYear() + 1);
+        break;
+      case '3years':
+        endDate.setFullYear(endDate.getFullYear() + 3);
+        break;
+    }
+    return endDate;
+  };
+
+  const getTimelineMonths = (startDate: Date, endDate: Date): Date[] => {
+    const months: Date[] = [];
+    const current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+    const end = new Date(endDate.getFullYear(), endDate.getMonth(), 1);
+
+    while (current <= end) {
+      months.push(new Date(current));
+      current.setMonth(current.getMonth() + 1);
+    }
+
+    return months;
+  };
+
+  // Group assignments by project and WBS
+  const groupedAssignments = useMemo(() => {
+    const projMap = new Map<string, {
+      projectId: string;
+      wbsGroups: Map<string, Assignment[]>;
+      noWbsAssignments: Assignment[];
+    }>();
+
+    assignments.forEach(assignment => {
+      // Get the project ID from the WBS element
+      const wbs = assignment.wbsElementId ? wbsMap.get(assignment.wbsElementId) : null;
+      const projectId = wbs?.projectId || 'no-project';
+
+      if (!projMap.has(projectId)) {
+        projMap.set(projectId, {
+          projectId,
+          wbsGroups: new Map(),
+          noWbsAssignments: [],
+        });
+      }
+
+      const projectGroup = projMap.get(projectId)!;
+
+      if (assignment.wbsElementId) {
+        if (!projectGroup.wbsGroups.has(assignment.wbsElementId)) {
+          projectGroup.wbsGroups.set(assignment.wbsElementId, []);
+        }
+        projectGroup.wbsGroups.get(assignment.wbsElementId)!.push(assignment);
+      } else {
+        projectGroup.noWbsAssignments.push(assignment);
+      }
     });
-  }, [assignments]);
+
+    return Array.from(projMap.entries()).map(([projectId, data]) => ({
+      projectId,
+      wbsGroups: Array.from(data.wbsGroups.entries()).map(([wbsId, items]) => ({
+        wbsId,
+        assignments: items,
+      })),
+      noWbsAssignments: data.noWbsAssignments,
+    }));
+  }, [assignments, wbsMap]);
+
+  // Timeline calculation removed - was unused
+  // Can be re-added if needed for future timeline visualization features
 
   const exportCsv = () => {
     const headers = ['Id', 'UserId', 'ProjectRoleId', 'Allocation', 'StartDate', 'EndDate', 'Status'];
@@ -159,10 +394,16 @@ export function StaffingPage() {
           <div className="flex flex-col md:flex-row gap-4 items-center">
             <div className="flex gap-2">
               <Button
+                variant={selectedView === 'projectAssignments' ? 'primary' : 'ghost'}
+                onClick={() => setSelectedView('projectAssignments')}
+              >
+                Project Assignments
+              </Button>
+              <Button
                 variant={selectedView === 'assignments' ? 'primary' : 'ghost'}
                 onClick={() => setSelectedView('assignments')}
               >
-                Assignments
+                WBS Assignments
               </Button>
               <Button
                 variant={selectedView === 'capacity' ? 'primary' : 'ghost'}
@@ -182,38 +423,25 @@ export function StaffingPage() {
               <Button variant="secondary" onClick={exportCsv}>
                 Export CSV
               </Button>
-              <select
-                className="border rounded px-3 py-2 text-sm"
-                value={approverGroupId}
-                onChange={(e) => setApproverGroupId(e.target.value)}
-              >
-                <option value="">Approver Group (optional)</option>
-                {approverGroups.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.name}
-                  </option>
-                ))}
-              </select>
-              <Button
-                variant="primary"
-                onClick={() =>
-                  handleRequest({
-                    projectId: assignments[0]?.projectRoleId || crypto.randomUUID(),
-                    wbsElementId: assignments[0]?.wbsElementId,
-                    projectRoleId: assignments[0]?.projectRoleId,
-                    allocationPct: 50,
-                    tenantId: currentWorkspace?.tenantId,
-                    requestedForUserId: user?.id,
-                    startDate: new Date().toISOString(),
-                    endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString(),
-                    notes: 'Requesting assignment',
-                    approverGroupId: approverGroupId || undefined,
-                  })
-                }
-                disabled={requesting}
-              >
-                {requesting ? 'Submitting...' : '+ Request Assignment'}
-              </Button>
+              {selectedView === 'projectAssignments' && (
+                <Button
+                  variant="primary"
+                  onClick={() => {
+                    setEditingProjectAssignment(null);
+                    setShowProjectAssignmentModal(true);
+                  }}
+                >
+                  + New Project Assignment
+                </Button>
+              )}
+              {selectedView === 'assignments' && (
+                <Button
+                  variant="primary"
+                  onClick={() => setShowRequestModal(true)}
+                >
+                  + Request WBS Assignment
+                </Button>
+              )}
             </div>
           </div>
         </CardBody>
@@ -227,24 +455,323 @@ export function StaffingPage() {
             subtitle={`${assignments.length} ${assignments.length === 1 ? 'assignment' : 'assignments'}`}
           />
 
-          {/* Gantt-style six-month view */}
+          {/* Timeline with range toggle */}
           <div className="border-t border-gray-200 p-4">
-            <h3 className="font-semibold text-gray-900 mb-3">6-Month Timeline</h3>
-            <div className="space-y-3">
-              {timeline.slice(0, 20).map((item) => (
-                <div key={item.id}>
-                  <div className="text-sm text-gray-700 mb-1">
-                    Project {item.projectRoleId ? item.projectRoleId.substring(0, 8) : '—'} • User {item.userId.substring(0,8)}
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-semibold text-gray-900">Timeline</h3>
+              <div className="flex gap-2">
+                <Button
+                  size="sm"
+                  variant={timelineRange === '2months' ? 'primary' : 'ghost'}
+                  onClick={() => setTimelineRange('2months')}
+                >
+                  2 Months
+                </Button>
+                <Button
+                  size="sm"
+                  variant={timelineRange === '6months' ? 'primary' : 'ghost'}
+                  onClick={() => setTimelineRange('6months')}
+                >
+                  6 Months
+                </Button>
+                <Button
+                  size="sm"
+                  variant={timelineRange === '1year' ? 'primary' : 'ghost'}
+                  onClick={() => setTimelineRange('1year')}
+                >
+                  1 Year
+                </Button>
+                <Button
+                  size="sm"
+                  variant={timelineRange === '3years' ? 'primary' : 'ghost'}
+                  onClick={() => setTimelineRange('3years')}
+                >
+                  3 Years
+                </Button>
+              </div>
+            </div>
+
+            {/* Month headers */}
+            {(() => {
+              const now = new Date();
+              const endDate = getTimelineEndDate(timelineRange);
+              const months = getTimelineMonths(now, endDate);
+              const totalMs = endDate.getTime() - now.getTime();
+
+              return (
+                <>
+                  <div className="relative h-8 mb-4 border-b border-gray-300">
+                    {months.map((month, idx) => {
+                      const monthStart = month.getTime();
+                      const monthEnd = new Date(month.getFullYear(), month.getMonth() + 1, 0).getTime();
+                      const leftPct = Math.max(0, ((monthStart - now.getTime()) / totalMs) * 100);
+                      const widthPct = ((monthEnd - Math.max(monthStart, now.getTime())) / totalMs) * 100;
+
+                      return (
+                        <div
+                          key={idx}
+                          className="absolute top-0 h-full border-l border-gray-300 text-xs text-gray-600 pl-1"
+                          style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
+                        >
+                          {month.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })}
+                        </div>
+                      );
+                    })}
                   </div>
-                  <div className="h-4 bg-gray-100 rounded relative overflow-hidden">
-                    <div
-                      className="h-4 bg-blue-500 rounded absolute"
-                      style={{ left: `${item.leftPct}%`, width: `${item.widthPct}%` }}
-                    />
+
+                  {/* Grouped assignment bars with accordion */}
+                  <div className="space-y-4">
+                    {groupedAssignments.map((projectGroup) => {
+                      const isExpanded = expandedProjects.has(projectGroup.projectId);
+                      const allProjectAssignments = [
+                        ...projectGroup.noWbsAssignments,
+                        ...projectGroup.wbsGroups.flatMap(wg => wg.assignments),
+                      ];
+                      const project = projectMap.get(projectGroup.projectId);
+                      const projectLabel = project
+                        ? `${project.name} (${project.programCode || project.id.substring(0, 8)})`
+                        : projectGroup.projectId === 'no-project'
+                          ? 'No Project'
+                          : projectGroup.projectId.substring(0, 8);
+
+                      return (
+                        <div key={projectGroup.projectId} className="border border-gray-200 rounded-md">
+                          {/* Project header */}
+                          <button
+                            onClick={() => toggleProject(projectGroup.projectId)}
+                            className="w-full flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 transition-colors"
+                          >
+                            <div className="flex items-center gap-2">
+                              <svg
+                                className={`w-4 h-4 transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                              </svg>
+                              <span className="font-medium text-gray-900">
+                                {projectLabel}
+                              </span>
+                              <span className="text-sm text-gray-500">
+                                ({allProjectAssignments.length} {allProjectAssignments.length === 1 ? 'assignment' : 'assignments'})
+                              </span>
+                            </div>
+                          </button>
+
+                          {/* Project timeline bar (always visible) */}
+                          <div className="px-3 py-2">
+                            {allProjectAssignments.map((assignment) => {
+                              const start = new Date(assignment.startDate);
+                              const end = new Date(assignment.endDate || assignment.startDate);
+                              const clampedStart = start < now ? now : start;
+                              const clampedEnd = end > endDate ? endDate : end;
+                              const leftPct = ((clampedStart.getTime() - now.getTime()) / totalMs) * 100;
+                              const widthPct = ((clampedEnd.getTime() - clampedStart.getTime()) / totalMs) * 100;
+
+                              return (
+                                <div key={assignment.id} className="mb-2">
+                                  <div className="text-xs text-gray-600 mb-1">
+                                    {assignment.allocation}% • {assignment.projectRoleId ? assignment.projectRoleId.substring(0, 8) : 'No Role'}
+                                  </div>
+                                  <div className="h-3 bg-gray-100 rounded relative overflow-hidden">
+                                    <div
+                                      className="h-3 bg-blue-500 rounded absolute"
+                                      style={{ left: `${Math.max(0, leftPct)}%`, width: `${Math.max(2, widthPct)}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {/* Expanded WBS details */}
+                          {isExpanded && projectGroup.wbsGroups.length > 0 && (
+                            <div className="border-t border-gray-200 bg-white p-3 space-y-3">
+                              {projectGroup.wbsGroups.map((wbsGroup) => {
+                                const wbs = wbsMap.get(wbsGroup.wbsId);
+                                const wbsLabel = wbs
+                                  ? `${wbs.code} - ${wbs.description}`
+                                  : wbsGroup.wbsId.substring(0, 8);
+
+                                return (
+                                <div key={wbsGroup.wbsId} className="pl-4">
+                                  <div className="font-medium text-sm text-gray-700 mb-2">
+                                    {wbsLabel}
+                                  </div>
+                                  {wbsGroup.assignments.map((assignment) => {
+                                    const start = new Date(assignment.startDate);
+                                    const end = new Date(assignment.endDate || assignment.startDate);
+                                    const clampedStart = start < now ? now : start;
+                                    const clampedEnd = end > endDate ? endDate : end;
+                                    const leftPct = ((clampedStart.getTime() - now.getTime()) / totalMs) * 100;
+                                    const widthPct = ((clampedEnd.getTime() - clampedStart.getTime()) / totalMs) * 100;
+
+                                    return (
+                                      <div key={assignment.id} className="mb-2">
+                                        <div className="text-xs text-gray-500 mb-1">
+                                          {assignment.allocation}% • Role: {assignment.projectRoleId?.substring(0, 8) || 'None'}
+                                        </div>
+                                        <div className="h-2 bg-gray-100 rounded relative overflow-hidden">
+                                          <div
+                                            className="h-2 bg-green-500 rounded absolute"
+                                            style={{ left: `${Math.max(0, leftPct)}%`, width: `${Math.max(2, widthPct)}%` }}
+                                          />
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {groupedAssignments.length === 0 && (
+                      <p className="text-sm text-gray-500 text-center py-4">No assignments to display.</p>
+                    )}
                   </div>
-                </div>
-              ))}
-              {timeline.length === 0 && <p className="text-sm text-gray-500">No timeline data.</p>}
+                </>
+              );
+            })()}
+          </div>
+
+          {/* Assignments Table */}
+          <div className="border-t border-gray-200 p-4">
+            <h3 className="font-semibold text-gray-900 mb-4">All Assignments</h3>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Project/WBS
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Role
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Start Date
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      End Date
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Allocation
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {assignments.map((assignment) => {
+                    const wbs = assignment.wbsElementId ? wbsMap.get(assignment.wbsElementId) : null;
+                    const project = wbs?.projectId ? projectMap.get(wbs.projectId) : null;
+                    const projectLabel = project ? `${project.name} (${project.programCode || 'N/A'})` : 'No Project';
+                    const wbsLabel = wbs ? `${wbs.code} - ${wbs.description}` : 'No WBS';
+                    const isEditing = editingAssignment === assignment.id;
+
+                    return (
+                    <tr key={assignment.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-3 text-sm text-gray-900">
+                        <div className="font-medium">{projectLabel}</div>
+                        <div className="text-xs text-gray-500">{wbsLabel}</div>
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {assignment.projectRoleId?.substring(0, 8) || '—'}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {isEditing ? (
+                          <input
+                            type="date"
+                            value={editedDates?.startDate || ''}
+                            onChange={(e) => setEditedDates(prev => prev ? { ...prev, startDate: e.target.value } : null)}
+                            className="px-2 py-1 border border-gray-300 rounded text-sm"
+                            aria-label="Start Date"
+                          />
+                        ) : (
+                          new Date(assignment.startDate).toLocaleDateString()
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {isEditing ? (
+                          <input
+                            type="date"
+                            value={editedDates?.endDate || ''}
+                            onChange={(e) => setEditedDates(prev => prev ? { ...prev, endDate: e.target.value } : null)}
+                            className="px-2 py-1 border border-gray-300 rounded text-sm"
+                            aria-label="End Date"
+                          />
+                        ) : (
+                          assignment.endDate ? new Date(assignment.endDate).toLocaleDateString() : 'Ongoing'
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-gray-600">
+                        {isEditing ? (
+                          <input
+                            type="number"
+                            min="1"
+                            max="200"
+                            value={editedDates?.allocation || 100}
+                            onChange={(e) => setEditedDates(prev => prev ? { ...prev, allocation: parseInt(e.target.value) } : null)}
+                            className="px-2 py-1 border border-gray-300 rounded text-sm w-20"
+                            aria-label="Allocation Percentage"
+                          />
+                        ) : (
+                          `${assignment.allocation}%`
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          assignment.status === AssignmentStatus.Active
+                            ? 'bg-green-100 text-green-800'
+                            : assignment.status === AssignmentStatus.PendingApproval
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : assignment.status === AssignmentStatus.Completed
+                            ? 'bg-gray-100 text-gray-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {getStatusLabel(assignment.status)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-sm">
+                        {isEditing ? (
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="primary" onClick={() => handleSaveEdit(assignment)}>
+                              Save
+                            </Button>
+                            <Button size="sm" variant="secondary" onClick={handleCancelEdit}>
+                              Cancel
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="ghost" onClick={() => handleEditClick(assignment)}>
+                              Edit
+                            </Button>
+                            <Button size="sm" variant="ghost" onClick={() => handleDelete(assignment.id)} className="text-red-600 hover:text-red-700">
+                              Delete
+                            </Button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                    );
+                  })}
+                  {assignments.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-8 text-center text-sm text-gray-500">
+                        No assignments found.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </Card>
@@ -258,7 +785,7 @@ export function StaffingPage() {
             <Card padding="sm">
               <div className="text-center">
                 <div className="text-2xl font-bold text-green-600">
-                  {assignments.filter(a => a.status === AssignmentStatus.Active && a.allocation < 80).length}
+                  {assignments.filter(a => a.status === AssignmentStatus.Active && (a.allocation || 0) < 80).length}
                 </div>
                 <div className="text-sm text-gray-600 mt-1">Under Allocated</div>
                 <div className="text-xs text-gray-500 mt-1">&lt;80% capacity</div>
@@ -267,7 +794,7 @@ export function StaffingPage() {
             <Card padding="sm">
               <div className="text-center">
                 <div className="text-2xl font-bold text-blue-600">
-                  {assignments.filter(a => a.status === AssignmentStatus.Active && a.allocation >= 80 && a.allocation <= 100).length}
+                  {assignments.filter(a => a.status === AssignmentStatus.Active && (a.allocation || 0) >= 80 && (a.allocation || 0) <= 100).length}
                 </div>
                 <div className="text-sm text-gray-600 mt-1">Optimally Allocated</div>
                 <div className="text-xs text-gray-500 mt-1">80-100% capacity</div>
@@ -276,7 +803,7 @@ export function StaffingPage() {
             <Card padding="sm">
               <div className="text-center">
                 <div className="text-2xl font-bold text-red-600">
-                  {assignments.filter(a => a.status === AssignmentStatus.Active && a.allocation > 100).length}
+                  {assignments.filter(a => a.status === AssignmentStatus.Active && (a.allocation || 0) > 100).length}
                 </div>
                 <div className="text-sm text-gray-600 mt-1">Over Allocated</div>
                 <div className="text-xs text-gray-500 mt-1">&gt;100% capacity</div>
@@ -316,7 +843,7 @@ export function StaffingPage() {
                 return (
                   <div className="space-y-6">
                     {personEntries.slice(0, 10).map(([userId, personAssignments]) => {
-                      const totalAllocation = personAssignments.reduce((sum, a) => sum + a.allocation, 0);
+                      const totalAllocation = personAssignments.reduce((sum, a) => sum + (a.allocation || 0), 0);
                       const isOverAllocated = totalAllocation > 100;
                       const isUnderAllocated = totalAllocation < 80;
 
@@ -404,53 +931,126 @@ export function StaffingPage() {
         </div>
       )}
 
-      {/* Requests */}
-      {/* Request CTA */}
-      <div className="mt-4">
+      {/* Project Assignments View */}
+      {selectedView === 'projectAssignments' && (
         <Card>
+          <CardHeader
+            title="Project Assignments (Step 1)"
+            subtitle={`${projectAssignments.length} project ${projectAssignments.length === 1 ? 'assignment' : 'assignments'}`}
+          />
           <CardBody>
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">Request an Assignment</h3>
-                <p className="text-sm text-gray-600">Submit a request to staffing managers for approval.</p>
-              </div>
-              <select
-                className="border rounded px-3 py-2 text-sm mr-3"
-                value={approverGroupId}
-                onChange={(e) => setApproverGroupId(e.target.value)}
-              >
-                <option value="">Approver Group (optional)</option>
-                {approverGroups.map((g) => (
-                  <option key={g.id} value={g.id}>
-                    {g.name}
-                  </option>
-                ))}
-              </select>
-              <Button
-                variant="primary"
-                onClick={() =>
-                  handleRequest({
-                    projectId: assignments[0]?.projectRoleId || crypto.randomUUID(),
-                    wbsElementId: assignments[0]?.wbsElementId,
-                    projectRoleId: assignments[0]?.projectRoleId,
-                    allocationPct: 50,
-                    tenantId: currentWorkspace?.tenantId,
-                    requestedForUserId: user?.id,
-                    startDate: new Date().toISOString(),
-                    endDate: new Date(new Date().setMonth(new Date().getMonth() + 1)).toISOString(),
-                    notes: 'Requesting assignment',
-                    approverGroupId: approverGroupId || undefined,
-                  })
-                }
-                disabled={requesting}
-              >
-                {requesting ? 'Submitting...' : 'Request Assignment'}
-              </Button>
+            <div className="overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Project
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Start Date
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      End Date
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      WBS Assignments
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {projectAssignments.map((projectAssignment) => {
+                    const project = projectMap.get(projectAssignment.projectId);
+                    const projectLabel = project ? `${project.name} (${project.programCode || 'N/A'})` : 'Unknown Project';
+                    const wbsCount = assignments.filter(a => a.projectAssignmentId === projectAssignment.id).length;
+
+                    return (
+                      <tr key={projectAssignment.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3 text-sm text-gray-900">
+                          <div className="font-medium">{projectLabel}</div>
+                          {projectAssignment.notes && (
+                            <div className="text-xs text-gray-500 mt-1">{projectAssignment.notes}</div>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600">
+                          {new Date(projectAssignment.startDate).toLocaleDateString()}
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600">
+                          {projectAssignment.endDate ? new Date(projectAssignment.endDate).toLocaleDateString() : 'Ongoing'}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            projectAssignment.status === ProjectAssignmentStatus.Active
+                              ? 'bg-green-100 text-green-800'
+                              : projectAssignment.status === ProjectAssignmentStatus.PendingApproval
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : projectAssignment.status === ProjectAssignmentStatus.Completed
+                              ? 'bg-gray-100 text-gray-800'
+                              : projectAssignment.status === ProjectAssignmentStatus.Draft
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            {getProjectAssignmentStatusLabel(projectAssignment.status)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-600">
+                          {wbsCount} WBS {wbsCount === 1 ? 'assignment' : 'assignments'}
+                        </td>
+                        <td className="px-4 py-3 text-sm">
+                          <div className="flex gap-2">
+                            <Button size="sm" variant="ghost" onClick={() => handleEditProjectAssignment(projectAssignment)}>
+                              Edit
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => handleDeleteProjectAssignment(projectAssignment.id)}
+                              className="text-red-600 hover:text-red-700"
+                            >
+                              Delete
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {projectAssignments.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="px-4 py-8 text-center text-sm text-gray-500">
+                        No project assignments found. Create one to get started with the two-step assignment model.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
-            <p className="text-xs text-gray-500 mt-2">Requests route to the Inbox for approval.</p>
           </CardBody>
         </Card>
-      </div>
+      )}
+
+      {/* Modals */}
+      <AssignmentRequestModal
+        isOpen={showRequestModal}
+        onClose={() => setShowRequestModal(false)}
+        onSubmit={handleRequest}
+        isSubmitting={requesting}
+      />
+
+      <ProjectAssignmentModal
+        isOpen={showProjectAssignmentModal}
+        onClose={() => {
+          setShowProjectAssignmentModal(false);
+          setEditingProjectAssignment(null);
+        }}
+        onSubmit={editingProjectAssignment ? handleUpdateProjectAssignment : handleCreateProjectAssignment}
+        isSubmitting={requesting}
+        existingAssignment={editingProjectAssignment || undefined}
+      />
     </div>
   );
 }
