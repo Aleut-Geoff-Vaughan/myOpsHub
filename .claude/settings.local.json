@@ -9,7 +9,10 @@
       "Bash(netstat:*)",
       "Bash(findstr:*)",
       "Bash(dotnet:*)",
-      "Bash(git rm:*)"
+      "Bash(git rm:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$(cat <<''EOF''\nRemove build artifacts from git and update .gitignore\n\n- Added .NET build artifacts (bin/, obj/, *.dll, *.exe, etc.) to .gitignore\n- Removed all tracked build artifacts from repository\n- Updated README.md with latest changes\n\nThis prevents build artifacts from being committed and fixes git permission issues with running executables.\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
+      "Bash(git push:*)"
     ],
     "deny": [],
     "ask": []
