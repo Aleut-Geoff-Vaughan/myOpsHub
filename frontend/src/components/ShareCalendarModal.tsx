@@ -87,7 +87,7 @@ export function ShareCalendarModal({
       .filter(p => p.userId === user.id)
       .sort((a, b) => a.workDate.localeCompare(b.workDate));
 
-    const displayName = user.displayName || `${user.firstName} ${user.lastName}`;
+    const displayName = user.displayName || user.name || user.email;
     const formattedStartDate = formatDate(startDate);
     const formattedEndDate = formatDate(endDate);
 
@@ -196,7 +196,7 @@ export function ShareCalendarModal({
   };
 
   const handleEmailClick = () => {
-    const subject = encodeURIComponent(`Work Location Schedule - ${user.displayName || user.firstName}`);
+    const subject = encodeURIComponent(`Work Location Schedule - ${user.displayName || user.name || user.email}`);
     const body = encodeURIComponent(generatedContent);
     window.location.href = `mailto:?subject=${subject}&body=${body}`;
   };
