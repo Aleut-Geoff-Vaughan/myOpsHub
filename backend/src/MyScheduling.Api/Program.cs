@@ -258,3 +258,4 @@ app.MapGet("/api/health", async (Microsoft.Extensions.Diagnostics.HealthChecks.H
 
 app.Run();
 
+// Force rebuild $(date)
