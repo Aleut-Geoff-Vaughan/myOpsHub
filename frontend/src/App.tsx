@@ -35,6 +35,8 @@ import StaffingAdminPage from './pages/StaffingAdminPage';
 import AdminGroupsPage from './pages/AdminGroupsPage';
 import { AdminDOATemplatesPage } from './pages/AdminDOATemplatesPage';
 import { AdminTenantSettingsPage } from './pages/AdminTenantSettingsPage';
+import { AdminOfficesPage } from './pages/AdminOfficesPage';
+import { ManagerDashboardPage } from './pages/ManagerDashboardPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -121,6 +123,7 @@ function App() {
               <Route path="data/assignments" element={<AdminAssignmentsPage />} />
               <Route path="doa-templates" element={<AdminDOATemplatesPage />} />
               <Route path="tenant-settings" element={<AdminTenantSettingsPage />} />
+              <Route path="offices" element={<AdminOfficesPage />} />
             </Route>
 
             {/* Main Application Routes */}
@@ -133,6 +136,7 @@ function App() {
               }
             >
               <Route index element={<DashboardPage />} />
+              <Route path="manager-dashboard" element={<ManagerDashboardPage />} />
               <Route path="projects" element={<ProjectsPage />} />
               <Route path="wbs" element={<WbsPage />} />
               <Route path="staffing" element={<StaffingPage />} />

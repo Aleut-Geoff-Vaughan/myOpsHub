@@ -4,9 +4,16 @@ public class Office : TenantEntity
 {
     public string Name { get; set; } = string.Empty;
     public string? Address { get; set; }
+    public string? Address2 { get; set; }  // Suite, Floor, Building, etc.
+    public string? City { get; set; }
+    public string? StateCode { get; set; }  // Two-letter state code (e.g., "VA", "CO")
+    public string? CountryCode { get; set; } = "US";  // Two-letter country code (e.g., "US", "CA")
     public string? Timezone { get; set; }
     public OfficeStatus Status { get; set; }
     public bool IsClientSite { get; set; } = false;  // Indicates if this is a client site location
+    public string? IconUrl { get; set; }  // Custom icon URL (optional)
+    public double? Latitude { get; set; }
+    public double? Longitude { get; set; }
 
     // Navigation properties
     public virtual ICollection<Space> Spaces { get; set; } = new List<Space>();
@@ -181,8 +188,7 @@ public class WorkLocationPreference : TenantEntity
     // Navigation properties
     [System.Text.Json.Serialization.JsonIgnore]
     public virtual User User { get; set; } = null!;
-    [System.Text.Json.Serialization.JsonIgnore]
-    public virtual Office? Office { get; set; }
+    public virtual Office? Office { get; set; }  // Include in serialization for display purposes
     [System.Text.Json.Serialization.JsonIgnore]
     public virtual Booking? Booking { get; set; }
     [System.Text.Json.Serialization.JsonIgnore]
@@ -196,7 +202,8 @@ public enum WorkLocationType
     ClientSite,             // Working at a client location
     OfficeNoReservation,    // In office but no specific desk/room booked
     OfficeWithReservation,  // In office with a specific booking
-    PTO                     // Paid Time Off
+    PTO,                    // Paid Time Off
+    Travel                  // Travel day (in transit)
 }
 
 // Company Holidays for tracking federal/company-wide holidays

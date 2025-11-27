@@ -29,6 +29,14 @@ public class TenantSettings : BaseEntity
     public string? FontFamily { get; set; }
     public int? FontSize { get; set; }
 
+    // Environment and Notification Banner settings
+    public string? EnvironmentName { get; set; } // e.g., "Development", "Test", "Staging", "Production"
+    public bool ShowEnvironmentBanner { get; set; } = false;
+    public bool NotificationBannerEnabled { get; set; } = false;
+    public string? NotificationBannerMessage { get; set; }
+    public string? NotificationBannerType { get; set; } // "info", "warning", "error", "success"
+    public DateTime? NotificationBannerExpiresAt { get; set; }
+
     // Navigation properties
     public virtual Tenant Tenant { get; set; } = null!;
 }

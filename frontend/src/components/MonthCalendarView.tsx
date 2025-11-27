@@ -32,6 +32,8 @@ export function MonthCalendarView({ referenceDate, preferences, onDayClick, user
         return 'Office (Reserved)';
       case WorkLocationType.PTO:
         return 'PTO';
+      case WorkLocationType.Travel:
+        return 'Travel';
       default:
         return 'Unknown';
     }
@@ -51,6 +53,8 @@ export function MonthCalendarView({ referenceDate, preferences, onDayClick, user
         return 'bg-emerald-100 text-emerald-800 border-emerald-300';
       case WorkLocationType.PTO:
         return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+      case WorkLocationType.Travel:
+        return 'bg-sky-100 text-sky-800 border-sky-300';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-300';
     }
@@ -68,6 +72,8 @@ export function MonthCalendarView({ referenceDate, preferences, onDayClick, user
         return '🏛️';
       case WorkLocationType.PTO:
         return '🌴';
+      case WorkLocationType.Travel:
+        return '✈️';
       default:
         return '📍';
     }
@@ -107,6 +113,7 @@ export function MonthCalendarView({ referenceDate, preferences, onDayClick, user
               return (
                 <button
                   key={date.toISOString()}
+                  type="button"
                   onClick={() => onDayClick(date)}
                   className={`
                     relative p-3 rounded-lg border-2 transition-all min-h-[100px]
@@ -135,6 +142,18 @@ export function MonthCalendarView({ referenceDate, preferences, onDayClick, user
                       <div className="text-xs font-semibold">
                         {getLocationTypeLabel(preference.locationType)}
                       </div>
+                      {/* Show office name for office locations */}
+                      {preference.office && (
+                        <div className="text-xs text-gray-600 mt-1 truncate" title={preference.office.name}>
+                          {preference.office.name}
+                        </div>
+                      )}
+                      {/* Show remote location for Remote+ */}
+                      {preference.remoteLocation && (
+                        <div className="text-xs text-gray-600 mt-1 truncate" title={preference.remoteLocation}>
+                          {preference.remoteLocation}
+                        </div>
+                      )}
                     </div>
                   ) : (
                     <div className="text-center text-gray-400">
@@ -157,7 +176,7 @@ export function MonthCalendarView({ referenceDate, preferences, onDayClick, user
       {/* Legend */}
       <div className="bg-gray-50 rounded-lg p-4">
         <h4 className="text-xs font-semibold text-gray-700 mb-2">Legend</h4>
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-2 text-xs">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 text-xs">
           <div className="flex items-center gap-2">
             <span>🏠</span>
             <span>Remote / Remote+</span>
@@ -173,6 +192,10 @@ export function MonthCalendarView({ referenceDate, preferences, onDayClick, user
           <div className="flex items-center gap-2">
             <span>🌴</span>
             <span>PTO</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span>✈️</span>
+            <span>Travel</span>
           </div>
           <div className="flex items-center gap-2">
             <span>❓</span>

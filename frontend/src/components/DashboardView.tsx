@@ -5,6 +5,9 @@ import { WeekCalendarView } from './WeekCalendarView';
 import { MonthCalendarView } from './MonthCalendarView';
 import { ViewSelector } from './ViewSelector';
 import { WorkLocationSelector } from './WorkLocationSelector';
+import { PTODateRangeModal } from './PTODateRangeModal';
+import { ShareCalendarModal } from './ShareCalendarModal';
+import { ApplyTemplateSelectModal } from './ApplyTemplateSelectModal';
 import { useDashboard } from '../hooks/useDashboard';
 import { getMondayOfWeek } from '../utils/dateUtils';
 import { CalendarSkeleton, StatsCardSkeleton } from './skeletons/CalendarSkeleton';
@@ -28,8 +31,12 @@ export function DashboardView({
   const navigate = useNavigate();
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [showLocationSelector, setShowLocationSelector] = useState(false);
+  const [showPTOModal, setShowPTOModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [selectedView, setSelectedView] = useState<'current-week' | 'two-weeks' | 'month'>('two-weeks');
   const [referenceDate, setReferenceDate] = useState<Date>(new Date());
+  const [daysPerWeek, setDaysPerWeek] = useState<5 | 7>(5);
 
   const dateRange = useMemo(() => {
     const monday = getMondayOfWeek(referenceDate);
@@ -221,7 +228,50 @@ export function DashboardView({
             subtitle={canEdit ? 'Click on any day to set or update work location' : 'Viewing schedule'}
           />
           <CardBody>
-            <ViewSelector selectedView={selectedView} onViewChange={setSelectedView} />
+            <div className="flex items-center justify-between mb-4">
+              <ViewSelector
+                selectedView={selectedView}
+                onViewChange={setSelectedView}
+                daysPerWeek={daysPerWeek}
+                onDaysPerWeekChange={setDaysPerWeek}
+              />
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setShowShareModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-300 rounded-lg hover:bg-blue-100 hover:border-blue-400 transition"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                  </svg>
+                  Share
+                </button>
+                {canEdit && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setShowTemplateModal(true)}
+                      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-indigo-700 bg-indigo-50 border border-indigo-300 rounded-lg hover:bg-indigo-100 hover:border-indigo-400 transition"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                      </svg>
+                      Apply Template
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowPTOModal(true)}
+                      className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-amber-700 bg-amber-50 border border-amber-300 rounded-lg hover:bg-amber-100 hover:border-amber-400 transition"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      Add PTO
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
 
             <div className="flex items-center justify-between mb-4 bg-gray-50 rounded-lg p-3">
               <button
@@ -259,6 +309,7 @@ export function DashboardView({
                 onDayClick={handleDayClick}
                 userId={dashboardData.user.id}
                 weeksToShow={1}
+                daysPerWeek={daysPerWeek}
               />
             )}
 
@@ -269,6 +320,7 @@ export function DashboardView({
                 onDayClick={handleDayClick}
                 userId={dashboardData.user.id}
                 weeksToShow={2}
+                daysPerWeek={daysPerWeek}
               />
             )}
 
@@ -327,6 +379,30 @@ export function DashboardView({
             selectedDate={selectedDate}
             existingPreference={existingPreference}
             userId={dashboardData.user.id}
+          />
+        )}
+
+        {canEdit && (
+          <PTODateRangeModal
+            isOpen={showPTOModal}
+            onClose={() => setShowPTOModal(false)}
+            userId={dashboardData.user.id}
+          />
+        )}
+
+        <ShareCalendarModal
+          isOpen={showShareModal}
+          onClose={() => setShowShareModal(false)}
+          preferences={dashboardData.preferences}
+          user={dashboardData.user}
+          startDate={dateRange.startDate}
+          endDate={dateRange.endDate}
+        />
+
+        {canEdit && (
+          <ApplyTemplateSelectModal
+            isOpen={showTemplateModal}
+            onClose={() => setShowTemplateModal(false)}
           />
         )}
       </div>

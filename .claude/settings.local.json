@@ -52,7 +52,10 @@
       "Bash(cat:*)",
       "Bash(git checkout:*)",
       "Bash(git commit:*)",
-      "Bash(az account show:*)"
+      "Bash(az account show:*)",
+      "Bash(powershell -ExecutionPolicy Bypass -File deploy-to-azure.ps1)",
+      "Bash(gh secret:*)",
+      "Bash(powershell -ExecutionPolicy Bypass -File:*)"
     ],
     "deny": [],
     "ask": []

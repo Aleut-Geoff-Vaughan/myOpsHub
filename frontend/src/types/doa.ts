@@ -157,6 +157,13 @@ export interface TenantSettings {
   secondaryColor?: string;
   fontFamily?: string;
   fontSize?: number;
+  // Environment and Notification Banner settings
+  environmentName?: string;
+  showEnvironmentBanner?: boolean;
+  notificationBannerEnabled?: boolean;
+  notificationBannerMessage?: string;
+  notificationBannerType?: 'info' | 'warning' | 'error' | 'success';
+  notificationBannerExpiresAt?: string;
   createdAt: string;
   updatedAt?: string;
 }
@@ -181,4 +188,11 @@ export interface UpdateTenantSettingsRequest {
   secondaryColor?: string;
   fontFamily?: string;
   fontSize?: number;
+  // Environment and Notification Banner settings
+  environmentName?: string;
+  showEnvironmentBanner?: boolean;
+  notificationBannerEnabled?: boolean;
+  notificationBannerMessage?: string;
+  notificationBannerType?: 'info' | 'warning' | 'error' | 'success';
+  notificationBannerExpiresAt?: string;
 }

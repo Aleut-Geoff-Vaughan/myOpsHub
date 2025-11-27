@@ -97,9 +97,11 @@ export function WorkLocationSelector({
 
     try {
       if (existingPreference) {
+        // Strip navigation properties to avoid model binding issues on the backend
+        const { user, office, booking, ...cleanPreference } = existingPreference;
         await updateMutation.mutateAsync({
           id: existingPreference.id,
-          preference: { ...existingPreference, ...preferenceData },
+          preference: { ...cleanPreference, ...preferenceData },
         });
       } else {
         try {
@@ -119,10 +121,12 @@ export function WorkLocationSelector({
               const existing = preferences.find((p) => p.workDate === preferenceData.workDate);
 
               if (existing) {
+                // Strip navigation properties to avoid model binding issues on the backend
+                const { user, office, booking, ...cleanExisting } = existing;
                 // Update the existing preference with new data
                 await updateMutation.mutateAsync({
                   id: existing.id,
-                  preference: { ...existing, ...preferenceData },
+                  preference: { ...cleanExisting, ...preferenceData },
                 });
 
                 // Wait for dashboard refetch to complete before closing modal
@@ -157,6 +161,7 @@ export function WorkLocationSelector({
     { value: WorkLocationType.OfficeNoReservation.toString(), label: 'Office - No desk reservation' },
     { value: WorkLocationType.OfficeWithReservation.toString(), label: 'Office - With desk/room reservation' },
     { value: WorkLocationType.PTO.toString(), label: 'PTO - Paid Time Off' },
+    { value: WorkLocationType.Travel.toString(), label: 'Travel - In transit/traveling' },
   ];
 
   const officeOptions = companyOffices.map(o => ({

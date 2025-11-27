@@ -325,14 +325,55 @@ export interface Office {
   tenantId: string;
   name: string;
   address?: string;
+  address2?: string;
   city?: string;
-  state?: string;
-  zipCode?: string;
-  country?: string;
-  totalCapacity: number;
+  stateCode?: string;
+  countryCode?: string;
+  timezone?: string;
+  status: OfficeStatus;
   isClientSite: boolean;
+  iconUrl?: string;
+  latitude?: number;
+  longitude?: number;
+  spaceCount?: number;
   createdAt: string;
-  updatedAt: string;
+  updatedAt?: string;
+}
+
+export enum OfficeStatus {
+  Active = 0,
+  Inactive = 1,
+}
+
+export interface CreateOfficeRequest {
+  tenantId: string;
+  name: string;
+  address?: string;
+  address2?: string;
+  city?: string;
+  stateCode?: string;
+  countryCode?: string;
+  timezone?: string;
+  status?: OfficeStatus;
+  isClientSite?: boolean;
+  iconUrl?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+export interface UpdateOfficeRequest {
+  name: string;
+  address?: string;
+  address2?: string;
+  city?: string;
+  stateCode?: string;
+  countryCode?: string;
+  timezone?: string;
+  status: OfficeStatus;
+  isClientSite: boolean;
+  iconUrl?: string;
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface Space {
@@ -419,6 +460,7 @@ export enum WorkLocationType {
   OfficeNoReservation = 3,
   OfficeWithReservation = 4,
   PTO = 5,
+  Travel = 6,
 }
 
 export interface WorkLocationPreference {

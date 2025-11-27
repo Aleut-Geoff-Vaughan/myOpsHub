@@ -1,5 +1,4 @@
 import { useState, useEffect, useRef } from 'react';
-import { AdminLayout } from '../components/layout/AdminLayout';
 import {
   useTenantSettings,
   useUpdateTenantSettings,
@@ -36,6 +35,12 @@ export function AdminTenantSettingsPage() {
         secondaryColor: settings.secondaryColor,
         fontFamily: settings.fontFamily,
         fontSize: settings.fontSize,
+        environmentName: settings.environmentName,
+        showEnvironmentBanner: settings.showEnvironmentBanner,
+        notificationBannerEnabled: settings.notificationBannerEnabled,
+        notificationBannerMessage: settings.notificationBannerMessage,
+        notificationBannerType: settings.notificationBannerType,
+        notificationBannerExpiresAt: settings.notificationBannerExpiresAt,
       });
       if (settings.logoUrl) {
         setLogoPreview(settings.logoUrl);
@@ -83,24 +88,23 @@ export function AdminTenantSettingsPage() {
 
   if (isLoading) {
     return (
-      <AdminLayout>
+      <div className="p-6">
         <div className="bg-white rounded-lg shadow p-8 text-center">
           <div className="animate-pulse text-gray-500">Loading settings...</div>
         </div>
-      </AdminLayout>
+      </div>
     );
   }
 
   return (
-    <AdminLayout>
-      <div className="space-y-6">
-        {/* Header */}
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Tenant Settings</h1>
-          <p className="mt-1 text-sm text-gray-600">
-            Configure your organization's branding, company information, and print templates
-          </p>
-        </div>
+    <div className="p-6 space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-gray-900">Tenant Settings</h1>
+        <p className="mt-1 text-sm text-gray-600">
+          Configure your organization's branding, company information, and print templates
+        </p>
+      </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Logo Settings */}
@@ -316,6 +320,182 @@ export function AdminTenantSettingsPage() {
             </div>
           </div>
 
+          {/* Environment & Notification Banner */}
+          <div className="bg-white rounded-lg shadow p-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              Environment & Notification Banner
+            </h2>
+            <p className="text-sm text-gray-600 mb-4">
+              Configure environment indicators and system-wide notification banners that appear at the top of the application.
+            </p>
+
+            <div className="space-y-6">
+              {/* Environment Banner Settings */}
+              <div className="border-b border-gray-200 pb-6">
+                <h3 className="text-sm font-semibold text-gray-800 mb-3">Environment Banner</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      id="showEnvironmentBanner"
+                      checked={formData.showEnvironmentBanner || false}
+                      onChange={(e) =>
+                        setFormData({ ...formData, showEnvironmentBanner: e.target.checked })
+                      }
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <label htmlFor="showEnvironmentBanner" className="text-sm text-gray-700">
+                      Show environment banner (for non-production environments)
+                    </label>
+                  </div>
+
+                  <div>
+                    <label htmlFor="environmentName" className="block text-sm font-medium text-gray-700 mb-1">
+                      Environment Name
+                    </label>
+                    <select
+                      id="environmentName"
+                      value={formData.environmentName || ''}
+                      onChange={(e) => setFormData({ ...formData, environmentName: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">Select environment...</option>
+                      <option value="Development">Development</option>
+                      <option value="Test">Test</option>
+                      <option value="Staging">Staging</option>
+                      <option value="UAT">UAT</option>
+                      <option value="Production">Production</option>
+                    </select>
+                    <p className="mt-1 text-xs text-gray-500">
+                      The environment banner will only show for non-production environments
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Notification Banner Settings */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-800 mb-3">Notification Banner</h3>
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      id="notificationBannerEnabled"
+                      checked={formData.notificationBannerEnabled || false}
+                      onChange={(e) =>
+                        setFormData({ ...formData, notificationBannerEnabled: e.target.checked })
+                      }
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                    <label htmlFor="notificationBannerEnabled" className="text-sm text-gray-700">
+                      Enable notification banner
+                    </label>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Banner Message
+                    </label>
+                    <textarea
+                      value={formData.notificationBannerMessage || ''}
+                      onChange={(e) =>
+                        setFormData({ ...formData, notificationBannerMessage: e.target.value })
+                      }
+                      placeholder="Enter the notification message to display to all users..."
+                      rows={2}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label htmlFor="notificationBannerType" className="block text-sm font-medium text-gray-700 mb-1">
+                        Banner Type
+                      </label>
+                      <select
+                        id="notificationBannerType"
+                        value={formData.notificationBannerType || 'info'}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            notificationBannerType: e.target.value as 'info' | 'warning' | 'error' | 'success',
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      >
+                        <option value="info">Info (Blue)</option>
+                        <option value="warning">Warning (Yellow)</option>
+                        <option value="error">Error (Red)</option>
+                        <option value="success">Success (Green)</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label htmlFor="notificationBannerExpiresAt" className="block text-sm font-medium text-gray-700 mb-1">
+                        Expires At (Optional)
+                      </label>
+                      <input
+                        id="notificationBannerExpiresAt"
+                        type="datetime-local"
+                        value={
+                          formData.notificationBannerExpiresAt
+                            ? new Date(formData.notificationBannerExpiresAt).toISOString().slice(0, 16)
+                            : ''
+                        }
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            notificationBannerExpiresAt: e.target.value
+                              ? new Date(e.target.value).toISOString()
+                              : undefined,
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <p className="mt-1 text-xs text-gray-500">
+                        Leave empty for no expiration
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Preview */}
+                  {formData.notificationBannerEnabled && formData.notificationBannerMessage && (
+                    <div className="mt-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Preview
+                      </label>
+                      <div
+                        className={`rounded-lg px-4 py-3 flex items-center gap-3 ${
+                          formData.notificationBannerType === 'warning'
+                            ? 'bg-yellow-50 border border-yellow-200'
+                            : formData.notificationBannerType === 'error'
+                            ? 'bg-red-50 border border-red-200'
+                            : formData.notificationBannerType === 'success'
+                            ? 'bg-green-50 border border-green-200'
+                            : 'bg-blue-50 border border-blue-200'
+                        }`}
+                      >
+                        <span
+                          className={`text-sm font-medium ${
+                            formData.notificationBannerType === 'warning'
+                              ? 'text-yellow-800'
+                              : formData.notificationBannerType === 'error'
+                              ? 'text-red-800'
+                              : formData.notificationBannerType === 'success'
+                              ? 'text-green-800'
+                              : 'text-blue-800'
+                          }`}
+                        >
+                          {formData.notificationBannerMessage}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Styling Options */}
           <div className="bg-white rounded-lg shadow p-6">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Styling Options</h2>
@@ -402,18 +582,17 @@ export function AdminTenantSettingsPage() {
             </div>
           </div>
 
-          {/* Submit Button */}
-          <div className="flex justify-end">
-            <button
-              type="submit"
-              disabled={updateMutation.isPending}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {updateMutation.isPending ? 'Saving...' : 'Save Settings'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </AdminLayout>
+        {/* Submit Button */}
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={updateMutation.isPending}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {updateMutation.isPending ? 'Saving...' : 'Save Settings'}
+          </button>
+        </div>
+      </form>
+    </div>
   );
 }

@@ -8,6 +8,7 @@ import type {
 import { TemplateType } from '../types/template';
 import { WorkLocationType } from '../types/api';
 import { useAuthStore } from '../stores/authStore';
+import { useOffices } from '../hooks/useBookings';
 
 interface TemplateEditorProps {
   template?: WorkLocationTemplate;
@@ -20,6 +21,11 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onClos
   const createTemplate = useCreateTemplate();
   const updateTemplate = useUpdateTemplate();
   const currentWorkspace = useAuthStore((state) => state.currentWorkspace);
+  const { data: allOffices = [] } = useOffices();
+
+  // Filter offices into company offices and client sites
+  const companyOffices = allOffices.filter(o => !o.isClientSite);
+  const clientSites = allOffices.filter(o => o.isClientSite);
 
   const [name, setName] = useState(template?.name || '');
   const [description, setDescription] = useState(template?.description || '');
@@ -176,6 +182,8 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onClos
         return 'Office (With Reservation)';
       case WorkLocationType.PTO:
         return 'PTO';
+      case WorkLocationType.Travel:
+        return 'Travel';
       default:
         return 'Unknown';
     }
@@ -292,13 +300,15 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onClos
                         </label>
                         <select
                           value={item.locationType}
-                          onChange={(e) =>
-                            handleItemChange(
-                              index,
-                              'locationType',
-                              Number(e.target.value) as WorkLocationType
-                            )
-                          }
+                          onChange={(e) => {
+                            const newType = Number(e.target.value) as WorkLocationType;
+                            handleItemChange(index, 'locationType', newType);
+                            // Clear officeId when changing location type
+                            if (newType !== WorkLocationType.OfficeNoReservation &&
+                                newType !== WorkLocationType.ClientSite) {
+                              handleItemChange(index, 'officeId', undefined);
+                            }
+                          }}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
                         >
                           {Object.values(WorkLocationType)
@@ -311,9 +321,57 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onClos
                         </select>
                       </div>
 
+                      {/* Office Selection for Office (No Reservation) */}
+                      {item.locationType === WorkLocationType.OfficeNoReservation && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Office *
+                          </label>
+                          <select
+                            value={item.officeId || ''}
+                            onChange={(e) => handleItemChange(index, 'officeId', e.target.value || undefined)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                          >
+                            <option value="">Select an office...</option>
+                            {companyOffices.map((office) => (
+                              <option key={office.id} value={office.id}>
+                                {office.name}{office.city ? ` - ${office.city}` : ''}
+                              </option>
+                            ))}
+                          </select>
+                          {companyOffices.length === 0 && (
+                            <p className="text-xs text-gray-500 mt-1">No offices configured</p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Client Site Selection */}
+                      {item.locationType === WorkLocationType.ClientSite && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Client Site *
+                          </label>
+                          <select
+                            value={item.officeId || ''}
+                            onChange={(e) => handleItemChange(index, 'officeId', e.target.value || undefined)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
+                          >
+                            <option value="">Select a client site...</option>
+                            {clientSites.map((site) => (
+                              <option key={site.id} value={site.id}>
+                                {site.name}{site.city ? ` - ${site.city}` : ''}
+                              </option>
+                            ))}
+                          </select>
+                          {clientSites.length === 0 && (
+                            <p className="text-xs text-gray-500 mt-1">No client sites configured</p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* City field for Remote types */}
                       {(item.locationType === WorkLocationType.Remote ||
-                        item.locationType === WorkLocationType.RemotePlus ||
-                        item.locationType === WorkLocationType.ClientSite) && (
+                        item.locationType === WorkLocationType.RemotePlus) && (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">
                             City

@@ -111,6 +111,14 @@ public class TenantSettingsController : AuthorizedControllerBase
             if (request.FontFamily != null) settings.FontFamily = request.FontFamily;
             if (request.FontSize.HasValue) settings.FontSize = request.FontSize;
 
+            // Update environment and notification banner settings
+            if (request.EnvironmentName != null) settings.EnvironmentName = request.EnvironmentName;
+            if (request.ShowEnvironmentBanner.HasValue) settings.ShowEnvironmentBanner = request.ShowEnvironmentBanner.Value;
+            if (request.NotificationBannerEnabled.HasValue) settings.NotificationBannerEnabled = request.NotificationBannerEnabled.Value;
+            if (request.NotificationBannerMessage != null) settings.NotificationBannerMessage = request.NotificationBannerMessage;
+            if (request.NotificationBannerType != null) settings.NotificationBannerType = request.NotificationBannerType;
+            if (request.NotificationBannerExpiresAt.HasValue) settings.NotificationBannerExpiresAt = request.NotificationBannerExpiresAt;
+
             settings.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
@@ -228,4 +236,12 @@ public class UpdateTenantSettingsRequest
     public string? SecondaryColor { get; set; }
     public string? FontFamily { get; set; }
     public int? FontSize { get; set; }
+
+    // Environment and Notification Banner settings
+    public string? EnvironmentName { get; set; }
+    public bool? ShowEnvironmentBanner { get; set; }
+    public bool? NotificationBannerEnabled { get; set; }
+    public string? NotificationBannerMessage { get; set; }
+    public string? NotificationBannerType { get; set; }
+    public DateTime? NotificationBannerExpiresAt { get; set; }
 }

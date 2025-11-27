@@ -115,6 +115,10 @@ export const useAuthStore = create<AuthState>()(
         } catch (error) {
           console.error('Logout error:', error);
         } finally {
+          // Clear notification banner dismissed state
+          sessionStorage.removeItem('dismissedEnvironmentBanner');
+          sessionStorage.removeItem('dismissedNotificationMessage');
+
           set({
             user: null,
             token: null,

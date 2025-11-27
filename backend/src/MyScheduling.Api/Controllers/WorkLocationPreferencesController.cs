@@ -132,31 +132,39 @@ public class WorkLocationPreferencesController : AuthorizedControllerBase
     [HttpPost]
     [RequiresPermission(Resource = "WorkLocationPreference", Action = PermissionAction.Create)]
     public async Task<ActionResult<WorkLocationPreference>> CreateWorkLocationPreference(
-        WorkLocationPreference preference)
+        [FromBody] CreateWorkLocationPreferenceRequest request)
     {
         try
         {
+            _logger.LogInformation("Creating work location preference for user {UserId} on {WorkDate}", request.UserId, request.WorkDate);
+
             var userId = GetCurrentUserId();
             var userTenantIds = GetUserTenantIds();
 
-            if (preference.UserId == Guid.Empty)
+            if (request.UserId == Guid.Empty)
             {
                 return BadRequest("UserId is required");
             }
 
-            if (preference.TenantId == Guid.Empty)
+            if (request.TenantId == Guid.Empty)
             {
                 return BadRequest("TenantId is required");
             }
 
+            // Parse the work date
+            if (!DateOnly.TryParse(request.WorkDate, out var workDate))
+            {
+                return BadRequest($"Invalid date format: {request.WorkDate}. Expected YYYY-MM-DD format.");
+            }
+
             // Tenant check
-            if (!userTenantIds.Contains(preference.TenantId) && !IsSystemAdmin())
+            if (!userTenantIds.Contains(request.TenantId) && !IsSystemAdmin())
             {
                 return StatusCode(403, "You do not have access to this tenant");
             }
 
             // Users can only create their own preferences unless system admin
-            if (preference.UserId != userId && !IsSystemAdmin())
+            if (request.UserId != userId && !IsSystemAdmin())
             {
                 return StatusCode(403, "Users can only create their own work location preferences");
             }
@@ -164,30 +172,44 @@ public class WorkLocationPreferencesController : AuthorizedControllerBase
             // Check if preference already exists for this person on this date
             var existing = await _context.WorkLocationPreferences
                 .FirstOrDefaultAsync(w =>
-                    w.UserId == preference.UserId &&
-                    w.WorkDate == preference.WorkDate &&
-                    w.TenantId == preference.TenantId);
+                    w.UserId == request.UserId &&
+                    w.WorkDate == workDate &&
+                    w.TenantId == request.TenantId);
 
             if (existing != null)
             {
-                return Conflict($"A work location preference already exists for this person on {preference.WorkDate}");
+                return Conflict($"A work location preference already exists for this person on {workDate}");
             }
 
             // Validate based on location type
-            if (preference.LocationType == WorkLocationType.OfficeWithReservation && preference.BookingId == null)
+            if (request.LocationType == WorkLocationType.OfficeWithReservation && request.BookingId == null)
             {
                 return BadRequest("BookingId is required for OfficeWithReservation location type");
             }
 
-            if ((preference.LocationType == WorkLocationType.OfficeNoReservation ||
-                 preference.LocationType == WorkLocationType.ClientSite) &&
-                preference.OfficeId == null)
+            if ((request.LocationType == WorkLocationType.OfficeNoReservation ||
+                 request.LocationType == WorkLocationType.ClientSite) &&
+                request.OfficeId == null)
             {
                 return BadRequest("OfficeId is required for OfficeNoReservation and ClientSite location types");
             }
 
-            preference.Id = Guid.NewGuid();
-            preference.CreatedAt = DateTime.UtcNow;
+            var preference = new WorkLocationPreference
+            {
+                Id = Guid.NewGuid(),
+                TenantId = request.TenantId,
+                UserId = request.UserId,
+                WorkDate = workDate,
+                LocationType = request.LocationType,
+                OfficeId = request.OfficeId,
+                BookingId = request.BookingId,
+                RemoteLocation = request.RemoteLocation,
+                City = request.City,
+                State = request.State,
+                Country = request.Country,
+                Notes = request.Notes,
+                CreatedAt = DateTime.UtcNow
+            };
 
             _context.WorkLocationPreferences.Add(preference);
             await _context.SaveChangesAsync();
@@ -209,9 +231,9 @@ public class WorkLocationPreferencesController : AuthorizedControllerBase
     [RequiresPermission(Resource = "WorkLocationPreference", Action = PermissionAction.Update)]
     public async Task<IActionResult> UpdateWorkLocationPreference(
         Guid id,
-        WorkLocationPreference preference)
+        [FromBody] UpdateWorkLocationPreferenceRequest request)
     {
-        if (id != preference.Id)
+        if (id != request.Id)
         {
             return BadRequest("ID mismatch");
         }
@@ -242,27 +264,27 @@ public class WorkLocationPreferencesController : AuthorizedControllerBase
             }
 
             // Validate based on location type
-            if (preference.LocationType == WorkLocationType.OfficeWithReservation && preference.BookingId == null)
+            if (request.LocationType == WorkLocationType.OfficeWithReservation && request.BookingId == null)
             {
                 return BadRequest("BookingId is required for OfficeWithReservation location type");
             }
 
-            if ((preference.LocationType == WorkLocationType.OfficeNoReservation ||
-                 preference.LocationType == WorkLocationType.ClientSite) &&
-                preference.OfficeId == null)
+            if ((request.LocationType == WorkLocationType.OfficeNoReservation ||
+                 request.LocationType == WorkLocationType.ClientSite) &&
+                request.OfficeId == null)
             {
                 return BadRequest("OfficeId is required for OfficeNoReservation and ClientSite location types");
             }
 
             // Update properties
-            existing.LocationType = preference.LocationType;
-            existing.OfficeId = preference.OfficeId;
-            existing.BookingId = preference.BookingId;
-            existing.RemoteLocation = preference.RemoteLocation;
-            existing.City = preference.City;
-            existing.State = preference.State;
-            existing.Country = preference.Country;
-            existing.Notes = preference.Notes;
+            existing.LocationType = request.LocationType;
+            existing.OfficeId = request.OfficeId;
+            existing.BookingId = request.BookingId;
+            existing.RemoteLocation = request.RemoteLocation;
+            existing.City = request.City;
+            existing.State = request.State;
+            existing.Country = request.Country;
+            existing.Notes = request.Notes;
             existing.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
@@ -408,4 +430,36 @@ public class WorkLocationPreferencesController : AuthorizedControllerBase
     {
         return await _context.WorkLocationPreferences.AnyAsync(e => e.Id == id);
     }
+}
+
+// DTOs for request/response
+public class CreateWorkLocationPreferenceRequest
+{
+    public Guid TenantId { get; set; }
+    public Guid UserId { get; set; }
+    public string WorkDate { get; set; } = string.Empty; // YYYY-MM-DD format
+    public WorkLocationType LocationType { get; set; }
+    public Guid? OfficeId { get; set; }
+    public Guid? BookingId { get; set; }
+    public string? RemoteLocation { get; set; }
+    public string? City { get; set; }
+    public string? State { get; set; }
+    public string? Country { get; set; }
+    public string? Notes { get; set; }
+}
+
+public class UpdateWorkLocationPreferenceRequest
+{
+    public Guid Id { get; set; }
+    public Guid TenantId { get; set; }
+    public Guid UserId { get; set; }
+    public string WorkDate { get; set; } = string.Empty; // YYYY-MM-DD format
+    public WorkLocationType LocationType { get; set; }
+    public Guid? OfficeId { get; set; }
+    public Guid? BookingId { get; set; }
+    public string? RemoteLocation { get; set; }
+    public string? City { get; set; }
+    public string? State { get; set; }
+    public string? Country { get; set; }
+    public string? Notes { get; set; }
 }

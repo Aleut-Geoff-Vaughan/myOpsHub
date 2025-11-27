@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using MyScheduling.Core.Entities;
 using MyScheduling.Infrastructure.Data;
 
 namespace MyScheduling.Api.Controllers;
@@ -189,6 +190,130 @@ public class DevSeedController : ControllerBase
         {
             _logger.LogError(ex, "Error getting seed stats");
             return StatusCode(500, new { message = "Failed to get stats", error = ex.Message });
+        }
+    }
+
+    /// <summary>
+    /// Seed office data
+    /// Only available in Development environment
+    /// </summary>
+    [HttpPost("seed-offices")]
+    public async Task<IActionResult> SeedOffices()
+    {
+        if (!_environment.IsDevelopment())
+        {
+            return Forbid("Office seeding is only available in Development environment");
+        }
+
+        try
+        {
+            _logger.LogInformation("Seeding offices via API endpoint");
+
+            // Get the first tenant to assign offices to
+            var tenant = await _context.Tenants.FirstOrDefaultAsync();
+            if (tenant == null)
+            {
+                return BadRequest(new { message = "No tenant found. Please seed the database first." });
+            }
+
+            // Check if offices already exist
+            var existingOffices = await _context.Offices.Where(o => o.TenantId == tenant.Id).CountAsync();
+            if (existingOffices > 0)
+            {
+                return Ok(new { message = $"Offices already seeded. Found {existingOffices} existing offices." });
+            }
+
+            var offices = new List<Office>
+            {
+                new Office
+                {
+                    Id = Guid.NewGuid(),
+                    TenantId = tenant.Id,
+                    Name = "National Headquarters",
+                    Address = "12355 Sunrise Valley Drive, Suite 300, Reston, VA 20191-3497",
+                    Timezone = "America/New_York",
+                    Status = OfficeStatus.Active,
+                    IsClientSite = false,
+                    CreatedAt = DateTime.UtcNow
+                },
+                new Office
+                {
+                    Id = Guid.NewGuid(),
+                    TenantId = tenant.Id,
+                    Name = "Colorado Springs, CO",
+                    Address = "5775 Mark Dabling Blvd., Suite 105, Colorado Springs, CO 80919-2240",
+                    Timezone = "America/Denver",
+                    Status = OfficeStatus.Active,
+                    IsClientSite = false,
+                    CreatedAt = DateTime.UtcNow
+                },
+                new Office
+                {
+                    Id = Guid.NewGuid(),
+                    TenantId = tenant.Id,
+                    Name = "Oak Ridge, TN",
+                    Address = "667 Emory Valley Road, Oak Ridge, TN 37830-7762",
+                    Timezone = "America/New_York",
+                    Status = OfficeStatus.Active,
+                    IsClientSite = false,
+                    CreatedAt = DateTime.UtcNow
+                },
+                new Office
+                {
+                    Id = Guid.NewGuid(),
+                    TenantId = tenant.Id,
+                    Name = "Paducah, KY",
+                    Address = "148 Stuart Nelson Park Rd, Paducah, KY 42001",
+                    Timezone = "America/Chicago",
+                    Status = OfficeStatus.Active,
+                    IsClientSite = false,
+                    CreatedAt = DateTime.UtcNow
+                },
+                new Office
+                {
+                    Id = Guid.NewGuid(),
+                    TenantId = tenant.Id,
+                    Name = "Anchorage, AK",
+                    Address = "810 N Street, Suite 302, Anchorage, AK 99501",
+                    Timezone = "America/Anchorage",
+                    Status = OfficeStatus.Active,
+                    IsClientSite = false,
+                    CreatedAt = DateTime.UtcNow
+                },
+                new Office
+                {
+                    Id = Guid.NewGuid(),
+                    TenantId = tenant.Id,
+                    Name = "Albuquerque, NM",
+                    Address = "4100 Osuna Road NE, Suite 1-103, Albuquerque, NM 87109",
+                    Timezone = "America/Denver",
+                    Status = OfficeStatus.Active,
+                    IsClientSite = false,
+                    CreatedAt = DateTime.UtcNow
+                },
+                new Office
+                {
+                    Id = Guid.NewGuid(),
+                    TenantId = tenant.Id,
+                    Name = "Arlington, VA",
+                    Address = "1735 N Lynn Street, Suite 840, Arlington, VA 22209",
+                    Timezone = "America/New_York",
+                    Status = OfficeStatus.Active,
+                    IsClientSite = false,
+                    CreatedAt = DateTime.UtcNow
+                }
+            };
+
+            await _context.Offices.AddRangeAsync(offices);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Successfully seeded {Count} offices", offices.Count);
+            return Ok(new { message = $"Successfully seeded {offices.Count} offices", offices = offices.Select(o => new { o.Name, o.Address }) });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error seeding offices");
+            return StatusCode(500, new { message = "Office seeding failed", error = ex.Message });
         }
     }
 }
