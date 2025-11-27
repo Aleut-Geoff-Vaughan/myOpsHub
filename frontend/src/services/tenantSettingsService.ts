@@ -7,13 +7,12 @@ import type {
 export const tenantSettingsService = {
   // Get tenant settings (auto-creates if not exists)
   async getSettings(): Promise<TenantSettings> {
-    const response = await api.get('/tenantsettings');
-    return response.data;
+    return await api.get<TenantSettings>('/tenantsettings');
   },
 
   // Update tenant settings
   async updateSettings(request: UpdateTenantSettingsRequest): Promise<void> {
-    await api.put('/tenantsettings', request);
+    await api.put<void>('/tenantsettings', request);
   },
 
   // Upload logo file
@@ -21,11 +20,10 @@ export const tenantSettingsService = {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await api.post('/tenantsettings/upload-logo', formData, {
+    return await api.post<{ logoUrl: string }>('/tenantsettings/upload-logo', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
     });
-    return response.data;
   },
 };

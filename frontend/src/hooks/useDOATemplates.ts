@@ -1,9 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { doaTemplatesService } from '../services/doaTemplatesService';
 import type {
-  DOATemplate,
   CreateDOATemplateRequest,
-  UpdateDOATemplateRequest,
 } from '../types/doa';
 
 // Query keys
@@ -50,7 +48,7 @@ export function useUpdateDOATemplate() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ id, request }: { id: string; request: UpdateDOATemplateRequest }) =>
+    mutationFn: ({ id, request }: { id: string; request: CreateDOATemplateRequest }) =>
       doaTemplatesService.updateTemplate(id, request),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: doaTemplateKeys.lists() });

@@ -132,9 +132,7 @@ export interface CreateDOATemplateRequest {
   sortOrder?: number;
 }
 
-export interface UpdateDOATemplateRequest extends CreateDOATemplateRequest {
-  id: string;
-}
+export type UpdateDOATemplateRequest = CreateDOATemplateRequest;
 
 // Tenant Settings Types
 export interface TenantSettings {

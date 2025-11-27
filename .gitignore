@@ -56,3 +56,12 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 nul
+
+# Build/Publish artifacts  
+publish/
+
+# Database files
+*.db
+*.db-shm
+*.db-wal
+myscheduling.db*

@@ -46,7 +46,11 @@
       "Bash(powershell -Command:*)",
       "Bash(del .\\nul)",
       "Bash(cmd /c \"del .\\nul\")",
-      "Bash(python -c \"import os; os.remove(r''\\\\?\\C:\\Users\\geoff\\.vscode\\myScheduling\\myScheduling\\backend\\src\\MyScheduling.Api\\nul'')\")"
+      "Bash(python -c \"import os; os.remove(r''\\\\?\\C:\\Users\\geoff\\.vscode\\myScheduling\\myScheduling\\backend\\src\\MyScheduling.Api\\nul'')\")",
+      "Bash(git reset:*)",
+      "Bash(md5sum:*)",
+      "Bash(cat:*)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "ask": []

@@ -2,7 +2,11 @@ import { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../../stores/authStore';
 
-export function AdminLayout() {
+interface AdminLayoutProps {
+  children?: React.ReactNode;
+}
+
+export function AdminLayout({ children }: AdminLayoutProps = {}) {
   const [sidebarOpen, setSidebarOpen] = useState(true); // Sidebar open by default
   const location = useLocation();
   const navigate = useNavigate();
@@ -253,7 +257,7 @@ export function AdminLayout() {
 
         {/* Main Content */}
         <main className="flex-1 overflow-y-auto">
-          <Outlet />
+          {children || <Outlet />}
         </main>
       </div>
     </div>

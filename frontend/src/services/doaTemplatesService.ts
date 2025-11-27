@@ -8,20 +8,17 @@ import type {
 export const doaTemplatesService = {
   // Get all DOA templates
   async getTemplates(): Promise<DOATemplate[]> {
-    const response = await api.get('/doatemplates');
-    return response.data;
+    return await api.get<DOATemplate[]>('/doatemplates');
   },
 
   // Get a single DOA template by ID
   async getTemplate(id: string): Promise<DOATemplate> {
-    const response = await api.get(`/doatemplates/${id}`);
-    return response.data;
+    return await api.get<DOATemplate>(`/doatemplates/${id}`);
   },
 
   // Create a new DOA template
   async createTemplate(request: CreateDOATemplateRequest): Promise<DOATemplate> {
-    const response = await api.post('/doatemplates', request);
-    return response.data;
+    return await api.post<DOATemplate>('/doatemplates', request);
   },
 
   // Update an existing DOA template
@@ -29,11 +26,11 @@ export const doaTemplatesService = {
     id: string,
     request: UpdateDOATemplateRequest
   ): Promise<void> {
-    await api.put(`/doatemplates/${id}`, request);
+    await api.put<void>(`/doatemplates/${id}`, request);
   },
 
   // Delete (soft delete) a DOA template
   async deleteTemplate(id: string): Promise<void> {
-    await api.delete(`/doatemplates/${id}`);
+    await api.delete<void>(`/doatemplates/${id}`);
   },
 };
