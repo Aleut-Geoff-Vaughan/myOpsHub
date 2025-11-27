@@ -57,8 +57,10 @@ yarn-debug.log*
 yarn-error.log*
 nul
 
-# Build/Publish artifacts  
+# Build/Publish artifacts
 publish/
+*.zip
+deploy-to-azure.ps1
 
 # Database files
 *.db

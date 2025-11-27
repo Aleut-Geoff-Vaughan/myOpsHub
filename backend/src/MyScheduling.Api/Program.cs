@@ -9,6 +9,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using MyScheduling.Core.Entities;
 
+// MyScheduling API - Production Ready
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
