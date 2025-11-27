@@ -51,7 +51,8 @@
       "Bash(md5sum:*)",
       "Bash(cat:*)",
       "Bash(git checkout:*)",
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Bash(az account show:*)"
     ],
     "deny": [],
     "ask": []
