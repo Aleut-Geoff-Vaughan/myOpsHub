@@ -7,6 +7,25 @@ using MyScheduling.Core.Interfaces;
 
 namespace MyScheduling.Api.Controllers;
 
+public class CheckInRequest
+{
+    public string? Method { get; set; }
+    public DateOnly? CheckInDate { get; set; }
+}
+
+public class CreateBookingRequest
+{
+    public Guid TenantId { get; set; }
+    public Guid SpaceId { get; set; }
+    public Guid UserId { get; set; }
+    public DateTime StartDatetime { get; set; }
+    public DateTime? EndDatetime { get; set; }
+    public BookingStatus Status { get; set; } = BookingStatus.Reserved;
+    public bool IsPermanent { get; set; }
+    public Guid? BookedByUserId { get; set; }
+    public DateTime? BookedAt { get; set; }
+}
+
 [ApiController]
 [Route("api/[controller]")]
 public class BookingsController : AuthorizedControllerBase
@@ -126,34 +145,101 @@ public class BookingsController : AuthorizedControllerBase
     // POST: api/bookings
     [HttpPost]
     [RequiresPermission(Resource = "Booking", Action = PermissionAction.Create)]
-    public async Task<ActionResult<Booking>> CreateBooking(Booking booking)
+    public async Task<ActionResult<Booking>> CreateBooking([FromBody] CreateBookingRequest request)
     {
         try
         {
-            if (booking.UserId == Guid.Empty)
+            if (request.UserId == Guid.Empty)
             {
                 return BadRequest("UserId is required");
             }
 
-            // Check for space conflicts
+            if (request.SpaceId == Guid.Empty)
+            {
+                return BadRequest("SpaceId is required");
+            }
+
+            if (request.TenantId == Guid.Empty)
+            {
+                return BadRequest("TenantId is required");
+            }
+
+            // Verify the space exists
+            var space = await _context.Spaces.FindAsync(request.SpaceId);
+            if (space == null)
+            {
+                return BadRequest($"Space with ID {request.SpaceId} not found");
+            }
+
+            // Verify the user exists
+            var user = await _context.Users.FindAsync(request.UserId);
+            if (user == null)
+            {
+                return BadRequest($"User with ID {request.UserId} not found");
+            }
+
+            // Convert DateTimes to UTC for PostgreSQL compatibility
+            var startDatetimeUtc = request.StartDatetime.Kind == DateTimeKind.Unspecified
+                ? DateTime.SpecifyKind(request.StartDatetime, DateTimeKind.Utc)
+                : request.StartDatetime.ToUniversalTime();
+
+            DateTime? endDatetimeUtc = null;
+            if (request.EndDatetime.HasValue)
+            {
+                endDatetimeUtc = request.EndDatetime.Value.Kind == DateTimeKind.Unspecified
+                    ? DateTime.SpecifyKind(request.EndDatetime.Value, DateTimeKind.Utc)
+                    : request.EndDatetime.Value.ToUniversalTime();
+            }
+
+            // Check for space conflicts - handle permanent bookings (null EndDatetime)
             var hasConflict = await _context.Bookings
                 .AnyAsync(b =>
-                    b.SpaceId == booking.SpaceId &&
-                    b.Id != booking.Id &&
+                    b.SpaceId == request.SpaceId &&
                     (b.Status == BookingStatus.Reserved || b.Status == BookingStatus.CheckedIn) &&
-                    ((booking.StartDatetime >= b.StartDatetime && booking.StartDatetime < b.EndDatetime) ||
-                     (booking.EndDatetime > b.StartDatetime && booking.EndDatetime <= b.EndDatetime) ||
-                     (booking.StartDatetime <= b.StartDatetime && booking.EndDatetime >= b.EndDatetime)));
+                    (
+                        // Existing booking is permanent - conflicts with any future booking
+                        (b.IsPermanent && startDatetimeUtc >= b.StartDatetime) ||
+                        // New booking is permanent - conflicts with any existing active booking
+                        (request.IsPermanent && (b.EndDatetime == null || b.EndDatetime > startDatetimeUtc)) ||
+                        // Both have end dates - standard overlap check
+                        (!b.IsPermanent && !request.IsPermanent && b.EndDatetime.HasValue && endDatetimeUtc.HasValue &&
+                         ((startDatetimeUtc >= b.StartDatetime && startDatetimeUtc < b.EndDatetime) ||
+                          (endDatetimeUtc > b.StartDatetime && endDatetimeUtc <= b.EndDatetime) ||
+                          (startDatetimeUtc <= b.StartDatetime && endDatetimeUtc >= b.EndDatetime)))
+                    ));
 
             if (hasConflict)
             {
                 return Conflict("This space is already booked for the requested time period");
             }
 
+            // Create the booking entity from the request
+            var booking = new Booking
+            {
+                Id = Guid.NewGuid(),
+                TenantId = request.TenantId,
+                SpaceId = request.SpaceId,
+                UserId = request.UserId,
+                StartDatetime = startDatetimeUtc,
+                EndDatetime = endDatetimeUtc,
+                Status = request.Status,
+                IsPermanent = request.IsPermanent,
+                BookedByUserId = request.BookedByUserId,
+                BookedAt = request.BookedAt ?? DateTime.UtcNow,
+                CreatedAt = DateTime.UtcNow
+            };
+
             _context.Bookings.Add(booking);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetBooking), new { id = booking.Id }, booking);
+            // Reload with navigation properties for response
+            var createdBooking = await _context.Bookings
+                .Include(b => b.User)
+                .Include(b => b.Space)
+                    .ThenInclude(s => s.Office)
+                .FirstOrDefaultAsync(b => b.Id == booking.Id);
+
+            return CreatedAtAction(nameof(GetBooking), new { id = booking.Id }, createdBooking);
         }
         catch (Exception ex)
         {
@@ -313,7 +399,7 @@ public class BookingsController : AuthorizedControllerBase
     // POST: api/bookings/{id}/checkin
     [HttpPost("{id}/checkin")]
     [RequiresPermission(Resource = "Booking", Action = PermissionAction.Update)]
-    public async Task<IActionResult> CheckIn(Guid id, [FromBody] string method)
+    public async Task<IActionResult> CheckIn(Guid id, [FromBody] CheckInRequest request)
     {
         try
         {
@@ -323,24 +409,91 @@ public class BookingsController : AuthorizedControllerBase
                 return NotFound($"Booking with ID {id} not found");
             }
 
-            booking.Status = BookingStatus.CheckedIn;
+            var checkInDate = request.CheckInDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
+
+            // Check if already checked in for this date
+            var existingCheckIn = await _context.CheckInEvents
+                .FirstOrDefaultAsync(c => c.BookingId == id && c.CheckInDate == checkInDate);
+
+            if (existingCheckIn != null)
+            {
+                return Conflict($"Already checked in for {checkInDate:yyyy-MM-dd}");
+            }
 
             var checkInEvent = new CheckInEvent
             {
                 BookingId = id,
+                CheckInDate = checkInDate,
                 Timestamp = DateTime.UtcNow,
-                Method = method
+                Method = request.Method ?? "web",
+                Status = CheckInStatus.CheckedIn,
+                ProcessedByUserId = GetCurrentUserId()
             };
 
             _context.CheckInEvents.Add(checkInEvent);
             await _context.SaveChangesAsync();
 
-            return NoContent();
+            return Ok(checkInEvent);
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error checking in booking {BookingId}", id);
             return StatusCode(500, "An error occurred while checking in");
+        }
+    }
+
+    // POST: api/bookings/{id}/checkout
+    [HttpPost("{id}/checkout")]
+    [RequiresPermission(Resource = "Booking", Action = PermissionAction.Update)]
+    public async Task<IActionResult> CheckOut(Guid id, [FromBody] CheckInRequest request)
+    {
+        try
+        {
+            var checkInDate = request.CheckInDate ?? DateOnly.FromDateTime(DateTime.UtcNow);
+
+            var checkInEvent = await _context.CheckInEvents
+                .FirstOrDefaultAsync(c => c.BookingId == id && c.CheckInDate == checkInDate);
+
+            if (checkInEvent == null)
+            {
+                return NotFound($"No check-in found for {checkInDate:yyyy-MM-dd}");
+            }
+
+            if (checkInEvent.Status != CheckInStatus.CheckedIn)
+            {
+                return BadRequest($"Cannot check out - current status is {checkInEvent.Status}");
+            }
+
+            checkInEvent.Status = CheckInStatus.CheckedOut;
+            await _context.SaveChangesAsync();
+
+            return Ok(checkInEvent);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking out booking {BookingId}", id);
+            return StatusCode(500, "An error occurred while checking out");
+        }
+    }
+
+    // GET: api/bookings/{id}/checkins
+    [HttpGet("{id}/checkins")]
+    [RequiresPermission(Resource = "Booking", Action = PermissionAction.Read)]
+    public async Task<ActionResult<IEnumerable<CheckInEvent>>> GetCheckIns(Guid id)
+    {
+        try
+        {
+            var checkIns = await _context.CheckInEvents
+                .Where(c => c.BookingId == id)
+                .OrderBy(c => c.CheckInDate)
+                .ToListAsync();
+
+            return Ok(checkIns);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving check-ins for booking {BookingId}", id);
+            return StatusCode(500, "An error occurred while retrieving check-ins");
         }
     }
 

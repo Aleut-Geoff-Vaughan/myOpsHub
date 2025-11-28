@@ -55,7 +55,9 @@
       "Bash(az account show:*)",
       "Bash(powershell -ExecutionPolicy Bypass -File deploy-to-azure.ps1)",
       "Bash(gh secret:*)",
-      "Bash(powershell -ExecutionPolicy Bypass -File:*)"
+      "Bash(powershell -ExecutionPolicy Bypass -File:*)",
+      "Bash(SEED_FACILITIES=true dotnet run:*)",
+      "Bash(VITE_API_PROXY_TARGET=http://localhost:5000 npm run dev:*)"
     ],
     "deny": [],
     "ask": []

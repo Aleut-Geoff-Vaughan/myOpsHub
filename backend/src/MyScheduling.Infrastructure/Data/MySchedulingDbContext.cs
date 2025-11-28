@@ -50,9 +50,13 @@ public class MySchedulingDbContext : DbContext
     public DbSet<Group> Groups => Set<Group>();
     public DbSet<GroupMember> GroupMembers => Set<GroupMember>();
 
-    // Hoteling
+    // Hoteling & Facilities
     public DbSet<Office> Offices => Set<Office>();
+    public DbSet<Floor> Floors => Set<Floor>();
+    public DbSet<Zone> Zones => Set<Zone>();
     public DbSet<Space> Spaces => Set<Space>();
+    public DbSet<SpaceAssignment> SpaceAssignments => Set<SpaceAssignment>();
+    public DbSet<BookingRule> BookingRules => Set<BookingRule>();
     public DbSet<Booking> Bookings => Set<Booking>();
     public DbSet<CheckInEvent> CheckInEvents => Set<CheckInEvent>();
     public DbSet<FacilityPermission> FacilityPermissions => Set<FacilityPermission>();
@@ -440,6 +444,39 @@ public class MySchedulingDbContext : DbContext
             entity.HasIndex(e => new { e.TenantId, e.Status });
         });
 
+        // Floor configuration
+        modelBuilder.Entity<Floor>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Level).IsRequired();
+
+            entity.HasIndex(e => new { e.TenantId, e.OfficeId, e.Level });
+            entity.HasIndex(e => new { e.OfficeId, e.IsActive });
+
+            entity.HasOne(e => e.Office)
+                .WithMany(o => o.Floors)
+                .HasForeignKey(e => e.OfficeId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Zone configuration
+        modelBuilder.Entity<Zone>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.Color).HasMaxLength(7); // #RRGGBB
+
+            entity.HasIndex(e => new { e.TenantId, e.FloorId });
+            entity.HasIndex(e => new { e.FloorId, e.IsActive });
+
+            entity.HasOne(e => e.Floor)
+                .WithMany(f => f.Zones)
+                .HasForeignKey(e => e.FloorId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
         modelBuilder.Entity<Space>(entity =>
         {
             entity.HasKey(e => e.Id);
@@ -447,16 +484,77 @@ public class MySchedulingDbContext : DbContext
 
             entity.HasIndex(e => new { e.TenantId, e.OfficeId, e.Type });
             entity.HasIndex(e => new { e.ManagerUserId, e.IsActive });
+            entity.HasIndex(e => new { e.FloorId, e.ZoneId });
 
             entity.HasOne(e => e.Office)
                 .WithMany(o => o.Spaces)
                 .HasForeignKey(e => e.OfficeId)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            entity.HasOne(e => e.Floor)
+                .WithMany(f => f.Spaces)
+                .HasForeignKey(e => e.FloorId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.Zone)
+                .WithMany(z => z.Spaces)
+                .HasForeignKey(e => e.ZoneId)
+                .OnDelete(DeleteBehavior.SetNull);
+
             entity.HasOne(e => e.Manager)
                 .WithMany()
                 .HasForeignKey(e => e.ManagerUserId)
                 .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // SpaceAssignment configuration
+        modelBuilder.Entity<SpaceAssignment>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Notes).HasMaxLength(1000);
+
+            entity.HasIndex(e => new { e.TenantId, e.SpaceId, e.Status });
+            entity.HasIndex(e => new { e.TenantId, e.UserId, e.Status });
+            entity.HasIndex(e => new { e.StartDate, e.EndDate });
+
+            entity.HasOne(e => e.Space)
+                .WithMany(s => s.Assignments)
+                .HasForeignKey(e => e.SpaceId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.ApprovedBy)
+                .WithMany()
+                .HasForeignKey(e => e.ApprovedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // BookingRule configuration
+        modelBuilder.Entity<BookingRule>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Description).HasMaxLength(1000);
+            entity.Property(e => e.AllowedDaysOfWeek).HasMaxLength(50);
+            entity.Property(e => e.AutoApproveRoles).HasMaxLength(500);
+
+            entity.HasIndex(e => new { e.TenantId, e.OfficeId, e.IsActive });
+            entity.HasIndex(e => new { e.SpaceType, e.IsActive });
+            entity.HasIndex(e => e.Priority);
+
+            entity.HasOne(e => e.Office)
+                .WithMany(o => o.BookingRules)
+                .HasForeignKey(e => e.OfficeId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Space)
+                .WithMany()
+                .HasForeignKey(e => e.SpaceId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<Booking>(entity =>
@@ -466,6 +564,7 @@ public class MySchedulingDbContext : DbContext
             entity.HasIndex(e => new { e.SpaceId, e.StartDatetime, e.EndDatetime });
             entity.HasIndex(e => new { e.UserId, e.Status });
             entity.HasIndex(e => e.Status);
+            entity.HasIndex(e => e.IsPermanent);  // Index for permanent bookings
 
             entity.HasOne(e => e.Space)
                 .WithMany(s => s.Bookings)
@@ -476,6 +575,11 @@ public class MySchedulingDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.BookedBy)
+                .WithMany()
+                .HasForeignKey(e => e.BookedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<CheckInEvent>(entity =>
@@ -484,11 +588,17 @@ public class MySchedulingDbContext : DbContext
             entity.Property(e => e.Method).IsRequired().HasMaxLength(50);
 
             entity.HasIndex(e => e.BookingId);
+            entity.HasIndex(e => new { e.BookingId, e.CheckInDate }).IsUnique();  // One check-in per day per booking
 
             entity.HasOne(e => e.Booking)
                 .WithMany(b => b.CheckInEvents)
                 .HasForeignKey(e => e.BookingId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.ProcessedBy)
+                .WithMany()
+                .HasForeignKey(e => e.ProcessedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<FacilityPermission>(entity =>

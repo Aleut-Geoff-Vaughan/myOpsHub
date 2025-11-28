@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MyScheduling.Infrastructure.Data;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MyScheduling.Infrastructure.Migrations
 {
     [DbContext(typeof(MySchedulingDbContext))]
-    partial class MySchedulingDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251128115648_AddBookingEnhancements")]
+    partial class AddBookingEnhancements
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -786,10 +789,6 @@ namespace MyScheduling.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("booking_id");
 
-                    b.Property<DateOnly>("CheckInDate")
-                        .HasColumnType("date")
-                        .HasColumnName("check_in_date");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -824,10 +823,6 @@ namespace MyScheduling.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("processed_by_user_id");
 
-                    b.Property<int>("Status")
-                        .HasColumnType("integer")
-                        .HasColumnName("status");
-
                     b.Property<DateTime>("Timestamp")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("timestamp");
@@ -845,13 +840,6 @@ namespace MyScheduling.Infrastructure.Migrations
 
                     b.HasIndex("BookingId")
                         .HasDatabaseName("ix_check_in_events_booking_id");
-
-                    b.HasIndex("ProcessedByUserId")
-                        .HasDatabaseName("ix_check_in_events_processed_by_user_id");
-
-                    b.HasIndex("BookingId", "CheckInDate")
-                        .IsUnique()
-                        .HasDatabaseName("ix_check_in_events_booking_id_check_in_date");
 
                     b.ToTable("check_in_events");
                 });
@@ -5882,15 +5870,7 @@ namespace MyScheduling.Infrastructure.Migrations
                         .IsRequired()
                         .HasConstraintName("fk_check_in_events_bookings_booking_id");
 
-                    b.HasOne("MyScheduling.Core.Entities.User", "ProcessedBy")
-                        .WithMany()
-                        .HasForeignKey("ProcessedByUserId")
-                        .OnDelete(DeleteBehavior.SetNull)
-                        .HasConstraintName("fk_check_in_events__users_processed_by_user_id");
-
                     b.Navigation("Booking");
-
-                    b.Navigation("ProcessedBy");
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.CompanyHoliday", b =>

@@ -6,7 +6,7 @@ Enterprise staffing, work-location management, hoteling, WBS workflow, resumes, 
 - Work locations: calendars (week/two-week/month), templates (day/week/custom), stats, and supervisor visibility.
 - Staffing: assignments with statuses, capacity view, request handling with inbox/approvals, admin/manager views.
 - WBS & projects: lifecycle workflow, approvals, history, and bulk ops.
-- Hoteling: spaces/bookings with check-in tracking UI.
+- Hoteling & Facilities: comprehensive enterprise facilities management with spaces/bookings, check-in tracking, floors/zones hierarchy, space assignments, booking rules, bulk Excel import/export, admin portal with booking management, on-behalf booking support, and permanent/indefinite booking capabilities.
 - Resumes: profiles, sections, versions, approvals (needs full E2E testing).
 - Admin portal: users/tenants/roles, invitations, profile editing (manager hierarchy), groups for approvers, login reports.
 - Delegation of Authority (DOA): letter creation/management with flexible subject lines, digital signatures (drawn/typed), template library, tenant branding settings with logo upload, and print preview configuration.
@@ -57,9 +57,25 @@ Sample accounts: `admin@admin.com`.
 - Work Location Templates: CRUD/apply; dashboard/cache refresh polish in progress.
 - Staffing: assignments, capacity timeline, tenant-scoped assignment requests with approvals/inbox, CSV export, and admin/manager views.
 - WBS/Projects: workflow, approvals, history, bulk operations.
-- Hoteling: spaces/bookings with check-in UI.
+- Hoteling & Facilities Management:
+  - Spaces/bookings with check-in UI
+  - Hierarchical organization: Office → Floor → Zone → Space
+  - Space types: Desk, HotDesk, Office, Cubicle, ConferenceRoom, HuddleRoom, PhoneBooth, TrainingRoom, BreakRoom, ParkingSpot
+  - Space availability: Shared, Assigned, Reservable, Restricted
+  - Long-term assignments: Permanent, LongTerm, Temporary, Visitor
+  - Booking rules: duration limits, advance booking, time restrictions, recurring settings, approval requirements
+  - Maintenance tracking with status workflow
+  - Admin portal: `/admin/facilities` with tabs for Overview, Import/Export, Floors, Zones
+  - Office detail page: `/admin/facilities/offices/:id` with space management and booking overview
+  - Space detail page: `/admin/facilities/spaces/:id` with booking tables showing "Booked For" user
+  - On-behalf booking: Managers can book spaces for other users with self-booking toggle
+  - Permanent bookings: Support for indefinite/permanent space reservations
+  - Booking edit restrictions: Edit mode only allows changing isPermanent and dates (read-only for user/space/status)
+  - Booking tracking: Records who created the booking (BookedBy) and when (BookedAt)
+  - Bulk Excel import/export for Offices, Spaces, Floors, Zones, and Assignments
+  - Downloadable Excel templates for easy data entry
 - Resumes: CRUD + versions/approvals; needs thorough testing.
-- Admin: user/tenant/role management, invitations, profile editing (searchable manager), groups for approvers, login reports, DOA templates library, tenant branding/settings.
+- Admin: user/tenant/role management, invitations, profile editing (searchable manager), groups for approvers, login reports, DOA templates library, tenant branding/settings, facilities admin (floors/zones/bulk import-export).
 - Delegation of Authority (DOA):
   - Letter creation with flexible subject line (replaces fixed authority types)
   - Default duration: 7 days (configurable)
@@ -67,7 +83,7 @@ Sample accounts: `admin@admin.com`.
   - Template library: reusable letter content with placeholders, sortable, default template selection
   - Tenant settings: logo upload (PNG/JPEG/SVG, max 2MB), company information, print template configuration (header/footer/letterhead), styling options (colors, fonts)
   - Status workflow: Draft → Pending Signatures → Active/Expired/Revoked
-  - Admin routes: `/admin/doa-templates`, `/admin/tenant-settings`
+  - Admin routes: `/admin/doa-templates`, `/admin/tenant-settings`, `/admin/facilities`
 
 ## Known Risks & TODO Highlights
 - Authorization coverage incomplete: remaining controllers to secure include WorkLocationPreferences, WBS, Facilities, Invitations, TenantMemberships, ResumeApprovals/Templates, Holidays, DelegationOfAuthority, Validation.

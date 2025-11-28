@@ -4,7 +4,8 @@ import { Toaster } from 'react-hot-toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { LoginPage } from './pages/LoginPage';
 import { WorkspaceSelectorPage } from './pages/WorkspaceSelectorPage';
-import { DashboardLayout } from './components/layout/DashboardLayout';
+import { MeLayout } from './components/layout/MeLayout';
+import { ManagerLayout } from './components/layout/ManagerLayout';
 import { AdminLayout } from './components/layout/AdminLayout';
 import { DashboardPage } from './pages/DashboardPage';
 import { ProjectsPage } from './pages/ProjectsPage';
@@ -36,6 +37,9 @@ import AdminGroupsPage from './pages/AdminGroupsPage';
 import { AdminDOATemplatesPage } from './pages/AdminDOATemplatesPage';
 import { AdminTenantSettingsPage } from './pages/AdminTenantSettingsPage';
 import { AdminOfficesPage } from './pages/AdminOfficesPage';
+import { AdminFacilitiesPage } from './pages/AdminFacilitiesPage';
+import { AdminOfficeDetailPage } from './pages/AdminOfficeDetailPage';
+import { AdminSpaceDetailPage } from './pages/AdminSpaceDetailPage';
 import { ManagerDashboardPage } from './pages/ManagerDashboardPage';
 
 const queryClient = new QueryClient({
@@ -124,38 +128,53 @@ function App() {
               <Route path="doa-templates" element={<AdminDOATemplatesPage />} />
               <Route path="tenant-settings" element={<AdminTenantSettingsPage />} />
               <Route path="offices" element={<AdminOfficesPage />} />
+              <Route path="facilities" element={<AdminFacilitiesPage />} />
+              <Route path="facilities/office/:officeId" element={<AdminOfficeDetailPage />} />
+              <Route path="facilities/space/:spaceId" element={<AdminSpaceDetailPage />} />
             </Route>
 
-            {/* Main Application Routes */}
+            {/* Me Portal Routes (mobile-friendly top nav) */}
             <Route
               path="/"
               element={
                 <ProtectedRoute>
-                  <DashboardLayout />
+                  <MeLayout />
                 </ProtectedRoute>
               }
             >
               <Route index element={<DashboardPage />} />
-              <Route path="manager-dashboard" element={<ManagerDashboardPage />} />
-              <Route path="projects" element={<ProjectsPage />} />
-              <Route path="wbs" element={<WbsPage />} />
               <Route path="staffing" element={<StaffingPage />} />
-              <Route path="staffing/manage" element={<ManagementStaffingPage />} />
-              <Route path="staffing/admin" element={<StaffingAdminPage />} />
               <Route path="hoteling" element={<HotelingPage />} />
-              <Route path="facilities" element={<FacilitiesPage />} />
-              <Route path="people" element={<PeoplePage />} />
-              <Route path="people/:id/dashboard" element={<PersonDashboardPage />} />
               <Route path="resumes" element={<ResumesPage />} />
               <Route path="resumes/:id" element={<ResumeDetailPage />} />
-              <Route path="team-calendar" element={<TeamCalendarPage />} />
-              <Route path="team-calendar/admin" element={<TeamCalendarAdminPage />} />
-              <Route path="templates" element={<TemplatesPage />} />
               <Route path="doa" element={<DOAPage />} />
               <Route path="profile" element={<UserProfilePage />} />
               <Route path="inbox" element={<InboxPage />} />
+            </Route>
+
+            {/* Manager Portal Routes (sidebar nav) */}
+            <Route
+              path="/manager"
+              element={
+                <ProtectedRoute>
+                  <ManagerLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<ManagerDashboardPage />} />
+              <Route path="people" element={<PeoplePage />} />
+              <Route path="people/:id/dashboard" element={<PersonDashboardPage />} />
+              <Route path="staffing" element={<ManagementStaffingPage />} />
+              <Route path="team-calendar" element={<TeamCalendarPage />} />
+              <Route path="team-calendar/admin" element={<TeamCalendarAdminPage />} />
+              <Route path="projects" element={<ProjectsPage />} />
+              <Route path="wbs" element={<WbsPage />} />
+              <Route path="templates" element={<TemplatesPage />} />
+              <Route path="facilities" element={<FacilitiesPage />} />
+              <Route path="staffing-admin" element={<StaffingAdminPage />} />
               <Route path="reports" element={<div className="p-6">Reports Module (Coming Soon)</div>} />
             </Route>
+
             <Route path="*" element={<Navigate to={isAuthenticated ? "/" : "/login"} replace />} />
           </Routes>
         </BrowserRouter>

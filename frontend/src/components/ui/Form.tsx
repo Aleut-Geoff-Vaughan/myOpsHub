@@ -106,6 +106,7 @@ export const Select: React.FC<SelectProps> = ({
         } ${props.disabled ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'} ${className}`}
         {...props}
       >
+        <option value="">-- Select --</option>
         {options ? (
           options.map((option) => (
             <option key={option.value} value={option.value}>

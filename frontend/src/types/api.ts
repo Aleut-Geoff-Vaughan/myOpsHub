@@ -31,10 +31,30 @@ export enum AssignmentStatus {
 
 export enum BookingStatus {
   Reserved = 0,
-  CheckedIn = 1,
+  CheckedIn = 1,  // Deprecated - use CheckInEvent for per-day check-ins
   Completed = 2,
   Cancelled = 3,
   NoShow = 4,
+}
+
+export enum CheckInStatus {
+  CheckedIn = 0,
+  CheckedOut = 1,
+  NoShow = 2,
+  AutoCheckout = 3,
+}
+
+export interface CheckInEvent {
+  id: string;
+  bookingId: string;
+  checkInDate: string;  // Date string YYYY-MM-DD
+  timestamp: string;
+  method: string;
+  processedByUserId?: string;
+  status: CheckInStatus;
+  processedBy?: User;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export enum TenantStatus {
@@ -226,8 +246,14 @@ export interface Booking {
   spaceId: string;
   userId: string;
   startDatetime: string;
-  endDatetime: string;
+  endDatetime?: string;  // Null/undefined = permanent/indefinite booking
   status: BookingStatus;
+  isPermanent: boolean;  // True for indefinite bookings
+  bookedByUserId?: string;  // User who made the booking (may differ from userId)
+  bookedAt: string;  // When the booking was made
+  bookedBy?: User;  // Navigation property
+  user?: User;  // Navigation property - who the booking is for
+  space?: Space;  // Navigation property
   createdAt: string;
   updatedAt: string;
 }
@@ -394,6 +420,7 @@ export interface Space {
   dailyCost?: number;
   maxBookingDays?: number;
   bookingRules?: string;
+  office?: Office;  // Navigation property
   createdAt: string;
   updatedAt: string;
 }
@@ -788,4 +815,112 @@ export interface RuleOrderUpdate {
 
 export interface SetActiveRequest {
   isActive: boolean;
+}
+
+// ==================== FACILITIES ADMIN TYPES ====================
+
+export enum SpaceAvailabilityType {
+  Shared = 0,
+  Assigned = 1,
+  Reservable = 2,
+  Restricted = 3,
+}
+
+export enum SpaceAssignmentType {
+  Permanent = 0,
+  LongTerm = 1,
+  Temporary = 2,
+  Visitor = 3,
+}
+
+export enum SpaceAssignmentStatus {
+  Pending = 0,
+  Active = 1,
+  Expired = 2,
+  Cancelled = 3,
+  Revoked = 4,
+}
+
+export interface Floor {
+  id: string;
+  tenantId: string;
+  officeId: string;
+  name: string;
+  level: number;
+  floorPlanUrl?: string;
+  squareFootage?: number;
+  isActive: boolean;
+  office?: Office;
+  zones?: Zone[];
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface Zone {
+  id: string;
+  tenantId: string;
+  floorId: string;
+  name: string;
+  description?: string;
+  color?: string;
+  isActive: boolean;
+  floor?: Floor;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface SpaceAssignment {
+  id: string;
+  tenantId: string;
+  spaceId: string;
+  userId: string;
+  startDate: string;
+  endDate?: string;
+  type: SpaceAssignmentType;
+  status: SpaceAssignmentStatus;
+  notes?: string;
+  approvedByUserId?: string;
+  approvedAt?: string;
+  space?: Space;
+  user?: User;
+  approvedBy?: User;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface BookingRule {
+  id: string;
+  tenantId: string;
+  officeId?: string;
+  spaceId?: string;
+  spaceType?: SpaceType;
+  name: string;
+  description?: string;
+  minDurationMinutes?: number;
+  maxDurationMinutes?: number;
+  minAdvanceBookingMinutes?: number;
+  maxAdvanceBookingDays?: number;
+  earliestStartTime?: string;
+  latestEndTime?: string;
+  allowedDaysOfWeek?: string;
+  allowRecurring: boolean;
+  maxRecurringWeeks?: number;
+  requiresApproval: boolean;
+  autoApproveForRoles: boolean;
+  autoApproveRoles?: string;
+  maxBookingsPerUserPerDay?: number;
+  maxBookingsPerUserPerWeek?: number;
+  isActive: boolean;
+  priority: number;
+  office?: Office;
+  space?: Space;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+export interface ImportResult {
+  success: boolean;
+  totalRows: number;
+  importedRows: number;
+  errors: string[];
 }

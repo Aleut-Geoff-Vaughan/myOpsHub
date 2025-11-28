@@ -8,6 +8,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using MyScheduling.Core.Entities;
+using MyScheduling.Api;
 
 // MyScheduling API - Production Ready
 var builder = WebApplication.CreateBuilder(args);
@@ -142,6 +143,9 @@ builder.Services.AddScoped<DatabaseSeeder>();
 builder.Services.AddScoped<IValidationEngine, ValidationEngine>();
 builder.Services.AddScoped<IRuleInterpreter, RuleInterpreter>();
 
+// Register Facilities Excel Service
+builder.Services.AddScoped<IFacilitiesExcelService, FacilitiesExcelService>();
+
 // Health Checks
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<MySchedulingDbContext>("database");
@@ -212,6 +216,25 @@ if (Environment.GetEnvironmentVariable("SEED_LOGIN_AUDITS")?.Equals("true", Stri
     catch (Exception ex)
     {
         logger.LogWarning(ex, "Failed to seed login audits");
+    }
+}
+
+// Seed facilities data (spaces for offices)
+// Runs only if SEED_FACILITIES=true environment variable is set
+if (Environment.GetEnvironmentVariable("SEED_FACILITIES")?.Equals("true", StringComparison.OrdinalIgnoreCase) == true)
+{
+    using var scope = app.Services.CreateScope();
+    var context = scope.ServiceProvider.GetRequiredService<MySchedulingDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    try
+    {
+        await SeedFacilitiesData.SeedSpacesForAllOffices(context);
+        logger.LogInformation("Facilities seed data applied successfully");
+    }
+    catch (Exception ex)
+    {
+        logger.LogWarning(ex, "Failed to seed facilities data");
     }
 }
 

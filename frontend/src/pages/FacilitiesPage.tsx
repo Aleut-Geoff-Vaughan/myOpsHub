@@ -1,18 +1,25 @@
 import { useState, useMemo } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardHeader, CardBody, Button, Table, StatusBadge, Input } from '../components/ui';
 import { facilitiesService } from '../services/facilitiesService';
-import { SpaceType, FacilityAccessLevel, MaintenanceStatus, MaintenanceType } from '../types/api';
+import { SpaceType, FacilityAccessLevel, MaintenanceStatus, MaintenanceType, type Space } from '../types/api';
 import { bookingsService } from '../services/bookingsService';
+import { SpaceModal } from '../components/SpaceModal';
+import toast from 'react-hot-toast';
 
 type TabType = 'spaces' | 'permissions' | 'maintenance';
 
 export function FacilitiesPage() {
+  const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<TabType>('spaces');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedOfficeFilter, setSelectedOfficeFilter] = useState<string>('all');
   const [selectedTypeFilter, setSelectedTypeFilter] = useState<'all' | SpaceType>('all');
   const [selectedStatusFilter, setSelectedStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+
+  // Modal state
+  const [isSpaceModalOpen, setIsSpaceModalOpen] = useState(false);
+  const [editingSpace, setEditingSpace] = useState<Space | null>(null);
 
   // Fetch offices for filter dropdown
   const { data: offices = [] } = useQuery({
@@ -43,6 +50,41 @@ export function FacilitiesPage() {
     queryFn: () => facilitiesService.getMaintenanceLogs(),
     enabled: activeTab === 'maintenance',
   });
+
+  // Delete space mutation
+  const deleteSpaceMutation = useMutation({
+    mutationFn: (id: string) => facilitiesService.deleteSpace(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['facilities-spaces'] });
+      toast.success('Space deleted successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to delete space');
+    },
+  });
+
+  // Handlers
+  const handleAddSpace = () => {
+    setEditingSpace(null);
+    setIsSpaceModalOpen(true);
+  };
+
+  const handleEditSpace = (space: Space) => {
+    setEditingSpace(space);
+    setIsSpaceModalOpen(true);
+  };
+
+  const handleDeleteSpace = async (space: Space) => {
+    if (!confirm(`Are you sure you want to delete "${space.name}"?`)) {
+      return;
+    }
+    deleteSpaceMutation.mutate(space.id);
+  };
+
+  const handleCloseModal = () => {
+    setIsSpaceModalOpen(false);
+    setEditingSpace(null);
+  };
 
   // Filter spaces by search term
   const filteredSpaces = useMemo(() => {
@@ -133,22 +175,28 @@ export function FacilitiesPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="p-6 space-y-6">
       {/* Header */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Facilities Management</h1>
           <p className="text-gray-600">Manage spaces, permissions, and maintenance</p>
         </div>
-        <Button
-          variant="primary"
-          onClick={() => {
-            // TODO: Open create modal based on active tab
-            console.log('Create new', activeTab);
-          }}
-        >
-          + {activeTab === 'spaces' ? 'Add Space' : activeTab === 'permissions' ? 'Grant Permission' : 'Report Maintenance'}
-        </Button>
+        {activeTab === 'spaces' && (
+          <Button variant="primary" onClick={handleAddSpace}>
+            + Add Space
+          </Button>
+        )}
+        {activeTab === 'permissions' && (
+          <Button variant="primary" onClick={() => console.log('Grant Permission')}>
+            + Grant Permission
+          </Button>
+        )}
+        {activeTab === 'maintenance' && (
+          <Button variant="primary" onClick={() => console.log('Report Maintenance')}>
+            + Report Maintenance
+          </Button>
+        )}
       </div>
 
       {/* Statistics Cards */}
@@ -191,6 +239,7 @@ export function FacilitiesPage() {
         <div className="px-6 pb-4">
           <div className="flex space-x-1 border-b border-gray-200">
             <button
+              type="button"
               onClick={() => setActiveTab('spaces')}
               className={`px-4 py-2 font-medium transition-colors ${
                 activeTab === 'spaces'
@@ -201,6 +250,7 @@ export function FacilitiesPage() {
               Spaces
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('permissions')}
               className={`px-4 py-2 font-medium transition-colors ${
                 activeTab === 'permissions'
@@ -211,6 +261,7 @@ export function FacilitiesPage() {
               Permissions
             </button>
             <button
+              type="button"
               onClick={() => setActiveTab('maintenance')}
               className={`px-4 py-2 font-medium transition-colors ${
                 activeTab === 'maintenance'
@@ -238,6 +289,7 @@ export function FacilitiesPage() {
                   />
                 </div>
                 <select
+                  aria-label="Filter by office"
                   value={selectedOfficeFilter}
                   onChange={(e) => setSelectedOfficeFilter(e.target.value)}
                   className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -250,8 +302,9 @@ export function FacilitiesPage() {
                   ))}
                 </select>
                 <select
+                  aria-label="Filter by space type"
                   value={selectedTypeFilter}
-                  onChange={(e) => setSelectedTypeFilter(e.target.value as any)}
+                  onChange={(e) => setSelectedTypeFilter(e.target.value as SpaceType | 'all')}
                   className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="all">All Types</option>
@@ -267,8 +320,9 @@ export function FacilitiesPage() {
                   <option value={SpaceType.ParkingSpot}>Parking Spot</option>
                 </select>
                 <select
+                  aria-label="Filter by status"
                   value={selectedStatusFilter}
-                  onChange={(e) => setSelectedStatusFilter(e.target.value as any)}
+                  onChange={(e) => setSelectedStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
                   className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="all">All Status</option>
@@ -307,13 +361,23 @@ export function FacilitiesPage() {
                       approval: space.requiresApproval ? 'Yes' : 'No',
                       dailyCost: space.dailyCost ? `$${space.dailyCost.toFixed(2)}` : '-',
                       actions: (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => console.log('Edit space', space.id)}
-                        >
-                          Edit
-                        </Button>
+                        <div className="flex gap-2 justify-end">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleEditSpace(space)}
+                          >
+                            Edit
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteSpace(space)}
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                          >
+                            Delete
+                          </Button>
+                        </div>
                       ),
                     }))}
                   />
@@ -409,6 +473,14 @@ export function FacilitiesPage() {
           )}
         </CardBody>
       </Card>
+
+      {/* Space Modal */}
+      <SpaceModal
+        isOpen={isSpaceModalOpen}
+        onClose={handleCloseModal}
+        space={editingSpace}
+        offices={offices}
+      />
     </div>
   );
 }

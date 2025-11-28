@@ -31,7 +31,7 @@ export function HotelingPage() {
       booking.userId,
       booking.spaceId,
       new Date(booking.startDatetime).toLocaleString(),
-      new Date(booking.endDatetime).toLocaleString(),
+      booking.isPermanent ? 'Permanent' : booking.endDatetime ? new Date(booking.endDatetime).toLocaleString() : '-',
       getStatusLabel(booking.status)
     ]);
 
@@ -106,7 +106,13 @@ export function HotelingPage() {
       render: (booking: Booking) => (
         <div className="text-sm">
           <div>{new Date(booking.startDatetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
-          <div className="text-gray-500">to {new Date(booking.endDatetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
+          <div className="text-gray-500">
+            {booking.isPermanent ? (
+              <span className="text-blue-600 font-medium">Permanent</span>
+            ) : booking.endDatetime ? (
+              `to ${new Date(booking.endDatetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`
+            ) : '-'}
+          </div>
         </div>
       )
     },
