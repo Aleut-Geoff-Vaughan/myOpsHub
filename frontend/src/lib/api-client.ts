@@ -75,7 +75,7 @@ export async function apiRequest<T>(
 
     if (!response.ok) {
       // Handle 401 Unauthorized - token expired or invalid
-      if (response.status === 401) {
+      if (response.status === 401 && !endpoint.includes('/auth/login')) {
         // Clear auth storage and redirect to login
         localStorage.removeItem('auth-storage');
         window.location.href = '/login';
