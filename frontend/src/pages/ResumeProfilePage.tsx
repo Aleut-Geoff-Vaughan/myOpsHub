@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, History, Shield, ChevronDown, ChevronUp } from 'lucide-react';
+import { ArrowLeft, History, Shield, ChevronUp } from 'lucide-react';
 import { useAuthStore, AppRole } from '../stores/authStore';
 import {
   getResume,

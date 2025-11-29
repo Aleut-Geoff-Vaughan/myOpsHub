@@ -48,11 +48,11 @@ export function UserProfilePage() {
   }, []);
 
   const { data: peopleOptions = [] } = usePeople({
-    tenantId: currentWorkspace?.tenantId,
+    tenantId: currentWorkspace?.tenantId ?? '',
   });
 
   const { data: offices = [] } = useOffices({
-    tenantId: currentWorkspace?.tenantId,
+    tenantId: currentWorkspace?.tenantId ?? '',
   });
 
   const fetchProfile = async () => {
