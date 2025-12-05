@@ -1,15 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { Card, CardHeader, CardBody } from '../components/ui';
 import { TeamCalendarView } from '../components/TeamCalendarView';
 import { ViewSelector } from '../components/ViewSelector';
 import { getMondayOfWeek } from '../utils/dateUtils';
 import { teamCalendarService } from '../services/teamCalendarService';
-import type { TeamCalendarViewResponse, ManagerViewResponse, TeamCalendarSummary } from '../types/teamCalendar';
+import toast from 'react-hot-toast';
+import type { TeamCalendarViewResponse, ManagerViewResponse, TeamCalendarSummary, CreateTeamCalendarRequest, TeamCalendarType } from '../types/teamCalendar';
 
 export function TeamCalendarPage() {
-  const { user } = useAuthStore();
+  const { user, currentWorkspace } = useAuthStore();
   const [selectedView, setSelectedView] = useState<'current-week' | 'two-weeks' | 'month'>('two-weeks');
   const [referenceDate, setReferenceDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<'manager' | 'team'>('manager');
@@ -18,6 +18,16 @@ export function TeamCalendarPage() {
   const [calendarData, setCalendarData] = useState<TeamCalendarViewResponse | ManagerViewResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Create calendar modal state
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [formData, setFormData] = useState<CreateTeamCalendarRequest>({
+    name: '',
+    description: '',
+    type: 0, // TeamCalendarType.Team
+    ownerUserId: undefined,
+    isActive: true,
+  });
 
   // Fetch available calendars for the user
   useEffect(() => {
@@ -137,6 +147,45 @@ export function TeamCalendarPage() {
     return 'View your team\'s work location schedule';
   };
 
+  const fetchAvailableCalendarsCallback = async () => {
+    if (!user?.id) return;
+    try {
+      const response = await teamCalendarService.getAvailableCalendars(user.id);
+      setAvailableCalendars(response.memberOf);
+    } catch (err) {
+      console.error('Failed to fetch available calendars:', err);
+    }
+  };
+
+  const handleCreate = async () => {
+    if (!currentWorkspace?.tenantId || !user?.id) return;
+
+    try {
+      await teamCalendarService.create(
+        currentWorkspace.tenantId,
+        user.id,
+        formData
+      );
+      toast.success('Team calendar created successfully');
+      setShowCreateModal(false);
+      resetForm();
+      // Refresh available calendars
+      fetchAvailableCalendarsCallback();
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to create calendar');
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      description: '',
+      type: 0,
+      ownerUserId: undefined,
+      isActive: true,
+    });
+  };
+
   return (
     <div className="p-6">
       {/* Header */}
@@ -145,16 +194,16 @@ export function TeamCalendarPage() {
           <h1 className="text-3xl font-bold text-gray-900">Team Calendar</h1>
           <p className="text-gray-600 mt-2">View and track your team's work locations</p>
         </div>
-        <Link
-          to="/team-calendar/admin"
-          className="px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition flex items-center gap-2"
+        <button
+          type="button"
+          onClick={() => setShowCreateModal(true)}
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2"
         >
           <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
-          Admin Settings
-        </Link>
+          Create Team Calendar
+        </button>
       </div>
 
       {/* View Mode Selector */}
@@ -306,6 +355,77 @@ export function TeamCalendarPage() {
             )}
         </CardBody>
       </Card>
+
+      {/* Create Calendar Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl p-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">
+              Create Team Calendar
+            </h2>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                <input
+                  type="text"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="e.g., Engineering Team"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Optional description"
+                  rows={3}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="calendarType" className="block text-sm font-medium text-gray-700 mb-1">Type *</label>
+                <select
+                  id="calendarType"
+                  value={formData.type}
+                  onChange={(e) => setFormData({ ...formData, type: Number(e.target.value) as TeamCalendarType })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value={0}>Team</option>
+                  <option value={1}>Manager</option>
+                  <option value={2}>Department</option>
+                  <option value={3}>Project</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 mt-6">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowCreateModal(false);
+                  resetForm();
+                }}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleCreate}
+                disabled={!formData.name.trim()}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Create
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
-import { Modal, Button, FormGroup, Input } from './ui';
+import { Modal, Button, FormGroup } from './ui';
 import { useAuthStore } from '../stores/authStore';
 import type { User as ApiUser } from '../types/api';
-import { AlertTriangle, Eye, User, Shield } from 'lucide-react';
+import { AlertTriangle, Eye, Shield } from 'lucide-react';
 
 interface ImpersonateUserModalProps {
   user: ApiUser;
@@ -116,7 +116,7 @@ export function ImpersonateUserModal({ user, onClose, onSuccess }: ImpersonateUs
         <div className="flex justify-end gap-3">
           <Button
             type="button"
-            variant="outline"
+            variant="secondary"
             onClick={onClose}
             disabled={impersonateMutation.isPending}
           >

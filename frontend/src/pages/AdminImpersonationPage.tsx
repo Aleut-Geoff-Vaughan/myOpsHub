@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import toast from 'react-hot-toast';
+
 import { Card, CardHeader, CardBody, Input, Button, Table, StatusBadge } from '../components/ui';
 import { ImpersonateUserModal } from '../components/ImpersonateUserModal';
 import { useAuthStore } from '../stores/authStore';
 import { authService, type ImpersonationSessionInfo } from '../services/authService';
 import { useUsers } from '../hooks/useTenants';
 import type { User as ApiUser } from '../types/api';
-import { Search, UserCheck, Eye, Clock, Shield, AlertTriangle } from 'lucide-react';
+import { Search, Eye, Shield, AlertTriangle } from 'lucide-react';
 
 export function AdminImpersonationPage() {
   const navigate = useNavigate();
@@ -140,9 +140,7 @@ export function AdminImpersonationPage() {
 
       {/* User Search */}
       <Card>
-        <CardHeader>
-          <h2 className="text-lg font-semibold">Find User to Impersonate</h2>
-        </CardHeader>
+        <CardHeader title="Find User to Impersonate" />
         <CardBody>
           <div className="mb-4">
             <div className="relative">
@@ -203,7 +201,7 @@ export function AdminImpersonationPage() {
                   header: 'Actions',
                   render: (row: ApiUser) => (
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
                       onClick={() => handleImpersonateClick(row)}
                       disabled={!row.isActive}
@@ -228,12 +226,7 @@ export function AdminImpersonationPage() {
 
       {/* Recent Sessions */}
       <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-gray-400" />
-            <h2 className="text-lg font-semibold">Recent Impersonation Sessions</h2>
-          </div>
-        </CardHeader>
+        <CardHeader title="Recent Impersonation Sessions" />
         <CardBody>
           {sessionsLoading ? (
             <div className="flex items-center justify-center py-8">

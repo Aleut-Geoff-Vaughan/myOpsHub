@@ -161,15 +161,27 @@ public class TeamCalendarController : AuthorizedControllerBase
     [HttpPost]
     [RequiresPermission(Resource = "TeamCalendar", Action = PermissionAction.Create)]
     public async Task<ActionResult<TeamCalendarResponse>> CreateTeamCalendar(
-        [FromBody] CreateTeamCalendarRequest request)
+        [FromBody] CreateTeamCalendarRequest request,
+        [FromQuery] Guid? tenantId = null)
     {
         try
         {
             var userId = GetCurrentUserId();
             var userTenantIds = GetUserTenantIds();
 
+            // Use tenantId from query param if body doesn't have it (backwards compatibility)
+            var effectiveTenantId = request.TenantId != Guid.Empty ? request.TenantId : tenantId ?? Guid.Empty;
+            if (effectiveTenantId == Guid.Empty)
+            {
+                effectiveTenantId = userTenantIds.FirstOrDefault();
+                if (effectiveTenantId == Guid.Empty)
+                {
+                    return BadRequest(new { error = "TenantId is required" });
+                }
+            }
+
             // Validate tenant access
-            if (!userTenantIds.Contains(request.TenantId) && !IsSystemAdmin())
+            if (!userTenantIds.Contains(effectiveTenantId) && !IsSystemAdmin())
             {
                 return StatusCode(403, "You do not have access to this tenant");
             }
@@ -178,7 +190,7 @@ public class TeamCalendarController : AuthorizedControllerBase
             if (request.OwnerUserId.HasValue)
             {
                 var ownerExists = await _context.TenantMemberships
-                    .AnyAsync(tm => tm.UserId == request.OwnerUserId.Value && tm.TenantId == request.TenantId && tm.IsActive);
+                    .AnyAsync(tm => tm.UserId == request.OwnerUserId.Value && tm.TenantId == effectiveTenantId && tm.IsActive);
 
                 if (!ownerExists)
                 {
@@ -189,7 +201,7 @@ public class TeamCalendarController : AuthorizedControllerBase
             var calendar = new TeamCalendar
             {
                 Id = Guid.NewGuid(),
-                TenantId = request.TenantId,
+                TenantId = effectiveTenantId,
                 Name = request.Name,
                 Description = request.Description,
                 Type = request.Type,
@@ -202,7 +214,7 @@ public class TeamCalendarController : AuthorizedControllerBase
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("Team calendar {CalendarId} created for tenant {TenantId} by user {UserId}",
-                calendar.Id, request.TenantId, userId);
+                calendar.Id, effectiveTenantId, userId);
 
             // Return the created calendar
             return CreatedAtAction(nameof(GetTeamCalendar), new { id = calendar.Id }, new TeamCalendarResponse
