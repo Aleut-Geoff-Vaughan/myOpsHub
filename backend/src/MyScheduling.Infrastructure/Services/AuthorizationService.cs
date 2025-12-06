@@ -396,12 +396,46 @@ public class AuthorizationService : IAuthorizationService
 
     private async Task<Permission?> GetRolePermissionAsync(AppRole role, string resource, PermissionAction action, Guid? tenantId)
     {
-        return await _context.Permissions
+        // First check explicit permissions in Permissions table
+        var explicitPermission = await _context.Permissions
             .Where(p => p.Role == role)
             .Where(p => p.Resource == resource && p.Action == action)
             .Where(p => !tenantId.HasValue || p.TenantId == null || p.TenantId == tenantId)
             .Where(p => p.IsActive)
             .FirstOrDefaultAsync();
+
+        if (explicitPermission != null)
+        {
+            return explicitPermission;
+        }
+
+        // Fallback to role permission templates (system-wide defaults)
+        // Check for exact action match or Manage action (which implies all actions)
+        var template = await _context.RolePermissionTemplates
+            .Where(t => t.Role == role)
+            .Where(t => t.Resource == resource)
+            .Where(t => t.Action == action || t.Action == PermissionAction.Manage)
+            .Where(t => t.TenantId == null || t.TenantId == tenantId)
+            .FirstOrDefaultAsync();
+
+        if (template != null)
+        {
+            // Convert template to a virtual permission for consistency
+            return new Permission
+            {
+                Id = template.Id,
+                Role = template.Role,
+                Resource = template.Resource,
+                Action = template.Action,
+                Scope = template.DefaultScope,
+                Conditions = template.DefaultConditions,
+                TenantId = template.TenantId,
+                IsActive = true,
+                CreatedAt = template.CreatedAt
+            };
+        }
+
+        return null;
     }
 
     private async Task<List<AppRole>> GetUserRolesAsync(Guid userId, Guid? tenantId)

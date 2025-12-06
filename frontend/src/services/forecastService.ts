@@ -143,9 +143,10 @@ export interface Forecast {
 export enum ForecastStatus {
   Draft = 0,
   Submitted = 1,
-  Approved = 2,
-  Rejected = 3,
-  Locked = 4,
+  Reviewed = 2,
+  Approved = 3,
+  Rejected = 4,
+  Locked = 5,
 }
 
 export interface ForecastHistoryItem {
@@ -169,12 +170,13 @@ export enum ForecastChangeType {
   StatusChanged = 2,
   Override = 3,
   Submitted = 4,
-  Approved = 5,
-  Rejected = 6,
-  Locked = 7,
-  VersionCreated = 8,
-  VersionPromoted = 9,
-  VersionDeleted = 10,
+  Reviewed = 5,
+  Approved = 6,
+  Rejected = 7,
+  Locked = 8,
+  VersionCreated = 9,
+  VersionPromoted = 10,
+  VersionDeleted = 11,
 }
 
 export interface ForecastSummary {
@@ -182,11 +184,13 @@ export interface ForecastSummary {
   totalHours: number;
   draftCount: number;
   submittedCount: number;
+  reviewedCount: number;
   approvedCount: number;
   rejectedCount: number;
   lockedCount: number;
   draftHours: number;
   submittedHours: number;
+  reviewedHours: number;
   approvedHours: number;
   overrideCount: number;
 }
@@ -416,6 +420,10 @@ export const forecastsService = {
     return api.post<Forecast>(`/forecasts/${id}/approve`, { notes });
   },
 
+  review: async (id: string, notes?: string): Promise<Forecast> => {
+    return api.post<Forecast>(`/forecasts/${id}/review`, { notes });
+  },
+
   reject: async (id: string, reason: string): Promise<Forecast> => {
     return api.post<Forecast>(`/forecasts/${id}/reject`, { reason });
   },
@@ -444,6 +452,8 @@ export const getForecastStatusColor = (status: ForecastStatus): string => {
       return 'bg-gray-100 text-gray-800';
     case ForecastStatus.Submitted:
       return 'bg-yellow-100 text-yellow-800';
+    case ForecastStatus.Reviewed:
+      return 'bg-purple-100 text-purple-800';
     case ForecastStatus.Approved:
       return 'bg-green-100 text-green-800';
     case ForecastStatus.Rejected:
@@ -746,6 +756,123 @@ export const formatFileSize = (bytes: number): string => {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+// ==================== ACTUAL HOURS TYPES ====================
+
+export enum ActualHoursSource {
+  ERP = 0,
+  SpreadsheetUpload = 1,
+  ManualEntry = 2,
+}
+
+export interface ActualHours {
+  id: string;
+  tenantId: string;
+  projectRoleAssignmentId: string;
+  year: number;
+  month: number;
+  week?: number;
+  hours: number;
+  source: ActualHoursSource;
+  sourceName: string;
+  sourceReference?: string;
+  importOperationId?: string;
+  createdAt: string;
+  updatedAt?: string;
+  // Assignment info
+  projectId?: string;
+  projectName?: string;
+  wbsElementId?: string;
+  wbsElementCode?: string;
+  positionTitle?: string;
+  assigneeName?: string;
+}
+
+export interface CreateActualHoursDto {
+  tenantId: string;
+  projectRoleAssignmentId: string;
+  year: number;
+  month: number;
+  week?: number;
+  hours: number;
+  source?: ActualHoursSource;
+  sourceReference?: string;
+}
+
+export interface BulkActualHoursDto {
+  tenantId: string;
+  updateExisting?: boolean;
+  source?: ActualHoursSource;
+  sourceReference?: string;
+  actuals: {
+    projectRoleAssignmentId: string;
+    year: number;
+    month: number;
+    week?: number;
+    hours: number;
+  }[];
+}
+
+export interface BulkActualHoursResponse {
+  totalRequested: number;
+  createdCount: number;
+  updatedCount: number;
+  skippedCount: number;
+  failedCount: number;
+}
+
+export const actualHoursService = {
+  getAll: async (params: {
+    tenantId: string;
+    projectId?: string;
+    projectRoleAssignmentId?: string;
+    year?: number;
+    month?: number;
+    source?: ActualHoursSource;
+  }): Promise<ActualHours[]> => {
+    const queryParams = new URLSearchParams();
+    queryParams.append('tenantId', params.tenantId);
+    if (params.projectId) queryParams.append('projectId', params.projectId);
+    if (params.projectRoleAssignmentId) queryParams.append('projectRoleAssignmentId', params.projectRoleAssignmentId);
+    if (params.year !== undefined) queryParams.append('year', params.year.toString());
+    if (params.month !== undefined) queryParams.append('month', params.month.toString());
+    if (params.source !== undefined) queryParams.append('source', params.source.toString());
+    return api.get<ActualHours[]>(`/actualhours?${queryParams.toString()}`);
+  },
+
+  getById: async (id: string): Promise<ActualHours> => {
+    return api.get<ActualHours>(`/actualhours/${id}`);
+  },
+
+  create: async (dto: CreateActualHoursDto): Promise<ActualHours> => {
+    return api.post<ActualHours>('/actualhours', dto);
+  },
+
+  createBulk: async (dto: BulkActualHoursDto): Promise<BulkActualHoursResponse> => {
+    return api.post<BulkActualHoursResponse>('/actualhours/bulk', dto);
+  },
+
+  update: async (id: string, hours: number): Promise<ActualHours> => {
+    return api.put<ActualHours>(`/actualhours/${id}`, { hours });
+  },
+
+  delete: async (id: string): Promise<void> => {
+    return api.delete<void>(`/actualhours/${id}`);
+  },
+};
+
+export const getActualHoursSourceColor = (source: ActualHoursSource): string => {
+  switch (source) {
+    case ActualHoursSource.ERP:
+      return 'bg-blue-100 text-blue-800';
+    case ActualHoursSource.SpreadsheetUpload:
+      return 'bg-green-100 text-green-800';
+    case ActualHoursSource.ManualEntry:
+      return 'bg-gray-100 text-gray-800';
+    default:
+      return 'bg-gray-100 text-gray-800';
+  }
 };
 
 // ==================== STAFFING REPORTS TYPES ====================

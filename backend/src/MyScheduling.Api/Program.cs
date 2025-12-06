@@ -136,12 +136,6 @@ builder.Services.AddControllers()
         options.JsonSerializerOptions.DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull;
     });
 
-// Register Database Seeder
-builder.Services.AddScoped<DatabaseSeeder>();
-
-// Register Staffing Seeder
-builder.Services.AddScoped<MyScheduling.Infrastructure.Data.Seeds.StaffingSeeder>();
-
 // Register Validation Services
 builder.Services.AddScoped<IValidationEngine, ValidationEngine>();
 builder.Services.AddScoped<IRuleInterpreter, RuleInterpreter>();

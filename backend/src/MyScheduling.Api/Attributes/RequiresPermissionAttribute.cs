@@ -69,14 +69,36 @@ public class RequiresPermissionAttribute : Attribute, IAsyncAuthorizationFilter
             return;
         }
 
-        // Get tenant ID from JWT claims if available
+        // Get tenant ID from X-Tenant-Id header first, then fallback to JWT claims
         Guid? tenantId = null;
-        var tenantIdClaim = context.HttpContext.User.Claims.FirstOrDefault(c =>
-            c.Type.Equals("tenantId", StringComparison.OrdinalIgnoreCase) ||
-            c.Type.Equals("TenantId", StringComparison.OrdinalIgnoreCase));
-        if (tenantIdClaim != null && Guid.TryParse(tenantIdClaim.Value, out var parsedTenantId))
+
+        // Check for X-Tenant-Id header (preferred - set by frontend when workspace is selected)
+        if (context.HttpContext.Request.Headers.TryGetValue("X-Tenant-Id", out var headerTenantId) &&
+            Guid.TryParse(headerTenantId.FirstOrDefault(), out var parsedHeaderTenantId))
         {
-            tenantId = parsedTenantId;
+            // Verify the user has access to this tenant (check JWT claims)
+            var userTenantIds = context.HttpContext.User.Claims
+                .Where(c => c.Type.Equals("TenantId", StringComparison.OrdinalIgnoreCase))
+                .Select(c => Guid.TryParse(c.Value, out var tid) ? tid : Guid.Empty)
+                .Where(id => id != Guid.Empty)
+                .ToList();
+
+            if (userTenantIds.Contains(parsedHeaderTenantId))
+            {
+                tenantId = parsedHeaderTenantId;
+            }
+        }
+
+        // Fallback to JWT claims if no header (for single-tenant users or admin workspace)
+        if (!tenantId.HasValue)
+        {
+            var tenantIdClaim = context.HttpContext.User.Claims.FirstOrDefault(c =>
+                c.Type.Equals("tenantId", StringComparison.OrdinalIgnoreCase) ||
+                c.Type.Equals("TenantId", StringComparison.OrdinalIgnoreCase));
+            if (tenantIdClaim != null && Guid.TryParse(tenantIdClaim.Value, out var parsedTenantId))
+            {
+                tenantId = parsedTenantId;
+            }
         }
 
         // Get resource ID from route if available

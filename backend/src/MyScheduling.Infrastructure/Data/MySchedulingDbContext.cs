@@ -62,6 +62,7 @@ public class MySchedulingDbContext : DbContext
     public DbSet<ForecastHistory> ForecastHistories => Set<ForecastHistory>();
     public DbSet<ForecastApprovalSchedule> ForecastApprovalSchedules => Set<ForecastApprovalSchedule>();
     public DbSet<ForecastImportExport> ForecastImportExports => Set<ForecastImportExport>();
+    public DbSet<ActualHours> ActualHours => Set<ActualHours>();
 
     // Hoteling & Facilities
     public DbSet<Office> Offices => Set<Office>();
@@ -727,6 +728,28 @@ public class MySchedulingDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.OperationByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ActualHours
+        modelBuilder.Entity<ActualHours>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Hours).HasPrecision(10, 2);
+            entity.Property(e => e.SourceReference).HasMaxLength(500);
+
+            entity.HasIndex(e => new { e.TenantId, e.ProjectRoleAssignmentId, e.Year, e.Month, e.Week });
+            entity.HasIndex(e => new { e.TenantId, e.Source });
+            entity.HasIndex(e => e.ImportOperationId);
+
+            entity.HasOne(e => e.ProjectRoleAssignment)
+                .WithMany(p => p.ActualHours)
+                .HasForeignKey(e => e.ProjectRoleAssignmentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.ImportOperation)
+                .WithMany()
+                .HasForeignKey(e => e.ImportOperationId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
 
         // User CareerJobFamily relationship

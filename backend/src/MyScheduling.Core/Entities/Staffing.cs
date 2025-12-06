@@ -173,6 +173,7 @@ public class ProjectRoleAssignment : TenantEntity
     public virtual CareerJobFamily? CareerJobFamily { get; set; }
     public virtual LaborCategory? LaborCategory { get; set; }
     public virtual ICollection<Forecast> Forecasts { get; set; } = new List<Forecast>();
+    public virtual ICollection<ActualHours> ActualHours { get; set; } = new List<ActualHours>();
 
     // Computed property for display name
     public string AssigneeName => User?.DisplayName ?? Subcontractor?.FullName ?? TbdDescription ?? "TBD";
@@ -287,9 +288,10 @@ public enum ForecastStatus
 {
     Draft = 0,
     Submitted = 1,
-    Approved = 2,
-    Rejected = 3,
-    Locked = 4
+    Reviewed = 2,
+    Approved = 3,
+    Rejected = 4,
+    Locked = 5
 }
 
 // ==================== FORECAST HISTORY ====================
@@ -323,12 +325,13 @@ public enum ForecastChangeType
     StatusChanged = 2,
     Override = 3,
     Submitted = 4,
-    Approved = 5,
-    Rejected = 6,
-    Locked = 7,
-    VersionCreated = 8,
-    VersionPromoted = 9,
-    VersionDeleted = 10
+    Reviewed = 5,
+    Approved = 6,
+    Rejected = 7,
+    Locked = 8,
+    VersionCreated = 9,
+    VersionPromoted = 10,
+    VersionDeleted = 11
 }
 
 // ==================== FORECAST APPROVAL SCHEDULE ====================
@@ -406,4 +409,38 @@ public enum ForecastImportExportStatus
     Completed = 1,
     CompletedWithErrors = 2,
     Failed = 3
+}
+
+// ==================== ACTUAL HOURS ====================
+
+/// <summary>
+/// Actual hours from ERP feed or spreadsheet upload for variance tracking
+/// </summary>
+public class ActualHours : TenantEntity
+{
+    public Guid ProjectRoleAssignmentId { get; set; }
+
+    // Period
+    public int Year { get; set; }
+    public int Month { get; set; }
+    public int? Week { get; set; }
+
+    // Hours
+    public decimal Hours { get; set; }
+
+    // Source tracking
+    public ActualHoursSource Source { get; set; } = ActualHoursSource.ERP;
+    public string? SourceReference { get; set; }
+    public Guid? ImportOperationId { get; set; }
+
+    // Navigation
+    public virtual ProjectRoleAssignment ProjectRoleAssignment { get; set; } = null!;
+    public virtual ForecastImportExport? ImportOperation { get; set; }
+}
+
+public enum ActualHoursSource
+{
+    ERP = 0,
+    SpreadsheetUpload = 1,
+    ManualEntry = 2
 }

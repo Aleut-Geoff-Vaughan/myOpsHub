@@ -34,6 +34,20 @@ function getAuthToken(): string | null {
   return null;
 }
 
+// Helper to get current tenant ID from localStorage
+function getCurrentTenantId(): string | null {
+  try {
+    const authState = localStorage.getItem('auth-storage');
+    if (authState) {
+      const parsed = JSON.parse(authState);
+      return parsed.state?.currentWorkspace?.tenantId || null;
+    }
+  } catch (error) {
+    console.error('Failed to get tenant ID from storage:', error);
+  }
+  return null;
+}
+
 // Request timeout in milliseconds (30 seconds)
 const REQUEST_TIMEOUT = 30000;
 
@@ -54,6 +68,12 @@ export async function apiRequest<T>(
   const token = getAuthToken();
   if (token) {
     defaultHeaders['Authorization'] = `Bearer ${token}`;
+  }
+
+  // Add current tenant ID header if available
+  const tenantId = getCurrentTenantId();
+  if (tenantId) {
+    defaultHeaders['X-Tenant-Id'] = tenantId;
   }
 
   // Create AbortController for timeout

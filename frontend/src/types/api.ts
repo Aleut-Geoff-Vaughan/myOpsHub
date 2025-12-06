@@ -392,6 +392,7 @@ export interface User {
   jobTitle?: string;
   department?: string;
   profilePhotoUrl?: string;
+  managerId?: string;
   // Navigation properties
   tenantMemberships: TenantMembership[];
   createdAt: string;

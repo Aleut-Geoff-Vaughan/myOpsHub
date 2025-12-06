@@ -58,6 +58,18 @@ import { MySchedulePage } from './pages/MySchedulePage';
 import StaffingDashboardPage from './pages/StaffingDashboardPage';
 import ProjectStaffingDetailPage from './pages/ProjectStaffingDetailPage';
 import { AdminImpersonationPage } from './pages/AdminImpersonationPage';
+import { AdminUserEditPage } from './pages/AdminUserEditPage';
+import { AdminTeamCalendarsPage } from './pages/AdminTeamCalendarsPage';
+import { ForecastLayout } from './components/layout/ForecastLayout';
+import { ForecastDashboardPage } from './pages/ForecastDashboardPage';
+import { MyForecastsPage } from './pages/MyForecastsPage';
+import { ForecastProjectsPage } from './pages/ForecastProjectsPage';
+import { ProjectForecastGridPage } from './pages/ProjectForecastGridPage';
+import { BudgetManagementPage } from './pages/BudgetManagementPage';
+import { ForecastAnalyticsPage } from './pages/ForecastAnalyticsPage';
+import { ForecastReviewPage } from './pages/ForecastReviewPage';
+import { ForecastApprovalsPage } from './pages/ForecastApprovalsPage';
+import { ForecastSettingsPage } from './pages/ForecastSettingsPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -138,8 +150,10 @@ function App() {
             >
               <Route index element={<AdminPage />} />
               <Route path="users" element={<AdminPage viewOverride="users" />} />
+              <Route path="users/:id" element={<AdminUserEditPage />} />
               <Route path="tenants" element={<AdminPage viewOverride="tenants" />} />
               <Route path="groups" element={<AdminGroupsPage />} />
+              <Route path="team-calendars" element={<AdminTeamCalendarsPage />} />
               <Route path="settings" element={<AdminPage viewOverride="settings" />} />
               <Route path="logins" element={<AdminLoginReport />} />
               <Route path="impersonation" element={<AdminImpersonationPage />} />
@@ -209,6 +223,29 @@ function App() {
               <Route path="staffing-admin" element={<StaffingAdminPage />} />
               <Route path="forecast-approvals" element={<ForecastApprovalPage />} />
               <Route path="reports" element={<div className="p-6">Reports Module (Coming Soon)</div>} />
+            </Route>
+
+            {/* myForecast Portal Routes (sidebar nav) */}
+            <Route
+              path="/forecast"
+              element={
+                <ProtectedRoute>
+                  <ForecastLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<ForecastDashboardPage />} />
+              <Route path="my-forecasts" element={<MyForecastsPage />} />
+              <Route path="projects" element={<ForecastProjectsPage />} />
+              <Route path="projects/:projectId" element={<ProjectForecastGridPage />} />
+              <Route path="projects/:projectId/grid" element={<ProjectForecastGridPage />} />
+              <Route path="budgets" element={<BudgetManagementPage />} />
+              <Route path="analytics" element={<ForecastAnalyticsPage />} />
+              <Route path="review" element={<ForecastReviewPage />} />
+              <Route path="approvals" element={<ForecastApprovalsPage />} />
+              <Route path="versions" element={<ForecastVersionsPage />} />
+              <Route path="import-export" element={<ForecastImportExportPage />} />
+              <Route path="settings" element={<ForecastSettingsPage />} />
             </Route>
 
             <Route path="*" element={<Navigate to={isAuthenticated ? "/" : "/login"} replace />} />
