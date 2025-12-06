@@ -23,6 +23,34 @@ public class StaffingReportsController : ControllerBase
     {
         _context = context;
         _logger = logger;
+    }    /// <summary>
+    /// Gets the current tenant ID from X-Tenant-Id header or JWT claims.
+    /// The X-Tenant-Id header is set by the frontend when a workspace is selected.
+    /// Falls back to JWT TenantId claims for single-tenant users.
+    /// </summary>
+    private Guid? GetCurrentTenantId()
+    {
+        // Check X-Tenant-Id header first (preferred - set by frontend when workspace is selected)
+        if (Request.Headers.TryGetValue("X-Tenant-Id", out var headerTenantId) &&
+            Guid.TryParse(headerTenantId.FirstOrDefault(), out var parsedHeaderTenantId))
+        {
+            // Verify the user has access to this tenant
+            var userTenantIds = User.FindAll("TenantId")
+                .Select(c => Guid.TryParse(c.Value, out var tid) ? tid : Guid.Empty)
+                .Where(id => id != Guid.Empty)
+                .ToList();
+            if (userTenantIds.Contains(parsedHeaderTenantId))
+            {
+                return parsedHeaderTenantId;
+            }
+        }
+        // Fallback to first TenantId claim for single-tenant users
+        var tenantIdClaim = User.FindFirst("TenantId")?.Value;
+        if (!string.IsNullOrEmpty(tenantIdClaim) && Guid.TryParse(tenantIdClaim, out var parsedTenantId))
+        {
+            return parsedTenantId;
+        }
+        return null;
     }
 
     /// <summary>
@@ -31,8 +59,8 @@ public class StaffingReportsController : ControllerBase
     [HttpGet("dashboard-summary")]
     public async Task<IActionResult> GetDashboardSummary([FromQuery] Guid? projectId = null)
     {
-        var tenantIdClaim = User.FindFirst("tenant_id")?.Value;
-        if (string.IsNullOrEmpty(tenantIdClaim) || !Guid.TryParse(tenantIdClaim, out var tenantId))
+        var tenantId = GetCurrentTenantId();
+        if (!tenantId.HasValue)
         {
             return BadRequest(new { message = "Invalid tenant context" });
         }
@@ -41,7 +69,7 @@ public class StaffingReportsController : ControllerBase
         {
             // Get the current forecast version
             var currentVersion = await _context.ForecastVersions
-                .Where(v => v.TenantId == tenantId && v.Type == ForecastVersionType.Current && v.IsCurrent)
+                .Where(v => v.TenantId == tenantId.Value && v.Type == ForecastVersionType.Current && v.IsCurrent)
                 .FirstOrDefaultAsync();
 
             if (currentVersion == null)
@@ -55,7 +83,7 @@ public class StaffingReportsController : ControllerBase
 
             var forecastsQuery = _context.Forecasts
                 .Include(f => f.ProjectRoleAssignment)
-                .Where(f => f.TenantId == tenantId && f.ForecastVersionId == currentVersion.Id);
+                .Where(f => f.TenantId == tenantId.Value && f.ForecastVersionId == currentVersion.Id);
 
             if (projectId.HasValue)
             {
@@ -132,8 +160,8 @@ public class StaffingReportsController : ControllerBase
     [HttpGet("project-summary/{projectId}")]
     public async Task<IActionResult> GetProjectSummary(Guid projectId)
     {
-        var tenantIdClaim = User.FindFirst("tenant_id")?.Value;
-        if (string.IsNullOrEmpty(tenantIdClaim) || !Guid.TryParse(tenantIdClaim, out var tenantId))
+        var tenantId = GetCurrentTenantId();
+        if (!tenantId.HasValue)
         {
             return BadRequest(new { message = "Invalid tenant context" });
         }
@@ -141,7 +169,7 @@ public class StaffingReportsController : ControllerBase
         try
         {
             var project = await _context.Projects
-                .Where(p => p.Id == projectId && p.TenantId == tenantId)
+                .Where(p => p.Id == projectId && p.TenantId == tenantId.Value)
                 .FirstOrDefaultAsync();
 
             if (project == null)
@@ -151,7 +179,7 @@ public class StaffingReportsController : ControllerBase
 
             // Get current version
             var currentVersion = await _context.ForecastVersions
-                .Where(v => v.TenantId == tenantId && v.Type == ForecastVersionType.Current && v.IsCurrent)
+                .Where(v => v.TenantId == tenantId.Value && v.Type == ForecastVersionType.Current && v.IsCurrent)
                 .FirstOrDefaultAsync();
 
             if (currentVersion == null)
@@ -170,14 +198,14 @@ public class StaffingReportsController : ControllerBase
                 .Include(r => r.Subcontractor)
                 .Include(r => r.LaborCategory)
                 .Include(r => r.WbsElement)
-                .Where(r => r.ProjectId == projectId && r.TenantId == tenantId)
+                .Where(r => r.ProjectId == projectId && r.TenantId == tenantId.Value)
                 .ToListAsync();
 
             // Get forecasts for this project's assignments
             var assignmentIds = roleAssignments.Select(r => r.Id).ToList();
             var forecasts = await _context.Forecasts
                 .Where(f => assignmentIds.Contains(f.ProjectRoleAssignmentId) &&
-                           f.TenantId == tenantId &&
+                           f.TenantId == tenantId.Value &&
                            f.ForecastVersionId == currentVersion.Id)
                 .ToListAsync();
 
@@ -267,8 +295,8 @@ public class StaffingReportsController : ControllerBase
     [HttpGet("variance-analysis")]
     public async Task<IActionResult> GetVarianceAnalysis([FromQuery] Guid? projectId = null)
     {
-        var tenantIdClaim = User.FindFirst("tenant_id")?.Value;
-        if (string.IsNullOrEmpty(tenantIdClaim) || !Guid.TryParse(tenantIdClaim, out var tenantId))
+        var tenantId = GetCurrentTenantId();
+        if (!tenantId.HasValue)
         {
             return BadRequest(new { message = "Invalid tenant context" });
         }
@@ -276,7 +304,7 @@ public class StaffingReportsController : ControllerBase
         try
         {
             var currentVersion = await _context.ForecastVersions
-                .Where(v => v.TenantId == tenantId && v.Type == ForecastVersionType.Current && v.IsCurrent)
+                .Where(v => v.TenantId == tenantId.Value && v.Type == ForecastVersionType.Current && v.IsCurrent)
                 .FirstOrDefaultAsync();
 
             if (currentVersion == null)
@@ -287,7 +315,7 @@ public class StaffingReportsController : ControllerBase
             var forecastsQuery = _context.Forecasts
                 .Include(f => f.ProjectRoleAssignment)
                     .ThenInclude(p => p.Project)
-                .Where(f => f.TenantId == tenantId && f.ForecastVersionId == currentVersion.Id);
+                .Where(f => f.TenantId == tenantId.Value && f.ForecastVersionId == currentVersion.Id);
 
             if (projectId.HasValue)
             {
@@ -362,8 +390,8 @@ public class StaffingReportsController : ControllerBase
     [HttpGet("burn-rate")]
     public async Task<IActionResult> GetBurnRate([FromQuery] Guid? projectId = null)
     {
-        var tenantIdClaim = User.FindFirst("tenant_id")?.Value;
-        if (string.IsNullOrEmpty(tenantIdClaim) || !Guid.TryParse(tenantIdClaim, out var tenantId))
+        var tenantId = GetCurrentTenantId();
+        if (!tenantId.HasValue)
         {
             return BadRequest(new { message = "Invalid tenant context" });
         }
@@ -371,7 +399,7 @@ public class StaffingReportsController : ControllerBase
         try
         {
             var currentVersion = await _context.ForecastVersions
-                .Where(v => v.TenantId == tenantId && v.Type == ForecastVersionType.Current && v.IsCurrent)
+                .Where(v => v.TenantId == tenantId.Value && v.Type == ForecastVersionType.Current && v.IsCurrent)
                 .FirstOrDefaultAsync();
 
             if (currentVersion == null)
@@ -382,7 +410,7 @@ public class StaffingReportsController : ControllerBase
             var forecastsQuery = _context.Forecasts
                 .Include(f => f.ProjectRoleAssignment)
                     .ThenInclude(p => p.LaborCategory)
-                .Where(f => f.TenantId == tenantId && f.ForecastVersionId == currentVersion.Id);
+                .Where(f => f.TenantId == tenantId.Value && f.ForecastVersionId == currentVersion.Id);
 
             if (projectId.HasValue)
             {
@@ -469,8 +497,8 @@ public class StaffingReportsController : ControllerBase
     [HttpGet("capacity-utilization")]
     public async Task<IActionResult> GetCapacityUtilization([FromQuery] int? year = null, [FromQuery] int? month = null)
     {
-        var tenantIdClaim = User.FindFirst("tenant_id")?.Value;
-        if (string.IsNullOrEmpty(tenantIdClaim) || !Guid.TryParse(tenantIdClaim, out var tenantId))
+        var tenantId = GetCurrentTenantId();
+        if (!tenantId.HasValue)
         {
             return BadRequest(new { message = "Invalid tenant context" });
         }
@@ -478,7 +506,7 @@ public class StaffingReportsController : ControllerBase
         try
         {
             var currentVersion = await _context.ForecastVersions
-                .Where(v => v.TenantId == tenantId && v.Type == ForecastVersionType.Current && v.IsCurrent)
+                .Where(v => v.TenantId == tenantId.Value && v.Type == ForecastVersionType.Current && v.IsCurrent)
                 .FirstOrDefaultAsync();
 
             if (currentVersion == null)
@@ -494,12 +522,12 @@ public class StaffingReportsController : ControllerBase
                 .Include(r => r.User)
                 .Include(r => r.Subcontractor)
                 .Include(r => r.Project)
-                .Where(r => r.TenantId == tenantId && r.Status == ProjectRoleAssignmentStatus.Active)
+                .Where(r => r.TenantId == tenantId.Value && r.Status == ProjectRoleAssignmentStatus.Active)
                 .ToListAsync();
 
             // Get forecasts for the target month
             var forecasts = await _context.Forecasts
-                .Where(f => f.TenantId == tenantId &&
+                .Where(f => f.TenantId == tenantId.Value &&
                            f.ForecastVersionId == currentVersion.Id &&
                            f.Year == targetYear &&
                            f.Month == targetMonth)
@@ -614,8 +642,8 @@ public class StaffingReportsController : ControllerBase
     [HttpGet("projects-summary")]
     public async Task<IActionResult> GetProjectsSummary()
     {
-        var tenantIdClaim = User.FindFirst("tenant_id")?.Value;
-        if (string.IsNullOrEmpty(tenantIdClaim) || !Guid.TryParse(tenantIdClaim, out var tenantId))
+        var tenantId = GetCurrentTenantId();
+        if (!tenantId.HasValue)
         {
             return BadRequest(new { message = "Invalid tenant context" });
         }
@@ -623,11 +651,11 @@ public class StaffingReportsController : ControllerBase
         try
         {
             var currentVersion = await _context.ForecastVersions
-                .Where(v => v.TenantId == tenantId && v.Type == ForecastVersionType.Current && v.IsCurrent)
+                .Where(v => v.TenantId == tenantId.Value && v.Type == ForecastVersionType.Current && v.IsCurrent)
                 .FirstOrDefaultAsync();
 
             var projects = await _context.Projects
-                .Where(p => p.TenantId == tenantId && p.Status == ProjectStatus.Active)
+                .Where(p => p.TenantId == tenantId.Value && p.Status == ProjectStatus.Active)
                 .Select(p => new
                 {
                     p.Id,
@@ -658,19 +686,19 @@ public class StaffingReportsController : ControllerBase
 
             // Get assignment counts
             var assignmentCounts = await _context.ProjectRoleAssignments
-                .Where(r => r.TenantId == tenantId)
+                .Where(r => r.TenantId == tenantId.Value)
                 .GroupBy(r => r.ProjectId)
                 .Select(g => new { ProjectId = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.ProjectId, x => x.Count);
 
             // Get forecast summaries (join through assignments)
             var assignmentsByProject = await _context.ProjectRoleAssignments
-                .Where(r => r.TenantId == tenantId)
+                .Where(r => r.TenantId == tenantId.Value)
                 .Select(r => new { r.Id, r.ProjectId })
                 .ToDictionaryAsync(r => r.Id, r => r.ProjectId);
 
             var forecastData = await _context.Forecasts
-                .Where(f => f.TenantId == tenantId && f.ForecastVersionId == currentVersion.Id)
+                .Where(f => f.TenantId == tenantId.Value && f.ForecastVersionId == currentVersion.Id)
                 .ToListAsync();
 
             var forecastSummariesByProject = forecastData

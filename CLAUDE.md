@@ -70,6 +70,50 @@ cd frontend && VITE_API_PROXY_TARGET=http://localhost:5107 npm run dev
 - Services in Infrastructure project, interfaces in Core project
 - EF Core with PostgreSQL; migrations in Infrastructure
 
+### Multi-Tenant ID Pattern (IMPORTANT)
+When writing controller endpoints that need tenant context:
+
+1. **JWT Claim Name**: The claim is `TenantId` (PascalCase), NOT `tenant_id`
+2. **Frontend Header**: Frontend sends `X-Tenant-Id` header via `api-client.ts`
+3. **Recommended Pattern**: Check header first, fall back to JWT claims
+
+```csharp
+// For controllers inheriting AuthorizedControllerBase, use:
+var tenantIds = GetUserTenantIds();  // Returns List<Guid> from "TenantId" claims
+
+// For standalone controllers, implement this helper:
+private Guid? GetCurrentTenantId()
+{
+    // Check X-Tenant-Id header first (set by frontend when workspace selected)
+    if (Request.Headers.TryGetValue("X-Tenant-Id", out var headerTenantId) &&
+        Guid.TryParse(headerTenantId.FirstOrDefault(), out var parsedHeaderTenantId))
+    {
+        // Verify user has access to this tenant
+        var userTenantIds = User.FindAll("TenantId")
+            .Select(c => Guid.TryParse(c.Value, out var tid) ? tid : Guid.Empty)
+            .Where(id => id != Guid.Empty)
+            .ToList();
+        if (userTenantIds.Contains(parsedHeaderTenantId))
+            return parsedHeaderTenantId;
+    }
+    // Fallback to first TenantId claim
+    var tenantIdClaim = User.FindFirst("TenantId")?.Value;
+    if (!string.IsNullOrEmpty(tenantIdClaim) && Guid.TryParse(tenantIdClaim, out var parsedTenantId))
+        return parsedTenantId;
+    return null;
+}
+
+// Usage in endpoint:
+var tenantId = GetCurrentTenantId();
+if (!tenantId.HasValue)
+    return BadRequest(new { message = "Invalid tenant context" });
+```
+
+Reference implementations:
+- `AuthorizedControllerBase.cs` - base class with tenant helpers
+- `RequiresPermissionAttribute.cs` - shows X-Tenant-Id header handling
+- `StaffingReportsController.cs` - example of GetCurrentTenantId() pattern
+
 ### Frontend
 - API calls via Axios in `services/` directory
 - State management with Zustand stores in `stores/`
