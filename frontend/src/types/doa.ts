@@ -38,22 +38,6 @@ export interface DigitalSignature {
   signerUser?: User;
 }
 
-export interface DOAActivation {
-  id: string;
-  doaLetterId: string;
-  tenantId: string;
-  startDate: string; // DateOnly format YYYY-MM-DD
-  endDate: string;
-  reason: string;
-  notes?: string;
-  isActive: boolean;
-  deactivatedAt?: string;
-  deactivatedByUserId?: string;
-  createdAt: string;
-  updatedAt?: string;
-  doaLetter?: DelegationOfAuthorityLetter;
-}
-
 export interface DelegationOfAuthorityLetter {
   id: string;
   tenantId: string;
@@ -73,7 +57,6 @@ export interface DelegationOfAuthorityLetter {
   delegatorUser?: User;
   designeeUser?: User;
   signatures?: DigitalSignature[];
-  activations?: DOAActivation[];
 }
 
 export interface CreateDOALetterRequest {
@@ -98,13 +81,6 @@ export interface SignatureRequest {
   typedSignature?: string; // Full name if typed signature
   ipAddress?: string;
   userAgent?: string;
-}
-
-export interface ActivationRequest {
-  startDate: string; // DateOnly format YYYY-MM-DD
-  endDate: string;
-  reason: string;
-  notes?: string;
 }
 
 export type DOAFilter = 'created' | 'assigned' | 'all';

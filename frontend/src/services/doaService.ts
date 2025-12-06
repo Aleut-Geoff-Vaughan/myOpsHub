@@ -4,8 +4,6 @@ import type {
   CreateDOALetterRequest,
   UpdateDOALetterRequest,
   SignatureRequest,
-  ActivationRequest,
-  DOAActivation,
   DOAFilter,
   DigitalSignature,
 } from '../types/doa';
@@ -61,32 +59,6 @@ export const doaService = {
    */
   async revokeDOALetter(id: string): Promise<void> {
     await api.post(`/delegationofauthority/${id}/revoke`);
-  },
-
-  /**
-   * Create an activation period for a DOA letter
-   */
-  async activateDOALetter(id: string, request: ActivationRequest): Promise<DOAActivation> {
-    return api.post<DOAActivation>(`/delegationofauthority/${id}/activate`, request);
-  },
-
-  /**
-   * Get active DOA activations for a specific date
-   */
-  async getActiveActivations(date?: string): Promise<DOAActivation[]> {
-    const url = date
-      ? `/delegationofauthority/active?date=${date}`
-      : '/delegationofauthority/active';
-    return api.get<DOAActivation[]>(url);
-  },
-
-  /**
-   * Get DOA activations that overlap with a date range
-   */
-  async getActivationsInRange(startDate: string, endDate: string): Promise<DOAActivation[]> {
-    return api.get<DOAActivation[]>(
-      `/delegationofauthority/activations/range?startDate=${startDate}&endDate=${endDate}`
-    );
   },
 
   /**

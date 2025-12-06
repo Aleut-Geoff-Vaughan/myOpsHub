@@ -426,7 +426,10 @@ public class DelegationOfAuthorityController : AuthorizedControllerBase
         {
             var userId = GetCurrentUserId();
             var tenantIds = GetUserTenantIds();
-            var tenantId = tenantIds.FirstOrDefault();
+
+            // Ensure dates are in UTC for PostgreSQL timestamp with time zone
+            var utcStartDate = DateTime.SpecifyKind(startDate, DateTimeKind.Utc);
+            var utcEndDate = DateTime.SpecifyKind(endDate, DateTimeKind.Utc);
 
             // Get all Active DOA letters whose effective dates overlap with the given date range
             var letters = await _context.DelegationOfAuthorityLetters
@@ -434,8 +437,8 @@ public class DelegationOfAuthorityController : AuthorizedControllerBase
                 .Include(d => d.DesigneeUser)
                 .Where(d => tenantIds.Contains(d.TenantId) &&
                            d.Status == DOAStatus.Active &&
-                           d.EffectiveStartDate <= endDate &&
-                           d.EffectiveEndDate >= startDate &&
+                           d.EffectiveStartDate <= utcEndDate &&
+                           d.EffectiveEndDate >= utcStartDate &&
                            (d.DelegatorUserId == userId || d.DesigneeUserId == userId))
                 .AsNoTracking()
                 .ToListAsync();
@@ -476,10 +479,3 @@ public class SignatureRequest
     public string? UserAgent { get; set; }
 }
 
-public class ActivationRequest
-{
-    public DateOnly StartDate { get; set; }
-    public DateOnly EndDate { get; set; }
-    public string Reason { get; set; } = string.Empty;
-    public string? Notes { get; set; }
-}

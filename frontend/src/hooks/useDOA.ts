@@ -4,7 +4,6 @@ import type {
   CreateDOALetterRequest,
   UpdateDOALetterRequest,
   SignatureRequest,
-  ActivationRequest,
   DOAFilter,
 } from '../types/doa';
 
@@ -90,27 +89,3 @@ export const useRevokeDOALetter = () => {
   });
 };
 
-export const useActivateDOALetter = () => {
-  const queryClient = useQueryClient();
-
-  return useMutation({
-    mutationFn: ({ id, request }: { id: string; request: ActivationRequest }) =>
-      doaService.activateDOALetter(id, request),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['doaLetters'] });
-      queryClient.invalidateQueries({ queryKey: ['doaActivations'] });
-    },
-  });
-};
-
-export const useActiveActivations = (date?: string) => {
-  return useQuery({
-    queryKey: ['doaActivations', 'active', date],
-    queryFn: () => doaService.getActiveActivations(date),
-    // Optimize: Add caching for activations
-    staleTime: 2 * 60 * 1000, // Activations don't change frequently - 2 minutes
-    gcTime: 10 * 60 * 1000,
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
-  });
-};

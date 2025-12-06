@@ -11,6 +11,7 @@ import { getMondayOfWeek } from '../utils/dateUtils';
 import { BookingStatus, ProjectAssignmentStatus } from '../types/api';
 import type { DelegationOfAuthorityLetter } from '../types/doa';
 import type { Booking, ProjectAssignment } from '../types/api';
+import { MyHubDetailModal } from '../components/MyHubDetailModal';
 import {
   Calendar,
   Users,
@@ -22,7 +23,17 @@ import {
   ChevronRight,
   LayoutGrid,
   List,
+  Mail,
 } from 'lucide-react';
+
+// Types for the detail modal
+type ModalType = 'schedule' | 'booking' | 'doa' | 'assignment' | 'forecast';
+interface ModalState {
+  isOpen: boolean;
+  type: ModalType;
+  data: any;
+  date?: Date;
+}
 
 type ViewMode = '1week' | '2weeks' | 'month';
 
@@ -114,6 +125,11 @@ export function MyHubPage() {
   const tenantId = currentWorkspace?.tenantId || '';
   const [viewMode, setViewMode] = useState<ViewMode>('2weeks');
   const [weekOffset, setWeekOffset] = useState(0);
+  const [modalState, setModalState] = useState<ModalState>({
+    isOpen: false,
+    type: 'schedule',
+    data: null,
+  });
   const dateRange = useMemo(() => getDateRange(viewMode, weekOffset), [viewMode, weekOffset]);
   const calendarDates = useMemo(
     () => generateCalendarDates(dateRange.startDate, dateRange.days),
@@ -283,6 +299,117 @@ export function MyHubPage() {
     return forecasts.filter((f: Forecast) => f.month === dateMonth && f.year === dateYear);
   };
 
+  // Modal handlers
+  const openModal = (type: ModalType, data: any, date?: Date) => {
+    setModalState({ isOpen: true, type, data, date });
+  };
+
+  const closeModal = () => {
+    setModalState({ isOpen: false, type: 'schedule', data: null });
+  };
+
+  // Generate email content for sharing schedule
+  const generateEmailContent = () => {
+    const startDate = new Date(dateRange.startDate + 'T00:00:00');
+    const endDate = new Date(dateRange.endDate + 'T00:00:00');
+    const dateRangeStr = `${startDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}`;
+
+    let emailBody = `Hi,\n\nI wanted to share my schedule for ${dateRangeStr}:\n\n`;
+
+    // Group data by date
+    calendarDates.forEach((date) => {
+      const schedules = getSchedulesForDate(date);
+      const dayBookings = getBookingsForDate(date);
+      const dayDOAs = getDOAsForDate(date);
+      const dayAssignments = getAssignmentsForDate(date);
+
+      // Only include days with some activity
+      if (schedules.length > 0 || dayBookings.length > 0 || dayDOAs.length > 0 || dayAssignments.length > 0) {
+        const dateStr = date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+        emailBody += `${dateStr}\n`;
+        emailBody += '─'.repeat(40) + '\n';
+
+        // Work Location
+        if (schedules.length > 0) {
+          schedules.forEach((schedule) => {
+            const locationLabel = getLocationLabel(schedule.locationType);
+            const portionLabel = getDayPortionLabel(schedule.dayPortion);
+            let scheduleText = `  • Work Location: ${locationLabel}`;
+            if (portionLabel !== 'Full Day') {
+              scheduleText += ` (${portionLabel})`;
+            }
+            if (schedule.office?.name) {
+              scheduleText += ` - ${schedule.office.name}`;
+            }
+            emailBody += scheduleText + '\n';
+          });
+        }
+
+        // Bookings
+        if (dayBookings.length > 0) {
+          dayBookings.forEach((booking) => {
+            const time = new Date(booking.startDatetime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+            const spaceName = booking.space?.name || 'Reserved Space';
+            const officeName = booking.space?.office?.name ? ` at ${booking.space.office.name}` : '';
+            emailBody += `  • Desk Reservation: ${time} - ${spaceName}${officeName}\n`;
+          });
+        }
+
+        // DOAs
+        if (dayDOAs.length > 0) {
+          dayDOAs.forEach((doa) => {
+            const isDesignee = doa.designeeUserId === user?.id;
+            if (isDesignee) {
+              emailBody += `  • Acting Authority: Covering for ${doa.delegatorUser?.displayName || 'colleague'}\n`;
+            } else {
+              emailBody += `  • Out of Office: Authority delegated to ${doa.designeeUser?.displayName || 'designee'}\n`;
+            }
+          });
+        }
+
+        // Assignments
+        if (dayAssignments.length > 0) {
+          emailBody += `  • Active Project Assignments: ${dayAssignments.length}\n`;
+        }
+
+        emailBody += '\n';
+      }
+    });
+
+    // Summary section
+    emailBody += '─'.repeat(40) + '\n';
+    emailBody += 'SUMMARY\n';
+    emailBody += '─'.repeat(40) + '\n';
+
+    const totalScheduleDays = calendarDates.filter((d) => getSchedulesForDate(d).length > 0).length;
+    const totalBookings = bookings.length;
+    const totalActiveDOAs = doaLetters.length;
+    const totalAssignments = assignments.length;
+    const totalForecastHours = forecasts.reduce((sum: number, f: Forecast) => sum + f.forecastedHours, 0);
+
+    emailBody += `• Schedule Days: ${totalScheduleDays}\n`;
+    emailBody += `• Desk Reservations: ${totalBookings}\n`;
+    if (totalActiveDOAs > 0) {
+      emailBody += `• Active DOA Letters: ${totalActiveDOAs}\n`;
+    }
+    if (totalAssignments > 0) {
+      emailBody += `• Project Assignments: ${totalAssignments}\n`;
+    }
+    if (totalForecastHours > 0) {
+      emailBody += `• Forecasted Hours: ${totalForecastHours}h\n`;
+    }
+
+    emailBody += '\nPlease let me know if you have any questions.\n\nBest regards,\n' + (user?.displayName || 'Team Member');
+
+    return emailBody;
+  };
+
+  const shareViaEmail = () => {
+    const subject = encodeURIComponent(`My Schedule - ${getDisplayTitle()}`);
+    const body = encodeURIComponent(generateEmailContent());
+    window.location.href = `mailto:?subject=${subject}&body=${body}`;
+  };
+
   // Get display title for current view
   const getDisplayTitle = () => {
     if (viewMode === 'month' && dateRange.displayMonth) {
@@ -364,43 +491,56 @@ export function MyHubPage() {
           <span className="ml-2 text-lg font-semibold text-gray-800">{getDisplayTitle()}</span>
         </div>
 
-        {/* View Mode Toggle */}
-        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+        {/* View Mode Toggle and Share Button */}
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+            <button
+              type="button"
+              onClick={() => { setViewMode('1week'); setWeekOffset(0); }}
+              className={`px-3 py-1.5 text-sm rounded-md transition flex items-center gap-1 ${
+                viewMode === '1week'
+                  ? 'bg-white text-emerald-700 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <List className="w-4 h-4" />
+              1 Week
+            </button>
+            <button
+              type="button"
+              onClick={() => { setViewMode('2weeks'); setWeekOffset(0); }}
+              className={`px-3 py-1.5 text-sm rounded-md transition flex items-center gap-1 ${
+                viewMode === '2weeks'
+                  ? 'bg-white text-emerald-700 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <List className="w-4 h-4" />
+              2 Weeks
+            </button>
+            <button
+              type="button"
+              onClick={() => { setViewMode('month'); setWeekOffset(0); }}
+              className={`px-3 py-1.5 text-sm rounded-md transition flex items-center gap-1 ${
+                viewMode === 'month'
+                  ? 'bg-white text-emerald-700 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <LayoutGrid className="w-4 h-4" />
+              Month
+            </button>
+          </div>
+
+          {/* Share via Email Button */}
           <button
             type="button"
-            onClick={() => { setViewMode('1week'); setWeekOffset(0); }}
-            className={`px-3 py-1.5 text-sm rounded-md transition flex items-center gap-1 ${
-              viewMode === '1week'
-                ? 'bg-white text-emerald-700 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
+            onClick={shareViaEmail}
+            className="px-3 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition flex items-center gap-1.5 shadow-sm"
+            title="Share schedule via email"
           >
-            <List className="w-4 h-4" />
-            1 Week
-          </button>
-          <button
-            type="button"
-            onClick={() => { setViewMode('2weeks'); setWeekOffset(0); }}
-            className={`px-3 py-1.5 text-sm rounded-md transition flex items-center gap-1 ${
-              viewMode === '2weeks'
-                ? 'bg-white text-emerald-700 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <List className="w-4 h-4" />
-            2 Weeks
-          </button>
-          <button
-            type="button"
-            onClick={() => { setViewMode('month'); setWeekOffset(0); }}
-            className={`px-3 py-1.5 text-sm rounded-md transition flex items-center gap-1 ${
-              viewMode === 'month'
-                ? 'bg-white text-emerald-700 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900'
-            }`}
-          >
-            <LayoutGrid className="w-4 h-4" />
-            Month
+            <Mail className="w-4 h-4" />
+            <span className="hidden sm:inline">Share</span>
           </button>
         </div>
       </div>
@@ -445,6 +585,7 @@ export function MyHubPage() {
             getForecastsForDate={getForecastsForDate}
             displayMonth={dateRange.displayMonth}
             user={user}
+            onItemClick={openModal}
           />
         ) : (
           // Week/2-Week Table View
@@ -504,9 +645,11 @@ export function MyHubPage() {
                             {schedules.map((schedule, sIdx) => {
                               const portionLabel = getDayPortionLabel(schedule.dayPortion);
                               return (
-                                <div
+                                <button
+                                  type="button"
                                   key={sIdx}
-                                  className={`px-2 py-1 rounded text-xs ${getScheduleColor(schedule.locationType)}`}
+                                  onClick={() => openModal('schedule', schedule, date)}
+                                  className={`w-full text-left px-2 py-1 rounded text-xs cursor-pointer hover:ring-2 hover:ring-blue-400 transition ${getScheduleColor(schedule.locationType)}`}
                                   title={`${getLocationLabel(schedule.locationType)}${portionLabel ? ` (${portionLabel})` : ''}${schedule.office?.name ? ` - ${schedule.office.name}` : ''}`}
                                 >
                                   <div className="font-medium">
@@ -516,7 +659,7 @@ export function MyHubPage() {
                                   {schedule.office?.name && (
                                     <div className="text-[10px] opacity-80 truncate">{schedule.office.name}</div>
                                   )}
-                                </div>
+                                </button>
                               );
                             })}
                           </div>
@@ -549,9 +692,11 @@ export function MyHubPage() {
                         {dayBookings.length > 0 ? (
                           <div className="space-y-1">
                             {dayBookings.slice(0, 3).map((booking, bIdx) => (
-                              <div
+                              <button
+                                type="button"
                                 key={bIdx}
-                                className={`px-2 py-1 rounded text-xs ${getBookingStatusColor(booking.status)}`}
+                                onClick={() => openModal('booking', booking, date)}
+                                className={`w-full text-left px-2 py-1 rounded text-xs cursor-pointer hover:ring-2 hover:ring-emerald-400 transition ${getBookingStatusColor(booking.status)}`}
                                 title={`${booking.space?.name || 'Booking'} - ${new Date(booking.startDatetime).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`}
                               >
                                 <div className="font-medium">
@@ -560,7 +705,7 @@ export function MyHubPage() {
                                 {booking.space?.name && (
                                   <div className="text-[10px] opacity-80 truncate">{booking.space.name}</div>
                                 )}
-                              </div>
+                              </button>
                             ))}
                             {dayBookings.length > 3 && (
                               <div className="text-xs text-gray-500 text-center">+{dayBookings.length - 3} more</div>
@@ -596,23 +741,26 @@ export function MyHubPage() {
                           <div className="space-y-1">
                             {dayDOAs.slice(0, 2).map((doa, dIdx) => {
                               const isDesignee = doa.designeeUserId === user?.id;
+                              const displayText = isDesignee ? 'Acting' : (doa.subjectLine || 'DOA');
                               return (
-                                <div
+                                <button
+                                  type="button"
                                   key={dIdx}
-                                  className={`px-2 py-1 rounded text-xs ${
+                                  onClick={() => openModal('doa', doa, date)}
+                                  className={`w-full text-left px-2 py-1 rounded text-xs cursor-pointer hover:ring-2 hover:ring-purple-400 transition ${
                                     isDesignee
                                       ? 'bg-purple-100 text-purple-800'
                                       : 'bg-indigo-100 text-indigo-800'
                                   }`}
                                   title={`${doa.subjectLine || 'DOA'} - ${isDesignee ? 'You are acting for ' + (doa.delegatorUser?.displayName || 'delegator') : 'Delegated to ' + (doa.designeeUser?.displayName || 'designee')}`}
                                 >
-                                  <div className="font-medium">{isDesignee ? 'Acting' : 'Out'}</div>
+                                  <div className="font-medium truncate">{displayText}</div>
                                   <div className="text-[10px] opacity-80 truncate">
                                     {isDesignee
                                       ? `for ${doa.delegatorUser?.displayName || 'delegator'}`
-                                      : `${doa.designeeUser?.displayName || 'designee'}`}
+                                      : `to ${doa.designeeUser?.displayName || 'designee'}`}
                                   </div>
-                                </div>
+                                </button>
                               );
                             })}
                             {dayDOAs.length > 2 && (
@@ -648,9 +796,11 @@ export function MyHubPage() {
                         {dayAssignments.length > 0 ? (
                           <div className="space-y-1">
                             {dayAssignments.slice(0, 2).map((assignment, aIdx) => (
-                              <div
+                              <button
+                                type="button"
                                 key={aIdx}
-                                className="px-2 py-1 rounded text-xs bg-orange-100 text-orange-800"
+                                onClick={() => openModal('assignment', assignment, date)}
+                                className="w-full text-left px-2 py-1 rounded text-xs bg-orange-100 text-orange-800 cursor-pointer hover:ring-2 hover:ring-orange-400 transition"
                                 title={`Assignment - ${assignment.status === ProjectAssignmentStatus.Active ? 'Active' : 'Assigned'}`}
                               >
                                 <div className="font-medium truncate">
@@ -659,7 +809,7 @@ export function MyHubPage() {
                                 {assignment.notes && (
                                   <div className="text-[10px] opacity-80 truncate">{assignment.notes}</div>
                                 )}
-                              </div>
+                              </button>
                             ))}
                             {dayAssignments.length > 2 && (
                               <div className="text-xs text-gray-500 text-center">+{dayAssignments.length - 2} more</div>
@@ -699,14 +849,16 @@ export function MyHubPage() {
                         {showForecast ? (
                           <div className="space-y-1">
                             {dayForecasts.slice(0, 2).map((forecast, fIdx) => (
-                              <div
+                              <button
+                                type="button"
                                 key={fIdx}
-                                className={`px-2 py-1 rounded text-xs ${getForecastStatusColor(forecast.status)}`}
+                                onClick={() => openModal('forecast', forecast, date)}
+                                className={`w-full text-left px-2 py-1 rounded text-xs cursor-pointer hover:ring-2 hover:ring-cyan-400 transition ${getForecastStatusColor(forecast.status)}`}
                                 title={`${forecast.projectName}: ${forecast.forecastedHours}h - ${forecast.statusName}`}
                               >
                                 <div className="font-medium">{forecast.forecastedHours}h</div>
                                 <div className="text-[10px] opacity-80 truncate">{forecast.projectName}</div>
-                              </div>
+                              </button>
                             ))}
                             {dayForecasts.length > 2 && (
                               <div className="text-xs text-gray-500 text-center">+{dayForecasts.length - 2} more</div>
@@ -761,6 +913,15 @@ export function MyHubPage() {
           suffix="hrs"
         />
       </div>
+
+      {/* Detail Modal */}
+      <MyHubDetailModal
+        isOpen={modalState.isOpen}
+        onClose={closeModal}
+        type={modalState.type}
+        data={modalState.data}
+        date={modalState.date}
+      />
     </div>
   );
 }
@@ -775,6 +936,7 @@ interface MonthCalendarViewProps {
   getForecastsForDate: (date: Date) => Forecast[];
   displayMonth: Date | null;
   user: { id: string; displayName: string } | null;
+  onItemClick: (type: ModalType, data: any, date: Date) => void;
 }
 
 function MonthCalendarView({
@@ -786,6 +948,7 @@ function MonthCalendarView({
   getForecastsForDate,
   displayMonth,
   user,
+  onItemClick,
 }: MonthCalendarViewProps) {
   const weeks: Date[][] = [];
   for (let i = 0; i < calendarDates.length; i += 7) {
@@ -841,49 +1004,65 @@ function MonthCalendarView({
                         {schedules.slice(0, 2).map((schedule, sIdx) => {
                           const portionLabel = getDayPortionLabel(schedule.dayPortion);
                           return (
-                            <div
+                            <button
+                              type="button"
                               key={`s-${sIdx}`}
-                              className={`px-1 py-0.5 rounded text-[10px] truncate ${getScheduleColor(schedule.locationType)}`}
+                              onClick={() => onItemClick('schedule', schedule, date)}
+                              className={`w-full text-left px-1 py-0.5 rounded text-[10px] truncate cursor-pointer hover:ring-1 hover:ring-blue-400 transition ${getScheduleColor(schedule.locationType)}`}
                               title={`${getLocationLabel(schedule.locationType)}${portionLabel ? ` (${portionLabel})` : ''}`}
                             >
                               {portionLabel ? `${portionLabel}: ` : ''}{getLocationShort(schedule.locationType)}
-                            </div>
+                            </button>
                           );
                         })}
                         {/* Bookings */}
                         {dayBookings.slice(0, 1).map((booking, bIdx) => (
-                          <div
+                          <button
+                            type="button"
                             key={`b-${bIdx}`}
-                            className={`px-1 py-0.5 rounded text-[10px] truncate ${getBookingStatusColor(booking.status)}`}
+                            onClick={() => onItemClick('booking', booking, date)}
+                            className={`w-full text-left px-1 py-0.5 rounded text-[10px] truncate cursor-pointer hover:ring-1 hover:ring-blue-400 transition ${getBookingStatusColor(booking.status)}`}
                           >
                             {new Date(booking.startDatetime).toLocaleTimeString('en-US', { hour: 'numeric' })}
-                          </div>
+                          </button>
                         ))}
                         {/* DOAs */}
                         {dayDOAs.slice(0, 1).map((doa, dIdx) => {
                           const isDesignee = doa.designeeUserId === user?.id;
+                          const displayText = isDesignee ? 'Acting' : (doa.subjectLine || 'DOA');
                           return (
-                            <div
+                            <button
+                              type="button"
                               key={`d-${dIdx}`}
-                              className={`px-1 py-0.5 rounded text-[10px] truncate ${
+                              onClick={() => onItemClick('doa', doa, date)}
+                              className={`w-full text-left px-1 py-0.5 rounded text-[10px] truncate cursor-pointer hover:ring-1 hover:ring-blue-400 transition ${
                                 isDesignee ? 'bg-purple-100 text-purple-800' : 'bg-indigo-100 text-indigo-800'
                               }`}
+                              title={doa.subjectLine || 'DOA'}
                             >
-                              {isDesignee ? 'Acting' : 'Out'}
-                            </div>
+                              {displayText}
+                            </button>
                           );
                         })}
                         {/* Assignments */}
                         {dayAssignments.length > 0 && (
-                          <div className="px-1 py-0.5 rounded text-[10px] truncate bg-orange-100 text-orange-800">
+                          <button
+                            type="button"
+                            onClick={() => onItemClick('assignment', dayAssignments[0], date)}
+                            className="w-full text-left px-1 py-0.5 rounded text-[10px] truncate bg-orange-100 text-orange-800 cursor-pointer hover:ring-1 hover:ring-blue-400 transition"
+                          >
                             {dayAssignments.length} proj
-                          </div>
+                          </button>
                         )}
                         {/* Forecasts - show only if first of month */}
                         {date.getDate() === 1 && dayForecasts.length > 0 && (
-                          <div className="px-1 py-0.5 rounded text-[10px] truncate bg-cyan-100 text-cyan-800">
+                          <button
+                            type="button"
+                            onClick={() => onItemClick('forecast', dayForecasts[0], date)}
+                            className="w-full text-left px-1 py-0.5 rounded text-[10px] truncate bg-cyan-100 text-cyan-800 cursor-pointer hover:ring-1 hover:ring-blue-400 transition"
+                          >
                             {dayForecasts.reduce((sum, f) => sum + f.forecastedHours, 0)}h
-                          </div>
+                          </button>
                         )}
                         {/* More indicator */}
                         {(dayBookings.length > 1 || dayDOAs.length > 1) && (
