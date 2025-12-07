@@ -72,6 +72,7 @@ import { ForecastAnalyticsPage } from './pages/ForecastAnalyticsPage';
 import { ForecastReviewPage } from './pages/ForecastReviewPage';
 import { ForecastApprovalsPage } from './pages/ForecastApprovalsPage';
 import { ForecastSettingsPage } from './pages/ForecastSettingsPage';
+import { CostRatesPage } from './pages/CostRatesPage';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -241,6 +242,7 @@ function App() {
               <Route path="versions" element={<ForecastVersionsPage />} />
               <Route path="import-export" element={<ForecastImportExportPage />} />
               <Route path="settings" element={<ForecastSettingsPage />} />
+              <Route path="cost-rates" element={<CostRatesPage />} />
               {/* Staffing Admin - moved from /admin/staffing */}
               <Route path="staffing-dashboard" element={<StaffingDashboardPage />} />
               <Route path="staffing/projects/:projectId" element={<ProjectStaffingDetailPage />} />

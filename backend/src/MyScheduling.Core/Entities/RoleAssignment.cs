@@ -22,6 +22,7 @@ public enum AppRole
     Executive,
     OverrideApprover,
     ResumeViewer,  // Can view and search all employee resumes within tenant
+    FinanceLead,   // Can manage employee cost rates and view financial forecasts
 
     // System-Level Roles (assigned via User.IsSystemAdmin or future system-level permissions)
     SystemAdmin,

@@ -67,6 +67,16 @@ public class MySchedulingDbContext : DbContext
     public DbSet<ProjectBudgetLine> ProjectBudgetLines => Set<ProjectBudgetLine>();
     public DbSet<ProjectBudgetHistory> ProjectBudgetHistories => Set<ProjectBudgetHistory>();
 
+    // Non-Labor Costs
+    public DbSet<NonLaborCostType> NonLaborCostTypes => Set<NonLaborCostType>();
+    public DbSet<NonLaborForecast> NonLaborForecasts => Set<NonLaborForecast>();
+    public DbSet<NonLaborBudgetLine> NonLaborBudgetLines => Set<NonLaborBudgetLine>();
+    public DbSet<ActualNonLaborCost> ActualNonLaborCosts => Set<ActualNonLaborCost>();
+
+    // Employee Cost Rates
+    public DbSet<EmployeeCostRate> EmployeeCostRates => Set<EmployeeCostRate>();
+    public DbSet<CostRateImportBatch> CostRateImportBatches => Set<CostRateImportBatch>();
+
     // Hoteling & Facilities
     public DbSet<Office> Offices => Set<Office>();
     public DbSet<Floor> Floors => Set<Floor>();
@@ -849,6 +859,140 @@ public class MySchedulingDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.ChangedByUserId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // NonLaborCostType
+        modelBuilder.Entity<NonLaborCostType>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Code).HasMaxLength(20);
+            entity.Property(e => e.Description).HasMaxLength(500);
+
+            entity.HasIndex(e => new { e.TenantId, e.IsActive, e.SortOrder });
+            entity.HasIndex(e => new { e.TenantId, e.Code });
+        });
+
+        // NonLaborForecast
+        modelBuilder.Entity<NonLaborForecast>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ForecastedAmount).HasPrecision(18, 2);
+            entity.Property(e => e.Notes).HasMaxLength(1000);
+
+            entity.HasIndex(e => new { e.TenantId, e.ProjectId, e.Year, e.Month });
+            entity.HasIndex(e => new { e.ProjectId, e.NonLaborCostTypeId, e.Year, e.Month });
+
+            entity.HasOne(e => e.Project)
+                .WithMany()
+                .HasForeignKey(e => e.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.WbsElement)
+                .WithMany()
+                .HasForeignKey(e => e.WbsElementId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.NonLaborCostType)
+                .WithMany()
+                .HasForeignKey(e => e.NonLaborCostTypeId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.ForecastVersion)
+                .WithMany()
+                .HasForeignKey(e => e.ForecastVersionId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.SubmittedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.SubmittedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.ApprovedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.ApprovedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // NonLaborBudgetLine
+        modelBuilder.Entity<NonLaborBudgetLine>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.BudgetedAmount).HasPrecision(18, 2);
+
+            entity.HasIndex(e => new { e.TenantId, e.ProjectBudgetId, e.Year, e.Month });
+
+            entity.HasOne(e => e.ProjectBudget)
+                .WithMany()
+                .HasForeignKey(e => e.ProjectBudgetId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.NonLaborCostType)
+                .WithMany()
+                .HasForeignKey(e => e.NonLaborCostTypeId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.WbsElement)
+                .WithMany()
+                .HasForeignKey(e => e.WbsElementId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // ActualNonLaborCost
+        modelBuilder.Entity<ActualNonLaborCost>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ActualAmount).HasPrecision(18, 2);
+
+            entity.HasIndex(e => new { e.TenantId, e.ProjectId, e.Year, e.Month });
+
+            entity.HasOne(e => e.Project)
+                .WithMany()
+                .HasForeignKey(e => e.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.NonLaborCostType)
+                .WithMany()
+                .HasForeignKey(e => e.NonLaborCostTypeId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.WbsElement)
+                .WithMany()
+                .HasForeignKey(e => e.WbsElementId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // EmployeeCostRate
+        modelBuilder.Entity<EmployeeCostRate>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.LoadedCostRate).HasPrecision(18, 2);
+            entity.Property(e => e.Notes).HasMaxLength(1000);
+
+            entity.HasIndex(e => new { e.TenantId, e.UserId, e.EffectiveDate })
+                .IsUnique();
+            entity.HasIndex(e => new { e.UserId, e.EffectiveDate });
+            entity.HasIndex(e => new { e.TenantId, e.EffectiveDate });
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.ImportBatch)
+                .WithMany(b => b.CostRates)
+                .HasForeignKey(e => e.ImportBatchId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // CostRateImportBatch
+        modelBuilder.Entity<CostRateImportBatch>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.FileName).IsRequired().HasMaxLength(255);
+            entity.Property(e => e.FileType).IsRequired().HasMaxLength(10);
+
+            entity.HasIndex(e => new { e.TenantId, e.CreatedAt });
         });
     }
 

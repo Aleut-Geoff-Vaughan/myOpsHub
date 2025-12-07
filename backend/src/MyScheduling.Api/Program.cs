@@ -153,6 +153,9 @@ builder.Services.AddScoped<IEmailService, EmailService>();
 // Register Impersonation Service
 builder.Services.AddScoped<IImpersonationService, ImpersonationService>();
 
+// Register Working Days Service
+builder.Services.AddScoped<IWorkingDaysService, WorkingDaysService>();
+
 // Health Checks
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<MySchedulingDbContext>("database");
@@ -264,6 +267,45 @@ if (Environment.GetEnvironmentVariable("SEED_SKILLS")?.Equals("true", StringComp
     catch (Exception ex)
     {
         logger.LogWarning(ex, "Failed to seed skills and certifications data");
+    }
+}
+
+// Seed role permission templates (always runs, only adds missing templates)
+{
+    using var scope = app.Services.CreateScope();
+    var context = scope.ServiceProvider.GetRequiredService<MySchedulingDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    try
+    {
+        await SeedRolePermissions.SeedRolePermissionTemplates(context);
+        logger.LogInformation("Role permission templates checked/seeded successfully");
+    }
+    catch (Exception ex)
+    {
+        logger.LogWarning(ex, "Failed to seed role permission templates");
+    }
+}
+
+// Seed non-labor cost types for all tenants
+// Runs only if SEED_NONLABOR=true environment variable is set
+// Use SEED_NONLABOR_FORCE=true to force refresh (delete and reseed)
+if (Environment.GetEnvironmentVariable("SEED_NONLABOR")?.Equals("true", StringComparison.OrdinalIgnoreCase) == true)
+{
+    using var scope = app.Services.CreateScope();
+    var context = scope.ServiceProvider.GetRequiredService<MySchedulingDbContext>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    var forceRefresh = Environment.GetEnvironmentVariable("SEED_NONLABOR_FORCE")?.Equals("true", StringComparison.OrdinalIgnoreCase) == true;
+
+    try
+    {
+        await SeedNonLaborCostTypes.SeedCostTypesForAllTenants(context, forceRefresh);
+        logger.LogInformation("Non-labor cost types seeded successfully");
+    }
+    catch (Exception ex)
+    {
+        logger.LogWarning(ex, "Failed to seed non-labor cost types");
     }
 }
 

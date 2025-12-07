@@ -39,7 +39,14 @@ public class TenantSettings : BaseEntity
 
     // Fiscal Year Configuration
     // FiscalYearStartMonth: 1 = January (calendar year), 4 = April (Apr-Mar), 7 = July (Jul-Jun), 10 = October (Oct-Sep)
-    public int FiscalYearStartMonth { get; set; } = 1; // Default to calendar year
+    public int FiscalYearStartMonth { get; set; } = 10; // Default to October (federal fiscal year)
+    public string FiscalYearPrefix { get; set; } = "FY"; // Display prefix (e.g., "FY2025")
+
+    // Working Days Configuration (for forecast calculations)
+    public decimal DefaultPtoDaysPerMonth { get; set; } = 1.5m; // Average PTO estimate per month
+    public decimal StandardHoursPerDay { get; set; } = 8.0m;
+    public bool ExcludeSaturdays { get; set; } = true;
+    public bool ExcludeSundays { get; set; } = true;
 
     // Budget Configuration
     public bool RequireBudgetApproval { get; set; } = false;

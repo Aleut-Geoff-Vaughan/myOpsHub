@@ -121,8 +121,15 @@ public class TenantSettingsController : AuthorizedControllerBase
 
             // Update fiscal year and budget settings
             if (request.FiscalYearStartMonth.HasValue) settings.FiscalYearStartMonth = request.FiscalYearStartMonth.Value;
+            if (request.FiscalYearPrefix != null) settings.FiscalYearPrefix = request.FiscalYearPrefix;
             if (request.RequireBudgetApproval.HasValue) settings.RequireBudgetApproval = request.RequireBudgetApproval.Value;
             if (request.DefaultBudgetMonthsAhead.HasValue) settings.DefaultBudgetMonthsAhead = request.DefaultBudgetMonthsAhead.Value;
+
+            // Update working days configuration
+            if (request.DefaultPtoDaysPerMonth.HasValue) settings.DefaultPtoDaysPerMonth = request.DefaultPtoDaysPerMonth.Value;
+            if (request.StandardHoursPerDay.HasValue) settings.StandardHoursPerDay = request.StandardHoursPerDay.Value;
+            if (request.ExcludeSaturdays.HasValue) settings.ExcludeSaturdays = request.ExcludeSaturdays.Value;
+            if (request.ExcludeSundays.HasValue) settings.ExcludeSundays = request.ExcludeSundays.Value;
 
             settings.UpdatedAt = DateTime.UtcNow;
 
@@ -252,6 +259,13 @@ public class UpdateTenantSettingsRequest
 
     // Fiscal Year and Budget settings
     public int? FiscalYearStartMonth { get; set; }
+    public string? FiscalYearPrefix { get; set; }
     public bool? RequireBudgetApproval { get; set; }
     public int? DefaultBudgetMonthsAhead { get; set; }
+
+    // Working Days Configuration
+    public decimal? DefaultPtoDaysPerMonth { get; set; }
+    public decimal? StandardHoursPerDay { get; set; }
+    public bool? ExcludeSaturdays { get; set; }
+    public bool? ExcludeSundays { get; set; }
 }

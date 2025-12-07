@@ -124,6 +124,44 @@ Reference implementations:
 ### Roles
 Employee, ViewOnly, TeamLead, ProjectManager, ResourceManager, OfficeManager, TenantAdmin, Executive, OverrideApprover, SysAdmin, Support, Auditor
 
+## Forecast Module Features
+
+### Fiscal Year / Calendar Year Toggle
+- Configurable fiscal year start month (default: October for federal)
+- Toggle between FY and CY views in forecast screens
+- Settings in `TenantSettings.FiscalYearStartMonth` and `FiscalYearPrefix`
+- Frontend hook: `useFiscalYear()` in `hooks/useFiscalYear.ts`
+
+### Working Days Calculation
+- Calculates business days minus weekends, holidays, and PTO
+- Backend service: `WorkingDaysService` with memory caching
+- API endpoint: `GET /api/workingdays/{year}/{month}`
+- Tenant settings: `StandardHoursPerDay`, `ExcludeSaturdays`, `ExcludeSundays`, `DefaultPtoDaysPerMonth`
+
+### Non-Labor Cost Types & Forecasting
+- Cost categories: Travel, Meals, Equipment, Supplies, Subcontracts, Training, Communications, Facilities, Other
+- Entities: `NonLaborCostType`, `NonLaborForecast`, `NonLaborBudgetLine`
+- API: `NonLaborCostsController` at `/api/non-labor-costs`
+- Frontend:
+  - Management: `/forecast/settings` (Non-Labor Cost Types section)
+  - Forecasting: `NonLaborCostsGrid` component on project forecast pages
+  - Hooks: `useNonLaborCostTypes`, `useNonLaborForecasts` in `hooks/useNonLaborCosts.ts`
+
+### Employee Loaded Cost Rates (LCR)
+- Simple $/hour rate with effective dates (no formula breakdown)
+- Supports CSV import/export
+- Entities: `EmployeeCostRate`, `CostRateImportBatch`
+- API: `CostRatesController` at `/api/cost-rates`
+- Frontend:
+  - Management: `/forecast/cost-rates`
+  - Hooks: `useCostRates`, `useImportCostRates`, `useExportCostRates` in `hooks/useCostRates.ts`
+
+### CSV Import Format for Cost Rates
+```csv
+Email,EffectiveDate,LoadedCostRate,EndDate,Notes
+john.doe@company.com,2025-01-01,125.50,2025-12-31,Annual rate
+```
+
 ## Testing
 
 Currently manual testing only:

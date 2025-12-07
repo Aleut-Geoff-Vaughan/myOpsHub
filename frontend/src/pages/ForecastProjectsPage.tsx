@@ -1,16 +1,19 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { staffingReportsService, type ProjectsSummaryItem } from '../services/forecastService';
+import { AddPositionModal } from '../components/AddPositionModal';
 
 export function ForecastProjectsPage() {
   const { currentWorkspace, availableTenants } = useAuthStore();
   // Use workspace tenantId, or fall back to first available tenant for admin users
   const tenantId = currentWorkspace?.tenantId || availableTenants?.[0]?.tenantId || '';
+  const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<'name' | 'hours' | 'assignments'>('name');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [addPositionProject, setAddPositionProject] = useState<ProjectsSummaryItem | null>(null);
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['forecast-projects', tenantId],
@@ -146,7 +149,11 @@ export function ForecastProjectsPage() {
                 </tr>
               ) : (
                 filteredProjects.map((project) => (
-                  <ProjectRow key={project.id} project={project} />
+                  <ProjectRow
+                    key={project.id}
+                    project={project}
+                    onAddPosition={() => setAddPositionProject(project)}
+                  />
                 ))
               )}
             </tbody>
@@ -175,11 +182,31 @@ export function ForecastProjectsPage() {
           </div>
         </div>
       )}
+
+      {/* Add Position Modal */}
+      {addPositionProject && (
+        <AddPositionModal
+          projectId={addPositionProject.id}
+          projectName={addPositionProject.name}
+          tenantId={tenantId}
+          onClose={() => setAddPositionProject(null)}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['forecast-projects'] });
+            setAddPositionProject(null);
+          }}
+        />
+      )}
     </div>
   );
 }
 
-function ProjectRow({ project }: { project: ProjectsSummaryItem }) {
+function ProjectRow({
+  project,
+  onAddPosition,
+}: {
+  project: ProjectsSummaryItem;
+  onAddPosition: () => void;
+}) {
   return (
     <tr className="hover:bg-gray-50">
       <td className="px-6 py-4 whitespace-nowrap">
@@ -204,6 +231,16 @@ function ProjectRow({ project }: { project: ProjectsSummaryItem }) {
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-center">
         <div className="flex items-center justify-center gap-2">
+          <button
+            type="button"
+            onClick={onAddPosition}
+            className="text-gray-400 hover:text-emerald-600"
+            title="Add Position"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+          </button>
           <Link
             to={`/forecast/projects/${project.id}`}
             className="text-gray-400 hover:text-emerald-600"

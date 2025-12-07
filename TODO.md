@@ -3,6 +3,14 @@
 Focused, current backlog. Historical notes are in `docs/archive/`.
 
 ## Highest Priority
+-MyForecast App
+[ ] Budget Entry Should be able to be loaded by month
+[ ] When MyForecast is set to Fiscal Year forecast grid should also match the fiscal year
+-Holiday and Calendars
+[ ] When applying Holidays to Calendars it errors out.  Our Company uses floating holidays, so add Holiday to Location type in the work location drop down and ensure that when applying holidays to calendars it uses that type.   
+
+
+## Items for evaluation
 - Authorization coverage: add `[RequiresPermission]` to remaining controllers (WorkLocationPreferences, WBS, Facilities, Invitations, TenantMemberships, ResumeApprovals/Templates, Holidays, DelegationOfAuthority, Validation) and verify soft-delete/audit where applicable.
 - Auth hardening: rotate JWT secrets per environment; consider refresh tokens/SSO/MFA (Entra ID) before production; ensure all identity is token-based (no header overrides).
 - Automated tests: add backend xUnit/integration tests (auth, authorization, work locations, staffing, resumes) and frontend Vitest/Playwright coverage for critical flows.

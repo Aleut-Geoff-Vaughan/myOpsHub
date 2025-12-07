@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using MyScheduling.Infrastructure.Data;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -11,9 +12,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace MyScheduling.Infrastructure.Migrations
 {
     [DbContext(typeof(MySchedulingDbContext))]
-    partial class MySchedulingDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251207140930_AddForecastEnhancements")]
+    partial class AddForecastEnhancements
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1278,14 +1281,6 @@ namespace MyScheduling.Infrastructure.Migrations
                         .HasColumnType("character varying(10)")
                         .HasColumnName("file_type");
 
-                    b.Property<DateTime?>("ImportedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("imported_at");
-
-                    b.Property<Guid?>("ImportedByUserId")
-                        .HasColumnType("uuid")
-                        .HasColumnName("imported_by_user_id");
-
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("boolean")
                         .HasColumnName("is_deleted");
@@ -1316,9 +1311,6 @@ namespace MyScheduling.Infrastructure.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_cost_rate_import_batches");
-
-                    b.HasIndex("ImportedByUserId")
-                        .HasDatabaseName("ix_cost_rate_import_batches_imported_by_user_id");
 
                     b.HasIndex("TenantId", "CreatedAt")
                         .HasDatabaseName("ix_cost_rate_import_batches_tenant_id_created_at");
@@ -8451,19 +8443,12 @@ namespace MyScheduling.Infrastructure.Migrations
 
             modelBuilder.Entity("MyScheduling.Core.Entities.CostRateImportBatch", b =>
                 {
-                    b.HasOne("MyScheduling.Core.Entities.User", "ImportedByUser")
-                        .WithMany()
-                        .HasForeignKey("ImportedByUserId")
-                        .HasConstraintName("fk_cost_rate_import_batches__users_imported_by_user_id");
-
                     b.HasOne("MyScheduling.Core.Entities.Tenant", "Tenant")
                         .WithMany()
                         .HasForeignKey("TenantId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_cost_rate_import_batches__tenants_tenant_id");
-
-                    b.Navigation("ImportedByUser");
 
                     b.Navigation("Tenant");
                 });

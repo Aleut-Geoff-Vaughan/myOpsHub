@@ -393,6 +393,13 @@ export interface User {
   department?: string;
   profilePhotoUrl?: string;
   managerId?: string;
+  // Staffing/Career fields
+  positionTitle?: string;
+  careerJobFamilyId?: string;
+  careerJobFamilyName?: string;
+  careerLevel?: number;
+  standardHoursPerWeek?: number;
+  isHourly?: boolean;
   // Navigation properties
   tenantMemberships: TenantMembership[];
   createdAt: string;

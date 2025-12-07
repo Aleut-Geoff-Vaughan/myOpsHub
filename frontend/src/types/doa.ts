@@ -142,8 +142,14 @@ export interface TenantSettings {
   notificationBannerExpiresAt?: string;
   // Fiscal Year and Budget settings
   fiscalYearStartMonth?: number;
+  fiscalYearPrefix?: string;
   requireBudgetApproval?: boolean;
   defaultBudgetMonthsAhead?: number;
+  // Working Days Configuration
+  defaultPtoDaysPerMonth?: number;
+  standardHoursPerDay?: number;
+  excludeSaturdays?: boolean;
+  excludeSundays?: boolean;
   createdAt: string;
   updatedAt?: string;
 }
@@ -177,6 +183,12 @@ export interface UpdateTenantSettingsRequest {
   notificationBannerExpiresAt?: string;
   // Fiscal Year and Budget settings
   fiscalYearStartMonth?: number;
+  fiscalYearPrefix?: string;
   requireBudgetApproval?: boolean;
   defaultBudgetMonthsAhead?: number;
+  // Working Days Configuration
+  defaultPtoDaysPerMonth?: number;
+  standardHoursPerDay?: number;
+  excludeSaturdays?: boolean;
+  excludeSundays?: boolean;
 }
