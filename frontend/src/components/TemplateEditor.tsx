@@ -188,6 +188,8 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onClos
         return 'PTO';
       case WorkLocationType.Travel:
         return 'Travel';
+      case WorkLocationType.Holiday:
+        return 'Holiday';
       default:
         return 'Unknown';
     }

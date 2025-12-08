@@ -17,6 +17,8 @@ const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Se
 const FULL_MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
 
 type BudgetEntryMode = 'project' | 'wbs';
+type BudgetInputMethod = 'monthly' | 'total';
+type DistributionMethod = 'even' | 'front' | 'back' | 'custom';
 
 export function CreateBudgetPage() {
   const navigate = useNavigate();
@@ -30,6 +32,9 @@ export function CreateBudgetPage() {
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [entryMode, setEntryMode] = useState<BudgetEntryMode>('project');
+  const [inputMethod, setInputMethod] = useState<BudgetInputMethod>('monthly');
+  const [totalBudgetHours, setTotalBudgetHours] = useState<number>(0);
+  const [distributionMethod, setDistributionMethod] = useState<DistributionMethod>('even');
   // Project-level: key is "year-month"
   const [monthlyHours, setMonthlyHours] = useState<Record<string, number>>({});
   // WBS-level: key is "wbsId-year-month"
@@ -69,6 +74,86 @@ export function CreateBudgetPage() {
       setMonthlyHours(initial);
     }
   }, [fiscalYearInfo]);
+
+  // Distribute total budget hours across months when using 'total' input method
+  const distributeBudget = (total: number, method: DistributionMethod) => {
+    if (!fiscalYearInfo?.months || total <= 0) return;
+
+    const monthCount = fiscalYearInfo.months.length;
+    const distributed: Record<string, number> = {};
+
+    if (method === 'even') {
+      // Distribute evenly
+      const perMonth = Math.floor(total / monthCount);
+      const remainder = total - (perMonth * monthCount);
+
+      fiscalYearInfo.months.forEach((m, index) => {
+        const key = `${m.year}-${m.month}`;
+        // Add remainder to first months
+        distributed[key] = perMonth + (index < remainder ? 1 : 0);
+      });
+    } else if (method === 'front') {
+      // Front-loaded: 60% first half, 40% second half
+      const firstHalfCount = Math.ceil(monthCount / 2);
+      const secondHalfCount = monthCount - firstHalfCount;
+      const firstHalfTotal = Math.round(total * 0.6);
+      const secondHalfTotal = total - firstHalfTotal;
+
+      const perFirstHalf = Math.floor(firstHalfTotal / firstHalfCount);
+      const perSecondHalf = Math.floor(secondHalfTotal / secondHalfCount);
+      const firstRemainder = firstHalfTotal - (perFirstHalf * firstHalfCount);
+      const secondRemainder = secondHalfTotal - (perSecondHalf * secondHalfCount);
+
+      fiscalYearInfo.months.forEach((m, index) => {
+        const key = `${m.year}-${m.month}`;
+        if (index < firstHalfCount) {
+          distributed[key] = perFirstHalf + (index < firstRemainder ? 1 : 0);
+        } else {
+          const secondHalfIndex = index - firstHalfCount;
+          distributed[key] = perSecondHalf + (secondHalfIndex < secondRemainder ? 1 : 0);
+        }
+      });
+    } else if (method === 'back') {
+      // Back-loaded: 40% first half, 60% second half
+      const firstHalfCount = Math.ceil(monthCount / 2);
+      const secondHalfCount = monthCount - firstHalfCount;
+      const firstHalfTotal = Math.round(total * 0.4);
+      const secondHalfTotal = total - firstHalfTotal;
+
+      const perFirstHalf = Math.floor(firstHalfTotal / firstHalfCount);
+      const perSecondHalf = Math.floor(secondHalfTotal / secondHalfCount);
+      const firstRemainder = firstHalfTotal - (perFirstHalf * firstHalfCount);
+      const secondRemainder = secondHalfTotal - (perSecondHalf * secondHalfCount);
+
+      fiscalYearInfo.months.forEach((m, index) => {
+        const key = `${m.year}-${m.month}`;
+        if (index < firstHalfCount) {
+          distributed[key] = perFirstHalf + (index < firstRemainder ? 1 : 0);
+        } else {
+          const secondHalfIndex = index - firstHalfCount;
+          distributed[key] = perSecondHalf + (secondHalfIndex < secondRemainder ? 1 : 0);
+        }
+      });
+    } else {
+      // Custom - just do even for now, user can modify
+      const perMonth = Math.floor(total / monthCount);
+      const remainder = total - (perMonth * monthCount);
+
+      fiscalYearInfo.months.forEach((m, index) => {
+        const key = `${m.year}-${m.month}`;
+        distributed[key] = perMonth + (index < remainder ? 1 : 0);
+      });
+    }
+
+    setMonthlyHours(distributed);
+  };
+
+  // Effect to distribute when total or method changes
+  useEffect(() => {
+    if (inputMethod === 'total' && entryMode === 'project' && totalBudgetHours > 0) {
+      distributeBudget(totalBudgetHours, distributionMethod);
+    }
+  }, [totalBudgetHours, distributionMethod, inputMethod, entryMode, fiscalYearInfo]);
 
   // Calculate totals
   const projectTotalHours = Object.values(monthlyHours).reduce((sum, h) => sum + (h || 0), 0);
@@ -470,34 +555,108 @@ export function CreateBudgetPage() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg mb-6">
-            <span className="text-sm font-medium text-gray-700">Entry Level:</span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setEntryMode('project')}
-                className={`px-4 py-2 text-sm rounded-lg transition-colors ${
-                  entryMode === 'project'
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                Project Total
-              </button>
-              <button
-                type="button"
-                onClick={() => setEntryMode('wbs')}
-                disabled={wbsElements.length === 0}
-                className={`px-4 py-2 text-sm rounded-lg transition-colors ${
-                  entryMode === 'wbs'
-                    ? 'bg-emerald-600 text-white'
-                    : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
-                } disabled:opacity-50 disabled:cursor-not-allowed`}
-              >
-                By WBS Element ({wbsElements.length})
-              </button>
+          <div className="flex flex-wrap items-center gap-4 p-3 bg-gray-50 rounded-lg mb-6">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-gray-700">Entry Level:</span>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEntryMode('project')}
+                  className={`px-4 py-2 text-sm rounded-lg transition-colors ${
+                    entryMode === 'project'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  }`}
+                >
+                  Project Total
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEntryMode('wbs')}
+                  disabled={wbsElements.length === 0}
+                  className={`px-4 py-2 text-sm rounded-lg transition-colors ${
+                    entryMode === 'wbs'
+                      ? 'bg-emerald-600 text-white'
+                      : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                  } disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  By WBS Element ({wbsElements.length})
+                </button>
+              </div>
             </div>
+
+            {entryMode === 'project' && (
+              <div className="flex items-center gap-2 border-l border-gray-300 pl-4">
+                <span className="text-sm font-medium text-gray-700">Input Method:</span>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setInputMethod('monthly')}
+                    className={`px-4 py-2 text-sm rounded-lg transition-colors ${
+                      inputMethod === 'monthly'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    By Month
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInputMethod('total')}
+                    className={`px-4 py-2 text-sm rounded-lg transition-colors ${
+                      inputMethod === 'total'
+                        ? 'bg-blue-600 text-white'
+                        : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    Total Budget
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* Total Budget Entry Section */}
+          {entryMode === 'project' && inputMethod === 'total' && (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+              <h3 className="text-sm font-semibold text-blue-800 mb-3">Enter Total Budget</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label htmlFor="total-budget" className="block text-sm font-medium text-blue-700 mb-1">
+                    Total Budget Hours
+                  </label>
+                  <input
+                    id="total-budget"
+                    type="number"
+                    min="0"
+                    value={totalBudgetHours || ''}
+                    onChange={(e) => setTotalBudgetHours(parseInt(e.target.value) || 0)}
+                    className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="Enter total hours"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="distribution-method" className="block text-sm font-medium text-blue-700 mb-1">
+                    Distribution Method
+                  </label>
+                  <select
+                    id="distribution-method"
+                    value={distributionMethod}
+                    onChange={(e) => setDistributionMethod(e.target.value as DistributionMethod)}
+                    className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="even">Even (Equal per month)</option>
+                    <option value="front">Front-loaded (60% first half)</option>
+                    <option value="back">Back-loaded (60% second half)</option>
+                    <option value="custom">Custom (edit below)</option>
+                  </select>
+                </div>
+              </div>
+              <p className="text-xs text-blue-600 mt-2">
+                Enter a total and select a distribution method. You can fine-tune individual months below.
+              </p>
+            </div>
+          )}
 
           {entryMode === 'project' ? (
             /* Project-level budget entry */

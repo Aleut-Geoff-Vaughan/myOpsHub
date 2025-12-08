@@ -33,6 +33,32 @@ export const getResume = async (id: string): Promise<ResumeProfile> => {
   return api.get<ResumeProfile>(`/resumes/${id}`);
 };
 
+// Get the current user's resume
+export const getMyResume = async (): Promise<ResumeProfile | null> => {
+  try {
+    return await api.get<ResumeProfile>('/resumes/my');
+  } catch (error: any) {
+    if (error?.response?.status === 404) {
+      return null; // User doesn't have a resume yet
+    }
+    throw error;
+  }
+};
+
+// Get team members' resumes (for managers)
+export const getTeamResumes = async (
+  filter: 'direct' | 'team' | 'all' = 'direct',
+  status?: ResumeStatus,
+  search?: string
+): Promise<ResumeProfile[]> => {
+  const params = new URLSearchParams();
+  params.append('filter', filter);
+  if (status !== undefined) params.append('status', status.toString());
+  if (search) params.append('search', search);
+
+  return api.get<ResumeProfile[]>(`/resumes/team?${params}`);
+};
+
 export const createResume = async (data: {
   userId: string;
   templateConfig?: string;

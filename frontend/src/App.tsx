@@ -53,6 +53,7 @@ import { ForecastVersionsPage } from './pages/ForecastVersionsPage';
 import { ForecastImportExportPage } from './pages/ForecastImportExportPage';
 import { ForecastApprovalPage } from './pages/ForecastApprovalPage';
 import { ManagerDashboardPage } from './pages/ManagerDashboardPage';
+import { ManagerResumesPage } from './pages/ManagerResumesPage';
 import { ResumeSharePage } from './pages/ResumeSharePage';
 import { MySchedulePage } from './pages/MySchedulePage';
 import { MyHubPage } from './pages/MyHubPage';
@@ -187,6 +188,7 @@ function App() {
             >
               <Route index element={<MyHubPage />} />
               <Route path="schedule" element={<MySchedulePage />} />
+              <Route path="templates" element={<TemplatesPage />} />
               <Route path="staffing" element={<StaffingPage />} />
               <Route path="hoteling" element={<HotelingPage />} />
               <Route path="resumes" element={<ResumesPage />} />
@@ -215,6 +217,7 @@ function App() {
               <Route path="wbs" element={<WbsPage />} />
               <Route path="templates" element={<TemplatesPage />} />
               <Route path="facilities" element={<FacilitiesPage />} />
+              <Route path="resumes" element={<ManagerResumesPage />} />
               <Route path="staffing-admin" element={<StaffingAdminPage />} />
               <Route path="forecast-approvals" element={<ForecastApprovalPage />} />
               <Route path="reports" element={<div className="p-6">Reports Module (Coming Soon)</div>} />

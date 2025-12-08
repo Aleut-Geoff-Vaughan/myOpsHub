@@ -10,9 +10,8 @@ import {
   ForecastStatus,
   getForecastStatusColor,
   getVersionTypeColor,
-  getMonthShortName,
-  generateMonthRange,
 } from '../services/forecastService';
+import { useFiscalYear, getFiscalYearStartDate, type MonthInfo } from '../hooks/useFiscalYear';
 import { projectRoleAssignmentsService, type ProjectRoleAssignment } from '../services/staffingService';
 import toast from 'react-hot-toast';
 
@@ -28,6 +27,9 @@ export function AdminForecastsPage() {
   // Use workspace tenantId, or fall back to first available tenant for admin users
   const tenantId = currentWorkspace?.tenantId || availableTenants?.[0]?.tenantId;
 
+  // Fiscal year hook
+  const fiscalYear = useFiscalYear();
+
   // Data state
   const [versions, setVersions] = useState<ForecastVersion[]>([]);
   const [forecasts, setForecasts] = useState<Forecast[]>([]);
@@ -41,10 +43,8 @@ export function AdminForecastsPage() {
   const [filterStatus, setFilterStatus] = useState<ForecastStatus | 'all'>('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
 
-  // Period selection (defaults to current year, 12 months)
-  const currentDate = new Date();
-  const [startYear, setStartYear] = useState(currentDate.getFullYear());
-  const [startMonth, setStartMonth] = useState(1);
+  // Period selection - use fiscal year by default
+  const [selectedFiscalYear, setSelectedFiscalYear] = useState(fiscalYear.currentFiscalYear);
   const [monthCount, setMonthCount] = useState(12);
 
   // Modal state
@@ -67,11 +67,15 @@ export function AdminForecastsPage() {
     notes: '',
   });
 
-  // Generate months for the grid
-  const months = useMemo(() =>
-    generateMonthRange(startYear, startMonth, monthCount),
-    [startYear, startMonth, monthCount]
-  );
+  // Calculate fiscal year start date
+  const fiscalYearStartDate = useMemo(() => {
+    return getFiscalYearStartDate(selectedFiscalYear, fiscalYear.config.startMonth);
+  }, [selectedFiscalYear, fiscalYear.config.startMonth]);
+
+  // Generate months for the grid based on fiscal year
+  const months: MonthInfo[] = useMemo(() => {
+    return fiscalYear.getMonthRange(fiscalYearStartDate, monthCount);
+  }, [fiscalYearStartDate, monthCount, fiscalYear]);
 
   // Get unique projects from assignments
   const projects = useMemo(() => {
@@ -219,8 +223,8 @@ export function AdminForecastsPage() {
           name: versionForm.name,
           description: versionForm.description || undefined,
           type: versionForm.type,
-          startYear,
-          startMonth,
+          startYear: months[0].year,
+          startMonth: months[0].month,
           endYear: months[months.length - 1].year,
           endMonth: months[months.length - 1].month,
         });
@@ -367,7 +371,7 @@ export function AdminForecastsPage() {
 
   const handleLockMonth = async (year: number, month: number) => {
     if (!tenantId || !selectedVersionId) return;
-    if (!confirm(`Lock all forecasts for ${getMonthShortName(month)} ${year}? This action cannot be undone.`)) return;
+    if (!confirm(`Lock all forecasts for ${fiscalYear.getMonthLabel(year, month)}? This action cannot be undone.`)) return;
 
     try {
       const result = await forecastsService.lockMonth({
@@ -495,24 +499,38 @@ export function AdminForecastsPage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Start</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {fiscalYear.isCalendarYear ? 'Year' : 'Fiscal Year'}
+            </label>
             <div className="flex gap-2">
               <select
-                value={startMonth}
-                onChange={(e) => setStartMonth(parseInt(e.target.value))}
+                value={selectedFiscalYear}
+                onChange={(e) => setSelectedFiscalYear(parseInt(e.target.value))}
                 className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                title="Select fiscal year"
+                aria-label="Select fiscal year"
               >
-                {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => (
-                  <option key={m} value={m}>{getMonthShortName(m)}</option>
+                {Array.from({ length: 5 }, (_, i) => fiscalYear.currentFiscalYear - 2 + i).map(fy => (
+                  <option key={fy} value={fy}>
+                    {fiscalYear.isCalendarYear ? fy : `${fiscalYear.config.prefix}${fy}`}
+                  </option>
                 ))}
               </select>
-              <input
-                type="number"
-                value={startYear}
-                onChange={(e) => setStartYear(parseInt(e.target.value) || currentDate.getFullYear())}
-                className="w-20 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-              />
             </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Mode</label>
+            <button
+              onClick={fiscalYear.toggleMode}
+              className={`px-3 py-2 rounded-lg border ${
+                fiscalYear.mode === 'fiscal'
+                  ? 'bg-blue-100 border-blue-300 text-blue-700'
+                  : 'bg-gray-100 border-gray-300 text-gray-700'
+              }`}
+              title={fiscalYear.mode === 'fiscal' ? 'Switch to Calendar Year' : 'Switch to Fiscal Year'}
+            >
+              {fiscalYear.mode === 'fiscal' ? 'FY' : 'CY'}
+            </button>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Months</label>
@@ -608,12 +626,12 @@ export function AdminForecastsPage() {
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sticky left-0 bg-gray-50 z-10 min-w-[250px]">
                   Assignment
                 </th>
-                {months.map(({ year, month }) => (
-                  <th key={`${year}-${month}`} className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">
-                    <div>{getMonthShortName(month)}</div>
-                    <div className="text-gray-400">{year}</div>
+                {months.map((monthInfo) => (
+                  <th key={`${monthInfo.year}-${monthInfo.month}`} className="px-2 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[80px]">
+                    <div>{fiscalYear.mode === 'fiscal' && !fiscalYear.isCalendarYear ? monthInfo.fiscalLabel : monthInfo.label}</div>
+                    {fiscalYear.mode === 'calendar' && <div className="text-gray-400">{monthInfo.year}</div>}
                     <button
-                      onClick={() => handleLockMonth(year, month)}
+                      onClick={() => handleLockMonth(monthInfo.year, monthInfo.month)}
                       className="text-blue-500 hover:text-blue-700 text-xs mt-1"
                       title="Lock month"
                     >
@@ -635,8 +653,8 @@ export function AdminForecastsPage() {
                 </tr>
               ) : (
                 filteredAssignments.map(assignment => {
-                  const rowTotal = months.reduce((sum, { year, month }) => {
-                    const forecast = getForecastForCell(assignment.id, year, month);
+                  const rowTotal = months.reduce((sum, monthInfo) => {
+                    const forecast = getForecastForCell(assignment.id, monthInfo.year, monthInfo.month);
                     return sum + (forecast?.forecastedHours || 0);
                   }, 0);
 
@@ -649,12 +667,12 @@ export function AdminForecastsPage() {
                           {assignment.assigneeName && ` - ${assignment.assigneeName}`}
                         </div>
                       </td>
-                      {months.map(({ year, month }) => {
-                        const forecast = getForecastForCell(assignment.id, year, month);
+                      {months.map((monthInfo) => {
+                        const forecast = getForecastForCell(assignment.id, monthInfo.year, monthInfo.month);
                         return (
                           <td
-                            key={`${year}-${month}`}
-                            onClick={() => handleCellClick(assignment, year, month)}
+                            key={`${monthInfo.year}-${monthInfo.month}`}
+                            onClick={() => handleCellClick(assignment, monthInfo.year, monthInfo.month)}
                             className="px-2 py-2 text-center cursor-pointer hover:bg-blue-50"
                           >
                             {forecast ? (
@@ -841,7 +859,7 @@ export function AdminForecastsPage() {
               {editingCell.forecast ? 'Edit Forecast' : 'Create Forecast'}
             </h2>
             <p className="text-sm text-gray-500 mb-4">
-              {getMonthShortName(editingCell.month)} {editingCell.year}
+              {fiscalYear.getMonthLabel(editingCell.year, editingCell.month)}
             </p>
 
             <div className="space-y-4">

@@ -41,6 +41,8 @@ export function MonthCalendarView({ referenceDate, preferences, onDayClick, user
         return 'PTO';
       case WorkLocationType.Travel:
         return 'Travel';
+      case WorkLocationType.Holiday:
+        return 'Holiday';
       default:
         return 'Unknown';
     }
@@ -62,6 +64,8 @@ export function MonthCalendarView({ referenceDate, preferences, onDayClick, user
         return 'bg-yellow-100 text-yellow-800 border-yellow-300';
       case WorkLocationType.Travel:
         return 'bg-sky-100 text-sky-800 border-sky-300';
+      case WorkLocationType.Holiday:
+        return 'bg-red-100 text-red-800 border-red-300';
       default:
         return 'bg-gray-100 text-gray-800 border-gray-300';
     }
@@ -81,6 +85,8 @@ export function MonthCalendarView({ referenceDate, preferences, onDayClick, user
         return '🌴';
       case WorkLocationType.Travel:
         return '✈️';
+      case WorkLocationType.Holiday:
+        return '🎉';
       default:
         return '📍';
     }
@@ -244,6 +250,10 @@ export function MonthCalendarView({ referenceDate, preferences, onDayClick, user
           <div className="flex items-center gap-2">
             <span>✈️</span>
             <span>Travel</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span>🎉</span>
+            <span>Holiday</span>
           </div>
           <div className="flex items-center gap-2">
             <span>❓</span>

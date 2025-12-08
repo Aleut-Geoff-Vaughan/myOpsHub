@@ -553,6 +553,7 @@ export enum WorkLocationType {
   OfficeWithReservation = 4,
   PTO = 5,
   Travel = 6,
+  Holiday = 7,
 }
 
 export enum DayPortion {
@@ -1058,6 +1059,8 @@ export interface ApplyHolidaysRequest {
   year: number;
   holidayIds?: string[];
   overwriteExisting?: boolean;
+  userIds?: string[];  // If provided, only apply to these specific users
+  usersJoinedAfter?: string;  // ISO date string - only apply to users who joined on or after this date
 }
 
 export interface HolidayApplyResult {

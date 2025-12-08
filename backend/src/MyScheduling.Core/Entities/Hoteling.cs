@@ -342,7 +342,8 @@ public enum WorkLocationType
     OfficeNoReservation,    // In office but no specific desk/room booked
     OfficeWithReservation,  // In office with a specific booking
     PTO,                    // Paid Time Off
-    Travel                  // Travel day (in transit)
+    Travel,                 // Travel day (in transit)
+    Holiday                 // Company/Federal Holiday (floating holiday)
 }
 
 public enum DayPortion

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { holidaysService } from '../services/holidaysService';
+import { useUsers } from '../hooks/useTenants';
 import {
   HolidayType,
   HolidayRecurrenceRule,
@@ -55,6 +56,12 @@ export function AdminHolidaysPage() {
   const [applyYear, setApplyYear] = useState(new Date().getFullYear());
   const [applyOverwrite, setApplyOverwrite] = useState(false);
   const [isApplyingLoading, setIsApplyingLoading] = useState(false);
+  const [applyFilterMode, setApplyFilterMode] = useState<'all' | 'specific' | 'joinedAfter'>('all');
+  const [applySelectedUserIds, setApplySelectedUserIds] = useState<string[]>([]);
+  const [applyJoinedAfterDate, setApplyJoinedAfterDate] = useState('');
+
+  // Users for selection
+  const { data: users = [] } = useUsers(tenantId);
 
   // Edit modal state
   const [showEditModal, setShowEditModal] = useState(false);
@@ -118,12 +125,18 @@ export function AdminHolidaysPage() {
         tenantId,
         year: applyYear,
         overwriteExisting: applyOverwrite,
+        userIds: applyFilterMode === 'specific' && applySelectedUserIds.length > 0 ? applySelectedUserIds : undefined,
+        usersJoinedAfter: applyFilterMode === 'joinedAfter' && applyJoinedAfterDate ? applyJoinedAfterDate : undefined,
       });
 
       toast.success(
         `Applied holidays to ${response.totalUsersAffected} users. Created ${response.entriesCreated} entries (${response.entriesSkipped} skipped)`
       );
       setShowApplyModal(false);
+      // Reset filter state
+      setApplyFilterMode('all');
+      setApplySelectedUserIds([]);
+      setApplyJoinedAfterDate('');
     } catch {
       toast.error('Failed to apply holidays to schedules');
     } finally {
@@ -486,10 +499,10 @@ export function AdminHolidaysPage() {
       {/* Apply to Schedules Modal */}
       {showApplyModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <h2 className="text-lg font-semibold text-gray-900 mb-4">Apply Holidays to Schedules</h2>
             <p className="text-sm text-gray-600 mb-4">
-              This will create PTO entries in employee schedules for all active holidays that have "Auto-apply to
+              This will create Holiday entries in employee schedules for all active holidays that have "Auto-apply to
               Schedule" enabled.
             </p>
 
@@ -508,6 +521,106 @@ export function AdminHolidaysPage() {
                   ))}
                 </select>
               </div>
+
+              {/* User Filter Options */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Apply to Users</label>
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="userFilter"
+                      checked={applyFilterMode === 'all'}
+                      onChange={() => setApplyFilterMode('all')}
+                      className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700">All active users in this tenant</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="userFilter"
+                      checked={applyFilterMode === 'specific'}
+                      onChange={() => setApplyFilterMode('specific')}
+                      className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700">Specific users only</span>
+                  </label>
+
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="userFilter"
+                      checked={applyFilterMode === 'joinedAfter'}
+                      onChange={() => setApplyFilterMode('joinedAfter')}
+                      className="w-4 h-4 text-blue-600 border-gray-300 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700">Users who joined on or after a date</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Specific Users Selection */}
+              {applyFilterMode === 'specific' && (
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Select Users ({applySelectedUserIds.length} selected)
+                  </label>
+                  <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-lg bg-white">
+                    {users.length === 0 ? (
+                      <div className="p-3 text-sm text-gray-500 text-center">No users found</div>
+                    ) : (
+                      users.map((user) => (
+                        <label
+                          key={user.id}
+                          className="flex items-center gap-2 p-2 hover:bg-gray-50 cursor-pointer border-b border-gray-100 last:border-b-0"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={applySelectedUserIds.includes(user.id)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                setApplySelectedUserIds([...applySelectedUserIds, user.id]);
+                              } else {
+                                setApplySelectedUserIds(applySelectedUserIds.filter((id) => id !== user.id));
+                              }
+                            }}
+                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-gray-900">
+                            {user.displayName || user.name}
+                          </span>
+                          <span className="text-xs text-gray-500">{user.email}</span>
+                        </label>
+                      ))
+                    )}
+                  </div>
+                  {applySelectedUserIds.length === 0 && (
+                    <p className="text-xs text-amber-600 mt-2">Please select at least one user</p>
+                  )}
+                </div>
+              )}
+
+              {/* Joined After Date Selection */}
+              {applyFilterMode === 'joinedAfter' && (
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <label htmlFor="joinedAfterDate" className="block text-sm font-medium text-gray-700 mb-2">
+                    Users who joined on or after:
+                  </label>
+                  <input
+                    id="joinedAfterDate"
+                    type="date"
+                    value={applyJoinedAfterDate}
+                    onChange={(e) => setApplyJoinedAfterDate(e.target.value)}
+                    title="Select the date to filter users by join date"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                  {!applyJoinedAfterDate && (
+                    <p className="text-xs text-amber-600 mt-2">Please select a date</p>
+                  )}
+                </div>
+              )}
 
               <label className="flex items-center gap-2 cursor-pointer">
                 <input
@@ -528,14 +641,23 @@ export function AdminHolidaysPage() {
 
             <div className="flex justify-end gap-3 mt-6">
               <button
-                onClick={() => setShowApplyModal(false)}
+                onClick={() => {
+                  setShowApplyModal(false);
+                  setApplyFilterMode('all');
+                  setApplySelectedUserIds([]);
+                  setApplyJoinedAfterDate('');
+                }}
                 className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
               >
                 Cancel
               </button>
               <button
                 onClick={handleApplyToSchedules}
-                disabled={isApplyingLoading}
+                disabled={
+                  isApplyingLoading ||
+                  (applyFilterMode === 'specific' && applySelectedUserIds.length === 0) ||
+                  (applyFilterMode === 'joinedAfter' && !applyJoinedAfterDate)
+                }
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
               >
                 {isApplyingLoading ? 'Applying...' : 'Apply Holidays'}

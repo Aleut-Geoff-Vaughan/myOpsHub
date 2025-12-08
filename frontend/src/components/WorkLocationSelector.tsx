@@ -296,6 +296,7 @@ export function WorkLocationSelector({
     { value: WorkLocationType.OfficeWithReservation.toString(), label: 'Office - With desk/room reservation' },
     { value: WorkLocationType.PTO.toString(), label: 'PTO - Paid Time Off' },
     { value: WorkLocationType.Travel.toString(), label: 'Travel - In transit/traveling' },
+    { value: WorkLocationType.Holiday.toString(), label: 'Holiday - Company/Federal Holiday' },
   ];
 
   const officeOptions = companyOffices.map(o => ({

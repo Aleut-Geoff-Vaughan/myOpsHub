@@ -51,6 +51,10 @@ export function TeamCalendarView({ memberSchedules, startDate, weeksToShow = 2 }
         return '🏛️';
       case WorkLocationType.PTO:
         return '🌴';
+      case WorkLocationType.Travel:
+        return '✈️';
+      case WorkLocationType.Holiday:
+        return '🎉';
       default:
         return '❓';
     }
@@ -70,6 +74,10 @@ export function TeamCalendarView({ memberSchedules, startDate, weeksToShow = 2 }
         return 'Office (Res)';
       case WorkLocationType.PTO:
         return 'PTO';
+      case WorkLocationType.Travel:
+        return 'Travel';
+      case WorkLocationType.Holiday:
+        return 'Holiday';
       default:
         return 'Unknown';
     }
@@ -88,6 +96,10 @@ export function TeamCalendarView({ memberSchedules, startDate, weeksToShow = 2 }
         return 'bg-green-50 text-green-700 border-green-200';
       case WorkLocationType.PTO:
         return 'bg-yellow-50 text-yellow-700 border-yellow-200';
+      case WorkLocationType.Travel:
+        return 'bg-sky-50 text-sky-700 border-sky-200';
+      case WorkLocationType.Holiday:
+        return 'bg-red-50 text-red-700 border-red-200';
       default:
         return 'bg-gray-50 text-gray-700 border-gray-200';
     }

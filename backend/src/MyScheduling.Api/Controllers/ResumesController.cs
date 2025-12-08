@@ -77,6 +77,142 @@ public class ResumesController : AuthorizedControllerBase
         }
     }
 
+    // GET: api/resumes/team - Get resumes for the current user's direct and indirect reports
+    [HttpGet("team")]
+    [RequiresPermission(Resource = "ResumeProfile", Action = PermissionAction.Read)]
+    public async Task<ActionResult<IEnumerable<ResumeProfile>>> GetTeamResumes(
+        [FromQuery] string filter = "direct", // direct, team (direct+indirect), all
+        [FromQuery] ResumeStatus? status = null,
+        [FromQuery] string? search = null)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            if (userId == null)
+            {
+                return Unauthorized("User not authenticated");
+            }
+
+            var tenantId = GetCurrentTenantId();
+
+            // Get all users in tenant for team filtering
+            var usersQuery = _context.Users.AsQueryable();
+            if (tenantId.HasValue)
+            {
+                usersQuery = usersQuery.Where(u =>
+                    _context.TenantMemberships.Any(tm => tm.UserId == u.Id && tm.TenantId == tenantId.Value && tm.IsActive));
+            }
+            var allUsers = await usersQuery.ToListAsync();
+
+            // Build set of team member IDs based on filter
+            var teamUserIds = new HashSet<Guid>();
+
+            if (filter == "direct")
+            {
+                // Only direct reports
+                teamUserIds = allUsers
+                    .Where(u => u.ManagerId == userId.Value)
+                    .Select(u => u.Id)
+                    .ToHashSet();
+            }
+            else if (filter == "team")
+            {
+                // Direct and indirect reports (recursive)
+                void AddReports(Guid managerId)
+                {
+                    var reports = allUsers.Where(u => u.ManagerId == managerId);
+                    foreach (var report in reports)
+                    {
+                        if (teamUserIds.Add(report.Id))
+                        {
+                            AddReports(report.Id);
+                        }
+                    }
+                }
+                AddReports(userId.Value);
+            }
+            else // "all" - for admins/managers who can see all
+            {
+                teamUserIds = allUsers.Select(u => u.Id).ToHashSet();
+            }
+
+            if (teamUserIds.Count == 0)
+            {
+                return Ok(new List<ResumeProfile>());
+            }
+
+            // Get resumes for team members
+            var query = _context.ResumeProfiles
+                .Include(r => r.User)
+                .AsNoTracking()
+                .Where(r => teamUserIds.Contains(r.UserId));
+
+            // Filter by status
+            if (status.HasValue)
+            {
+                query = query.Where(r => r.Status == status.Value);
+            }
+
+            // Search
+            if (!string.IsNullOrEmpty(search))
+            {
+                query = query.Where(r =>
+                    r.User.DisplayName.Contains(search) ||
+                    (r.User.JobTitle != null && r.User.JobTitle.Contains(search)) ||
+                    r.User.Email.Contains(search));
+            }
+
+            var resumes = await query
+                .OrderBy(r => r.User.DisplayName)
+                .ToListAsync();
+
+            return Ok(resumes);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving team resumes");
+            return StatusCode(500, "An error occurred while retrieving team resumes");
+        }
+    }
+
+    // GET: api/resumes/my - Get the current user's resume
+    [HttpGet("my")]
+    [RequiresPermission(Resource = "ResumeProfile", Action = PermissionAction.Read)]
+    public async Task<ActionResult<ResumeProfile>> GetMyResume()
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            if (userId == null)
+            {
+                return Unauthorized("User not authenticated");
+            }
+
+            var resume = await _context.ResumeProfiles
+                .Include(r => r.User)
+                .Include(r => r.Sections.OrderBy(s => s.DisplayOrder))
+                    .ThenInclude(s => s.Entries.OrderByDescending(e => e.StartDate))
+                .Include(r => r.Versions.OrderByDescending(v => v.VersionNumber))
+                .Include(r => r.Documents.OrderByDescending(d => d.GeneratedAt))
+                .Include(r => r.Approvals.OrderByDescending(a => a.RequestedAt))
+                .Include(r => r.CurrentVersion)
+                .Include(r => r.LastReviewedBy)
+                .FirstOrDefaultAsync(r => r.UserId == userId.Value);
+
+            if (resume == null)
+            {
+                return NotFound("No resume found for current user");
+            }
+
+            return Ok(resume);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving resume for current user");
+            return StatusCode(500, "An error occurred while retrieving your resume");
+        }
+    }
+
     // GET: api/resumes/{id}
     [HttpGet("{id}")]
     [RequiresPermission(Resource = "ResumeProfile", Action = PermissionAction.Read)]

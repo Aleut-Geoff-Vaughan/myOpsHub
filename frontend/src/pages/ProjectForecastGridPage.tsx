@@ -8,13 +8,12 @@ import {
   forecastVersionsService,
   type Forecast,
   ForecastStatus,
-  getMonthShortName,
-  generateMonthRange,
 } from '../services/forecastService';
 import { projectRoleAssignmentsService, type ProjectRoleAssignment } from '../services/staffingService';
 import { projectsService } from '../services/projectsService';
 import { AddPositionModal } from '../components/AddPositionModal';
 import { NonLaborCostsGrid } from '../components/NonLaborCostsGrid';
+import { useFiscalYear, getFiscalYearStartDate, type MonthInfo } from '../hooks/useFiscalYear';
 
 type GranularityMode = 'monthly' | 'weekly';
 
@@ -25,8 +24,11 @@ export function ProjectForecastGridPage() {
   const tenantId = currentWorkspace?.tenantId || availableTenants?.[0]?.tenantId || '';
   const queryClient = useQueryClient();
 
+  // Fiscal year support
+  const fiscalYear = useFiscalYear();
+
   const [granularity, setGranularity] = useState<GranularityMode>('monthly');
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedFiscalYear, setSelectedFiscalYear] = useState(fiscalYear.currentFiscalYear);
   const [selectedQuarter, setSelectedQuarter] = useState<number | null>(null);
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [cellValues, setCellValues] = useState<Record<string, number>>({});
@@ -54,13 +56,35 @@ export function ProjectForecastGridPage() {
     enabled: !!tenantId,
   });
 
-  // Fetch forecasts
+  // Calculate the calendar year range that corresponds to the selected fiscal year
+  const fiscalYearStartDate = useMemo(() => {
+    return getFiscalYearStartDate(selectedFiscalYear, fiscalYear.config.startMonth);
+  }, [selectedFiscalYear, fiscalYear.config.startMonth]);
+
+  // For querying, we may need to fetch multiple calendar years for a fiscal year
+  // that spans two calendar years (e.g., FY2025 = Oct 2024 - Sep 2025)
+  const calendarYearsToFetch = useMemo(() => {
+    if (fiscalYear.config.startMonth === 1) {
+      return [selectedFiscalYear]; // Calendar year, just one
+    }
+    // Fiscal year spans two calendar years
+    return [selectedFiscalYear - 1, selectedFiscalYear];
+  }, [selectedFiscalYear, fiscalYear.config.startMonth]);
+
+  // Fetch forecasts for all relevant calendar years
   const { data: forecasts = [], isLoading: forecastsLoading } = useQuery({
-    queryKey: ['project-forecasts', projectId, currentVersion?.id, selectedYear],
-    queryFn: () => forecastsService.getByProject(projectId!, {
-      versionId: currentVersion?.id,
-      year: selectedYear,
-    }),
+    queryKey: ['project-forecasts', projectId, currentVersion?.id, calendarYearsToFetch],
+    queryFn: async () => {
+      const allForecasts = await Promise.all(
+        calendarYearsToFetch.map(year =>
+          forecastsService.getByProject(projectId!, {
+            versionId: currentVersion?.id,
+            year,
+          })
+        )
+      );
+      return allForecasts.flat();
+    },
     enabled: !!projectId && !!currentVersion?.id,
   });
 
@@ -112,12 +136,21 @@ export function ProjectForecastGridPage() {
     },
   });
 
-  // Generate month columns
-  const months = useMemo(() => {
-    const startMonth = selectedQuarter ? (selectedQuarter - 1) * 3 + 1 : 1;
+  // Generate month columns using fiscal year
+  const months: MonthInfo[] = useMemo(() => {
+    // Get start date for the fiscal year
+    const startDate = fiscalYearStartDate;
     const count = selectedQuarter ? 3 : 12;
-    return generateMonthRange(selectedYear, startMonth, count);
-  }, [selectedYear, selectedQuarter]);
+
+    // For quarter selection, offset the start date
+    let adjustedStartDate = startDate;
+    if (selectedQuarter) {
+      const quarterOffset = (selectedQuarter - 1) * 3;
+      adjustedStartDate = new Date(startDate.getFullYear(), startDate.getMonth() + quarterOffset, 1);
+    }
+
+    return fiscalYear.getMonthRange(adjustedStartDate, count);
+  }, [fiscalYearStartDate, selectedQuarter, fiscalYear]);
 
   // Build forecast lookup map
   const forecastMap = useMemo(() => {
@@ -304,22 +337,43 @@ export function ProjectForecastGridPage() {
             </button>
           </div>
 
+          {/* Fiscal/Calendar Year Toggle */}
+          {!fiscalYear.isCalendarYear && (
+            <button
+              onClick={fiscalYear.toggleMode}
+              className={`px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
+                fiscalYear.mode === 'fiscal'
+                  ? 'bg-emerald-50 border-emerald-300 text-emerald-700'
+                  : 'bg-gray-50 border-gray-300 text-gray-700'
+              }`}
+              title={`Switch to ${fiscalYear.mode === 'fiscal' ? 'calendar' : 'fiscal'} year view`}
+            >
+              {fiscalYear.mode === 'fiscal' ? 'FY' : 'CY'}
+            </button>
+          )}
+
           {/* Year Select */}
           <select
-            value={selectedYear}
-            onChange={(e) => setSelectedYear(Number(e.target.value))}
+            value={selectedFiscalYear}
+            onChange={(e) => setSelectedFiscalYear(Number(e.target.value))}
             className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500"
+            title="Select fiscal year"
+            aria-label="Select fiscal year"
           >
-            {[2024, 2025, 2026].map(year => (
-              <option key={year} value={year}>{year}</option>
+            {[fiscalYear.currentFiscalYear - 1, fiscalYear.currentFiscalYear, fiscalYear.currentFiscalYear + 1].map(fy => (
+              <option key={fy} value={fy}>
+                {fiscalYear.isCalendarYear ? fy : `${fiscalYear.config.prefix}${fy}`}
+              </option>
             ))}
           </select>
 
-          {/* Quarter Filter */}
+          {/* Quarter Filter - uses fiscal quarters */}
           <select
             value={selectedQuarter || ''}
             onChange={(e) => setSelectedQuarter(e.target.value ? Number(e.target.value) : null)}
             className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500"
+            title="Select quarter"
+            aria-label="Select quarter"
           >
             <option value="">Full Year</option>
             <option value="1">Q1</option>
@@ -400,7 +454,7 @@ export function ProjectForecastGridPage() {
                 </th>
                 {months.map(m => (
                   <th key={`${m.year}-${m.month}`} className="px-3 py-3 text-center text-xs font-medium text-gray-500 uppercase w-20">
-                    {getMonthShortName(m.month)}
+                    {fiscalYear.mode === 'fiscal' && !fiscalYear.isCalendarYear ? m.fiscalLabel : m.label}
                   </th>
                 ))}
                 <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase w-24 sticky right-0 bg-gray-50">
@@ -471,7 +525,7 @@ export function ProjectForecastGridPage() {
           projectId={projectId}
           months={months}
           versionId={currentVersion?.id}
-          year={selectedYear}
+          year={selectedFiscalYear}
         />
       )}
 
@@ -494,7 +548,7 @@ export function ProjectForecastGridPage() {
 
 interface WbsGroupProps {
   group: { wbsCode: string; wbsDescription: string; assignments: ProjectRoleAssignment[] };
-  months: { year: number; month: number }[];
+  months: MonthInfo[];
   forecastMap: Record<string, Forecast>;
   editingCell: string | null;
   cellValues: Record<string, number>;
@@ -603,7 +657,7 @@ function WbsGroup({
 
 interface AssignmentRowProps {
   assignment: ProjectRoleAssignment;
-  months: { year: number; month: number }[];
+  months: MonthInfo[];
   forecastMap: Record<string, Forecast>;
   editingCell: string | null;
   cellValues: Record<string, number>;

@@ -38,6 +38,10 @@ const getLocationTypeLabel = (type: WorkLocationType): string => {
       return 'Office (With Reservation)';
     case WorkLocationType.PTO:
       return 'PTO';
+    case WorkLocationType.Travel:
+      return 'Travel';
+    case WorkLocationType.Holiday:
+      return 'Holiday';
     default:
       return 'Unknown';
   }
@@ -57,6 +61,10 @@ const getLocationTypeColor = (type: WorkLocationType): string => {
       return 'bg-orange-100 text-orange-800';
     case WorkLocationType.PTO:
       return 'bg-pink-100 text-pink-800';
+    case WorkLocationType.Travel:
+      return 'bg-sky-100 text-sky-800';
+    case WorkLocationType.Holiday:
+      return 'bg-red-100 text-red-800';
     default:
       return 'bg-gray-100 text-gray-800';
   }

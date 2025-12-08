@@ -38,6 +38,8 @@ export function ShareCalendarModal({
         return 'PTO';
       case WorkLocationType.Travel:
         return 'Travel';
+      case WorkLocationType.Holiday:
+        return 'Holiday';
       default:
         return 'Unknown';
     }
@@ -57,6 +59,8 @@ export function ShareCalendarModal({
         return '🌴';
       case WorkLocationType.Travel:
         return '✈️';
+      case WorkLocationType.Holiday:
+        return '🎉';
       default:
         return '📍';
     }

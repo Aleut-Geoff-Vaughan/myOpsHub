@@ -241,9 +241,23 @@ public class HolidaysController : AuthorizedControllerBase
                 holidays = holidays.Where(h => request.HolidayIds.Contains(h.Id)).ToList();
             }
 
-            // Get all active users for this tenant
-            var users = await _context.TenantMemberships
-                .Where(tm => tm.TenantId == request.TenantId && tm.IsActive)
+            // Build user query with optional filters
+            var usersQuery = _context.TenantMemberships
+                .Where(tm => tm.TenantId == request.TenantId && tm.IsActive);
+
+            // Filter by specific user IDs if provided
+            if (request.UserIds != null && request.UserIds.Count > 0)
+            {
+                usersQuery = usersQuery.Where(tm => request.UserIds.Contains(tm.UserId));
+            }
+
+            // Filter by users who joined on or after the specified date
+            if (request.UsersJoinedAfter.HasValue)
+            {
+                usersQuery = usersQuery.Where(tm => tm.JoinedAt >= request.UsersJoinedAfter.Value);
+            }
+
+            var users = await usersQuery
                 .Select(tm => tm.UserId)
                 .ToListAsync();
 
@@ -279,8 +293,8 @@ public class HolidaysController : AuthorizedControllerBase
                     if (existingPref != null && request.OverwriteExisting)
                     {
                         // Update existing
-                        existingPref.LocationType = WorkLocationType.PTO;
-                        existingPref.Notes = $"Federal Holiday: {holiday.Name}";
+                        existingPref.LocationType = WorkLocationType.Holiday;
+                        existingPref.Notes = $"Holiday: {holiday.Name}";
                         existingPref.UpdatedAt = DateTime.UtcNow;
                     }
                     else
@@ -291,9 +305,9 @@ public class HolidaysController : AuthorizedControllerBase
                             UserId = userId,
                             TenantId = request.TenantId,
                             WorkDate = holiday.HolidayDate,
-                            LocationType = WorkLocationType.PTO,
+                            LocationType = WorkLocationType.Holiday,
                             DayPortion = DayPortion.FullDay,
-                            Notes = $"Federal Holiday: {holiday.Name}"
+                            Notes = $"Holiday: {holiday.Name}"
                         };
                         _context.WorkLocationPreferences.Add(preference);
                     }
@@ -557,6 +571,8 @@ public class ApplyHolidaysRequest
     public int Year { get; set; }
     public List<Guid>? HolidayIds { get; set; }  // If null, apply all active holidays
     public bool OverwriteExisting { get; set; } = false;
+    public List<Guid>? UserIds { get; set; }  // If provided, only apply to these specific users
+    public DateTime? UsersJoinedAfter { get; set; }  // If provided, only apply to users who joined on or after this date
 }
 
 public class ApplyHolidaysResponse
