@@ -88,10 +88,6 @@ public class ResumesController : AuthorizedControllerBase
         try
         {
             var userId = GetCurrentUserId();
-            if (userId == null)
-            {
-                return Unauthorized("User not authenticated");
-            }
 
             var tenantId = GetCurrentTenantId();
 
@@ -111,7 +107,7 @@ public class ResumesController : AuthorizedControllerBase
             {
                 // Only direct reports
                 teamUserIds = allUsers
-                    .Where(u => u.ManagerId == userId.Value)
+                    .Where(u => u.ManagerId == userId)
                     .Select(u => u.Id)
                     .ToHashSet();
             }
@@ -129,7 +125,7 @@ public class ResumesController : AuthorizedControllerBase
                         }
                     }
                 }
-                AddReports(userId.Value);
+                AddReports(userId);
             }
             else // "all" - for admins/managers who can see all
             {
@@ -183,10 +179,6 @@ public class ResumesController : AuthorizedControllerBase
         try
         {
             var userId = GetCurrentUserId();
-            if (userId == null)
-            {
-                return Unauthorized("User not authenticated");
-            }
 
             var resume = await _context.ResumeProfiles
                 .Include(r => r.User)
@@ -197,7 +189,7 @@ public class ResumesController : AuthorizedControllerBase
                 .Include(r => r.Approvals.OrderByDescending(a => a.RequestedAt))
                 .Include(r => r.CurrentVersion)
                 .Include(r => r.LastReviewedBy)
-                .FirstOrDefaultAsync(r => r.UserId == userId.Value);
+                .FirstOrDefaultAsync(r => r.UserId == userId);
 
             if (resume == null)
             {
@@ -1046,6 +1038,26 @@ public class ResumesController : AuthorizedControllerBase
             _logger.LogError(ex, "Error bulk approving resumes");
             return StatusCode(500, "An error occurred while bulk approving resumes");
         }
+    }
+
+    /// <summary>
+    /// Gets the current tenant ID from the X-Tenant-Id header or JWT claims.
+    /// </summary>
+    private Guid? GetCurrentTenantId()
+    {
+        // Check X-Tenant-Id header first (set by frontend when workspace selected)
+        if (Request.Headers.TryGetValue("X-Tenant-Id", out var headerTenantId) &&
+            Guid.TryParse(headerTenantId.FirstOrDefault(), out var parsedHeaderTenantId))
+        {
+            // Verify user has access to this tenant
+            var userTenantIds = GetUserTenantIds();
+            if (userTenantIds.Contains(parsedHeaderTenantId))
+                return parsedHeaderTenantId;
+        }
+
+        // Fallback to first TenantId claim
+        var tenantIds = GetUserTenantIds();
+        return tenantIds.FirstOrDefault() != Guid.Empty ? tenantIds.FirstOrDefault() : null;
     }
 
     // Helper method to convert DateTime to UTC for PostgreSQL compatibility

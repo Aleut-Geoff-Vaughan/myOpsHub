@@ -139,7 +139,7 @@ public class RequiresPermissionAttribute : Attribute, IAsyncAuthorizationFilter
                 {
                     StatusCode = 403
                 };
-                context.HttpContext.Response.Headers.Add("X-Denial-Reason", result.Reason ?? "Insufficient permissions");
+                context.HttpContext.Response.Headers["X-Denial-Reason"] = result.Reason ?? "Insufficient permissions";
             }
             // If authorized, continue to action
         }

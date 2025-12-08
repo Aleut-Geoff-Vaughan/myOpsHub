@@ -7,7 +7,7 @@ public class ResumeVersion : BaseEntity
     public string VersionName { get; set; } = string.Empty; // e.g., "Federal Proposal", "Commercial"
     public string? Description { get; set; }
     public string? ContentSnapshot { get; set; } // JSON snapshot of all sections/entries
-    public Guid CreatedByUserId { get; set; }
+    public new Guid CreatedByUserId { get; set; }
     public bool IsActive { get; set; } = true;
 
     // Navigation properties
@@ -98,7 +98,7 @@ public class ResumeShareLink : BaseEntity
     public bool HideContactInfo { get; set; } = false;
     public int ViewCount { get; set; } = 0;
     public bool IsActive { get; set; } = true;
-    public Guid CreatedByUserId { get; set; }
+    public new Guid CreatedByUserId { get; set; }
 
     // Navigation properties
     public virtual ResumeProfile ResumeProfile { get; set; } = null!;

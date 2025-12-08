@@ -190,7 +190,7 @@ public class CostRatesController : AuthorizedControllerBase
             if (!tenantId.HasValue)
                 return BadRequest(new { message = "Invalid tenant context" });
 
-            var currentUserId = GetCurrentUserId();
+            var currentUserId = GetCurrentUserIdNullable();
 
             // Validate user exists
             var user = await _context.Users.FindAsync(request.UserId);
@@ -383,7 +383,7 @@ public class CostRatesController : AuthorizedControllerBase
             if (!tenantId.HasValue)
                 return BadRequest(new { message = "Invalid tenant context" });
 
-            var currentUserId = GetCurrentUserId();
+            var currentUserId = GetCurrentUserIdNullable();
 
             if (file == null || file.Length == 0)
                 return BadRequest(new { message = "No file uploaded" });
@@ -574,7 +574,7 @@ public class CostRatesController : AuthorizedControllerBase
         return null;
     }
 
-    private Guid? GetCurrentUserId()
+    private Guid? GetCurrentUserIdNullable()
     {
         var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
             ?? User.FindFirst("sub")?.Value

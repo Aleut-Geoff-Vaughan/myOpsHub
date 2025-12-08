@@ -170,7 +170,7 @@ public class SkillsController : ControllerBase
     {
         try
         {
-            Skill skill;
+            Skill? skill = null;
 
             if (request.SkillId.HasValue)
             {
@@ -206,19 +206,19 @@ public class SkillsController : ControllerBase
                 return BadRequest("Either SkillId or SkillName must be provided");
             }
 
-            // Check if user already has this skill
+            // Check if user already has this skill (skill is guaranteed non-null here due to control flow)
             var existingUserSkill = await _context.PersonSkills
-                .FirstOrDefaultAsync(ps => ps.UserId == userId && ps.SkillId == skill.Id);
+                .FirstOrDefaultAsync(ps => ps.UserId == userId && ps.SkillId == skill!.Id);
 
             if (existingUserSkill != null)
             {
-                return Conflict($"User already has the skill '{skill.Name}'");
+                return Conflict($"User already has the skill '{skill!.Name}'");
             }
 
             var personSkill = new PersonSkill
             {
                 UserId = userId,
-                SkillId = skill.Id,
+                SkillId = skill!.Id,
                 ProficiencyLevel = request.ProficiencyLevel,
                 LastUsedDate = ToUtc(request.LastUsedDate)
             };

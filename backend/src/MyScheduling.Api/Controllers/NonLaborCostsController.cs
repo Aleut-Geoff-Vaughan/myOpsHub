@@ -255,7 +255,7 @@ public class NonLaborCostsController : AuthorizedControllerBase
             if (!tenantId.HasValue)
                 return BadRequest(new { message = "Invalid tenant context" });
 
-            var userId = GetCurrentUserId();
+            var userId = GetCurrentUserIdNullable();
 
             // Check if forecast exists for this project/costType/month
             var existing = await _context.NonLaborForecasts
@@ -459,7 +459,7 @@ public class NonLaborCostsController : AuthorizedControllerBase
         return null;
     }
 
-    private Guid? GetCurrentUserId()
+    private Guid? GetCurrentUserIdNullable()
     {
         var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
             ?? User.FindFirst("sub")?.Value

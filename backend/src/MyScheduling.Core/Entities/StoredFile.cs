@@ -27,9 +27,9 @@ public class StoredFile : TenantEntity
     // Access control
     public FileAccessLevel AccessLevel { get; set; } = FileAccessLevel.Private;
     public DateTime? ExpiresAt { get; set; }
-    public bool IsDeleted { get; set; } = false;
-    public DateTime? DeletedAt { get; set; }
-    public Guid? DeletedByUserId { get; set; }
+    public new bool IsDeleted { get; set; } = false;
+    public new DateTime? DeletedAt { get; set; }
+    public new Guid? DeletedByUserId { get; set; }
 
     // Versioning
     public int Version { get; set; } = 1;

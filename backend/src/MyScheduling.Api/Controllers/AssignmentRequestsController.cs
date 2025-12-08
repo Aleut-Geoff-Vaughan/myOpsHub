@@ -33,7 +33,7 @@ public class AssignmentRequestsController : AuthorizedControllerBase
             .Include(r => r.RequestedByUser)
             .Include(r => r.RequestedForUser)
             .Include(r => r.WbsElement)
-                .ThenInclude(w => w.Project)
+                .ThenInclude(w => w!.Project)
             .Include(r => r.ApproverGroup)
             .AsNoTracking()
             .AsQueryable();
@@ -73,7 +73,7 @@ public class AssignmentRequestsController : AuthorizedControllerBase
             .Include(r => r.RequestedByUser)
             .Include(r => r.RequestedForUser)
             .Include(r => r.WbsElement)
-                .ThenInclude(w => w.Project)
+                .ThenInclude(w => w!.Project)
             .Include(r => r.Assignment)
             .Include(r => r.ApproverGroup)
             .AsNoTracking()
