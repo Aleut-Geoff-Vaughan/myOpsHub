@@ -136,6 +136,10 @@ public static class SeedRolePermissions
                 "View own profile"),
             CreateTemplate(AppRole.Employee, "UserProfile", PermissionAction.Update, PermissionScope.Owner,
                 "Update own profile"),
+
+            // Tenant - Read access to own tenant(s)
+            CreateTemplate(AppRole.Employee, "Tenant", PermissionAction.Read, PermissionScope.Tenant,
+                "View tenant information"),
         };
     }
 

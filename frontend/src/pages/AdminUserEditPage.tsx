@@ -56,36 +56,44 @@ function PersonSelect({ label, value, onChange, people, excludeId, placeholder =
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const dropdownId = `person-select-${label.toLowerCase().replace(/\s+/g, '-')}`;
+
   return (
     <div ref={containerRef} className="relative">
-      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-      <button
-        type="button"
-        onClick={() => !disabled && setIsOpen(!isOpen)}
-        disabled={disabled}
-        className="w-full px-3 py-2 text-left border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white disabled:bg-gray-100"
-      >
-        {selectedPerson ? (
-          <span className="flex items-center justify-between">
-            <span>{selectedPerson.displayName} <span className="text-gray-400 text-sm">({selectedPerson.email})</span></span>
-            {value && (
-              <button
-                type="button"
-                onClick={(e) => { e.stopPropagation(); onChange(''); }}
-                className="text-gray-400 hover:text-gray-600"
-                title="Clear selection"
-                aria-label="Clear selection"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            )}
-          </span>
-        ) : (
-          <span className="text-gray-400">None selected</span>
+      <label id={`${dropdownId}-label`} className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <div className="relative">
+        <div
+          id={dropdownId}
+          role="button"
+          tabIndex={disabled ? -1 : 0}
+          aria-labelledby={`${dropdownId}-label`}
+          aria-haspopup="listbox"
+          onClick={() => !disabled && setIsOpen(!isOpen)}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); !disabled && setIsOpen(!isOpen); } }}
+          className={`w-full px-3 py-2 text-left border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white cursor-pointer ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+        >
+          {selectedPerson ? (
+            <span className="flex items-center pr-6">
+              <span>{selectedPerson.displayName} <span className="text-gray-400 text-sm">({selectedPerson.email})</span></span>
+            </span>
+          ) : (
+            <span className="text-gray-400">None selected</span>
+          )}
+        </div>
+        {value && !disabled && (
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onChange(''); }}
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+            title="Clear selection"
+            aria-label="Clear selection"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         )}
-      </button>
+      </div>
       {isOpen && (
         <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-hidden">
           <div className="p-2 border-b">
