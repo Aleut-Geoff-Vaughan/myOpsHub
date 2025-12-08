@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { Link } from 'react-router-dom';
 import { useTemplates, useApplyTemplate } from '../hooks/useTemplates';
 import type { WorkLocationTemplate } from '../types/template';
 import { TemplateType } from '../types/template';
@@ -129,6 +130,16 @@ export const ApplyTemplateSelectModal: React.FC<ApplyTemplateSelectModalProps> =
                 <p className="mt-1 text-sm text-gray-500">
                   Create templates from the Templates page first.
                 </p>
+                <Link
+                  to="/templates"
+                  className="mt-4 inline-flex items-center px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 transition-colors"
+                  onClick={onClose}
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  Create Template
+                </Link>
               </div>
             ) : (
               <div className="space-y-3">
@@ -176,7 +187,17 @@ export const ApplyTemplateSelectModal: React.FC<ApplyTemplateSelectModalProps> =
             )}
           </div>
 
-          <div className="px-6 py-4 border-t border-gray-200 flex justify-end">
+          <div className="px-6 py-4 border-t border-gray-200 flex justify-between items-center">
+            <Link
+              to="/templates"
+              onClick={onClose}
+              className="text-sm text-indigo-600 hover:text-indigo-700 font-medium flex items-center gap-1"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              Create New Template
+            </Link>
             <button
               type="button"
               onClick={onClose}

@@ -393,6 +393,11 @@ export interface User {
   department?: string;
   profilePhotoUrl?: string;
   managerId?: string;
+  // Delegation and office fields
+  homeOfficeId?: string;
+  homeOfficeName?: string;
+  executiveAssistantId?: string;
+  standardDelegateIds?: string[];
   // Staffing/Career fields
   positionTitle?: string;
   careerJobFamilyId?: string;

@@ -53,6 +53,9 @@ public static class SeedRolePermissions
     {
         var templates = new List<RolePermissionTemplate>();
 
+        // Employee role permissions - basic access for all users
+        templates.AddRange(GetEmployeeTemplates());
+
         // FinanceLead role permissions - manages cost rates and financial forecasts
         templates.AddRange(GetFinanceLeadTemplates());
 
@@ -66,6 +69,74 @@ public static class SeedRolePermissions
         templates.AddRange(GetProjectManagerTemplates());
 
         return templates;
+    }
+
+    private static List<RolePermissionTemplate> GetEmployeeTemplates()
+    {
+        return new List<RolePermissionTemplate>
+        {
+            // Delegation of Authority - Read/Create/Update own letters
+            CreateTemplate(AppRole.Employee, "DelegationOfAuthority", PermissionAction.Read, PermissionScope.Owner,
+                "View own DOA letters (as delegator or designee)"),
+            CreateTemplate(AppRole.Employee, "DelegationOfAuthority", PermissionAction.Create, PermissionScope.Owner,
+                "Create DOA letters"),
+            CreateTemplate(AppRole.Employee, "DelegationOfAuthority", PermissionAction.Update, PermissionScope.Owner,
+                "Update own DOA letters"),
+            CreateTemplate(AppRole.Employee, "DelegationOfAuthority", PermissionAction.Delete, PermissionScope.Owner,
+                "Delete own draft DOA letters"),
+            CreateTemplate(AppRole.Employee, "DelegationOfAuthority", PermissionAction.Approve, PermissionScope.Owner,
+                "Sign DOA letters where user is delegator or designee"),
+
+            // Project Assignments - Read own assignments
+            CreateTemplate(AppRole.Employee, "ProjectAssignment", PermissionAction.Read, PermissionScope.Owner,
+                "View own project assignments"),
+
+            // Work Locations - Basic access for scheduling
+            CreateTemplate(AppRole.Employee, "WorkLocation", PermissionAction.Read, PermissionScope.Owner,
+                "View own work location schedule"),
+            CreateTemplate(AppRole.Employee, "WorkLocation", PermissionAction.Create, PermissionScope.Owner,
+                "Create own work location entries"),
+            CreateTemplate(AppRole.Employee, "WorkLocation", PermissionAction.Update, PermissionScope.Owner,
+                "Update own work location entries"),
+            CreateTemplate(AppRole.Employee, "WorkLocation", PermissionAction.Delete, PermissionScope.Owner,
+                "Delete own work location entries"),
+
+            // Templates - Basic access
+            CreateTemplate(AppRole.Employee, "WorkLocationTemplate", PermissionAction.Read, PermissionScope.Owner,
+                "View own work location templates"),
+            CreateTemplate(AppRole.Employee, "WorkLocationTemplate", PermissionAction.Create, PermissionScope.Owner,
+                "Create own work location templates"),
+            CreateTemplate(AppRole.Employee, "WorkLocationTemplate", PermissionAction.Update, PermissionScope.Owner,
+                "Update own work location templates"),
+            CreateTemplate(AppRole.Employee, "WorkLocationTemplate", PermissionAction.Delete, PermissionScope.Owner,
+                "Delete own work location templates"),
+
+            // Bookings - Basic hoteling access
+            CreateTemplate(AppRole.Employee, "Booking", PermissionAction.Read, PermissionScope.Owner,
+                "View own desk/room bookings"),
+            CreateTemplate(AppRole.Employee, "Booking", PermissionAction.Create, PermissionScope.Owner,
+                "Create desk/room bookings"),
+            CreateTemplate(AppRole.Employee, "Booking", PermissionAction.Update, PermissionScope.Owner,
+                "Update own bookings"),
+            CreateTemplate(AppRole.Employee, "Booking", PermissionAction.Delete, PermissionScope.Owner,
+                "Cancel own bookings"),
+
+            // Time Entries - Basic timesheet access
+            CreateTemplate(AppRole.Employee, "TimeEntry", PermissionAction.Read, PermissionScope.Owner,
+                "View own time entries"),
+            CreateTemplate(AppRole.Employee, "TimeEntry", PermissionAction.Create, PermissionScope.Owner,
+                "Create time entries"),
+            CreateTemplate(AppRole.Employee, "TimeEntry", PermissionAction.Update, PermissionScope.Owner,
+                "Update own time entries"),
+            CreateTemplate(AppRole.Employee, "TimeEntry", PermissionAction.Delete, PermissionScope.Owner,
+                "Delete own draft time entries"),
+
+            // Profile - Self management
+            CreateTemplate(AppRole.Employee, "UserProfile", PermissionAction.Read, PermissionScope.Owner,
+                "View own profile"),
+            CreateTemplate(AppRole.Employee, "UserProfile", PermissionAction.Update, PermissionScope.Owner,
+                "Update own profile"),
+        };
     }
 
     private static List<RolePermissionTemplate> GetFinanceLeadTemplates()

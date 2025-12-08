@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
@@ -7,14 +7,231 @@ import { RoleSelector } from '../components/RoleSelector';
 import { RoleTemplates } from '../components/RoleTemplates';
 import { useTenants } from '../hooks/useTenants';
 import { usePeople } from '../hooks/usePeople';
+import { useOffices } from '../hooks/useOffices';
 import { usersService } from '../services/tenantsService';
 import { tenantMembershipsService } from '../services/tenantMembershipsService';
 import { authService } from '../services/authService';
 import { teamCalendarService } from '../services/teamCalendarService';
-import type { User, TenantMembership } from '../types/api';
+import type { User, TenantMembership, Person } from '../types/api';
 import { AppRole } from '../types/api';
 import type { TeamCalendarResponse, CreateTeamCalendarRequest, UpdateTeamCalendarRequest, TeamCalendarType } from '../types/teamCalendar';
 import { useAuthStore } from '../stores/authStore';
+
+// Searchable Person Select Component
+interface PersonSelectProps {
+  label: string;
+  value: string | undefined;
+  onChange: (value: string) => void;
+  people: Person[];
+  excludeId?: string;
+  placeholder?: string;
+  disabled?: boolean;
+}
+
+function PersonSelect({ label, value, onChange, people, excludeId, placeholder = 'Search...', disabled }: PersonSelectProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const filteredPeople = useMemo(() => {
+    return people
+      .filter(p => p.id !== excludeId)
+      .filter(p =>
+        search === '' ||
+        p.displayName?.toLowerCase().includes(search.toLowerCase()) ||
+        p.email?.toLowerCase().includes(search.toLowerCase())
+      )
+      .slice(0, 50);
+  }, [people, excludeId, search]);
+
+  const selectedPerson = people.find(p => p.id === value);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <button
+        type="button"
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        disabled={disabled}
+        className="w-full px-3 py-2 text-left border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white disabled:bg-gray-100"
+      >
+        {selectedPerson ? (
+          <span className="flex items-center justify-between">
+            <span>{selectedPerson.displayName} <span className="text-gray-400 text-sm">({selectedPerson.email})</span></span>
+            {value && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onChange(''); }}
+                className="text-gray-400 hover:text-gray-600"
+                title="Clear selection"
+                aria-label="Clear selection"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            )}
+          </span>
+        ) : (
+          <span className="text-gray-400">None selected</span>
+        )}
+      </button>
+      {isOpen && (
+        <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-60 overflow-hidden">
+          <div className="p-2 border-b">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder={placeholder}
+              className="w-full px-2 py-1 border rounded text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+              autoFocus
+            />
+          </div>
+          <div className="max-h-48 overflow-y-auto">
+            <button
+              type="button"
+              onClick={() => { onChange(''); setIsOpen(false); setSearch(''); }}
+              className="w-full px-3 py-2 text-left text-sm hover:bg-gray-100 text-gray-500 italic"
+            >
+              None
+            </button>
+            {filteredPeople.map(person => (
+              <button
+                key={person.id}
+                type="button"
+                onClick={() => { onChange(person.id); setIsOpen(false); setSearch(''); }}
+                className={`w-full px-3 py-2 text-left text-sm hover:bg-blue-50 ${value === person.id ? 'bg-blue-100' : ''}`}
+              >
+                <span className="font-medium">{person.displayName}</span>
+                <span className="text-gray-400 ml-2">{person.email}</span>
+              </button>
+            ))}
+            {filteredPeople.length === 0 && (
+              <div className="px-3 py-2 text-sm text-gray-500 text-center">No matches found</div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Multi-select for Standard Delegates
+interface MultiPersonSelectProps {
+  label: string;
+  values: string[];
+  onChange: (values: string[]) => void;
+  people: Person[];
+  excludeId?: string;
+  placeholder?: string;
+  disabled?: boolean;
+}
+
+function MultiPersonSelect({ label, values, onChange, people, excludeId, placeholder = 'Search to add...', disabled }: MultiPersonSelectProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const filteredPeople = useMemo(() => {
+    return people
+      .filter(p => p.id !== excludeId)
+      .filter(p => !values.includes(p.id))
+      .filter(p =>
+        search === '' ||
+        p.displayName?.toLowerCase().includes(search.toLowerCase()) ||
+        p.email?.toLowerCase().includes(search.toLowerCase())
+      )
+      .slice(0, 50);
+  }, [people, excludeId, values, search]);
+
+  const selectedPeople = people.filter(p => values.includes(p.id));
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const removeDelegate = (id: string) => {
+    onChange(values.filter(v => v !== id));
+  };
+
+  const addDelegate = (id: string) => {
+    onChange([...values, id]);
+    setSearch('');
+  };
+
+  return (
+    <div ref={containerRef} className="relative">
+      <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <div className="min-h-[42px] px-3 py-2 border rounded-md shadow-sm bg-white">
+        <div className="flex flex-wrap gap-2 mb-2">
+          {selectedPeople.map(person => (
+            <span key={person.id} className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-blue-100 text-blue-800 text-sm">
+              {person.displayName}
+              {!disabled && (
+                <button
+                  type="button"
+                  onClick={() => removeDelegate(person.id)}
+                  className="hover:text-blue-900"
+                  title={`Remove ${person.displayName}`}
+                  aria-label={`Remove ${person.displayName}`}
+                >
+                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </span>
+          ))}
+        </div>
+        {!disabled && (
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setIsOpen(true); }}
+            onFocus={() => setIsOpen(true)}
+            placeholder={values.length === 0 ? placeholder : 'Add more...'}
+            className="w-full text-sm focus:outline-none"
+          />
+        )}
+      </div>
+      {isOpen && !disabled && search && (
+        <div className="absolute z-10 mt-1 w-full bg-white border border-gray-200 rounded-md shadow-lg max-h-48 overflow-y-auto">
+          {filteredPeople.map(person => (
+            <button
+              key={person.id}
+              type="button"
+              onClick={() => addDelegate(person.id)}
+              className="w-full px-3 py-2 text-left text-sm hover:bg-blue-50"
+            >
+              <span className="font-medium">{person.displayName}</span>
+              <span className="text-gray-400 ml-2">{person.email}</span>
+            </button>
+          ))}
+          {filteredPeople.length === 0 && (
+            <div className="px-3 py-2 text-sm text-gray-500 text-center">No matches found</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export function AdminUserEditPage() {
   const { id } = useParams<{ id: string }>();
@@ -53,6 +270,11 @@ export function AdminUserEditPage() {
     tenantId: currentWorkspace?.tenantId ?? '',
   });
 
+  // Get offices for home office dropdown
+  const { data: offices = [] } = useOffices({
+    tenantId: currentWorkspace?.tenantId ?? '',
+  });
+
   const { data: user, isLoading, error } = useQuery({
     queryKey: ['user', id],
     queryFn: () => usersService.getById(id!),
@@ -81,6 +303,10 @@ export function AdminUserEditPage() {
         department: user.department || '',
         managerId: user.managerId || '',
         isSystemAdmin: user.isSystemAdmin,
+        entraObjectId: user.entraObjectId || '',
+        homeOfficeId: user.homeOfficeId || '',
+        executiveAssistantId: user.executiveAssistantId || '',
+        standardDelegateIds: user.standardDelegateIds || [],
       });
     }
   }, [user]);
@@ -523,26 +749,56 @@ export function AdminUserEditPage() {
                       value={formData.department || ''}
                       onChange={(e) => setFormData({ ...formData, department: e.target.value })}
                     />
+                    <PersonSelect
+                      label="Manager"
+                      value={formData.managerId}
+                      onChange={(value) => setFormData({ ...formData, managerId: value })}
+                      people={peopleOptions}
+                      excludeId={id}
+                      placeholder="Search for manager..."
+                    />
                     <div>
-                      <label htmlFor="manager-select" className="block text-sm font-medium text-gray-700 mb-1">
-                        Manager
+                      <label htmlFor="home-office-select" className="block text-sm font-medium text-gray-700 mb-1">
+                        Home Office
                       </label>
                       <select
-                        id="manager-select"
-                        value={formData.managerId || ''}
-                        onChange={(e) => setFormData({ ...formData, managerId: e.target.value })}
+                        id="home-office-select"
+                        value={formData.homeOfficeId || ''}
+                        onChange={(e) => setFormData({ ...formData, homeOfficeId: e.target.value })}
                         className="w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       >
-                        <option value="">No Manager</option>
-                        {peopleOptions
-                          .filter((p) => p.id !== id) // Exclude self
-                          .map((person) => (
-                            <option key={person.id} value={person.id}>
-                              {person.displayName} {person.email ? `(${person.email})` : ''}
-                            </option>
-                          ))}
+                        <option value="">No Home Office</option>
+                        {offices.map((office) => (
+                          <option key={office.id} value={office.id}>
+                            {office.name} {office.city ? `(${office.city})` : ''}
+                          </option>
+                        ))}
                       </select>
                     </div>
+                    <PersonSelect
+                      label="Executive Assistant"
+                      value={formData.executiveAssistantId}
+                      onChange={(value) => setFormData({ ...formData, executiveAssistantId: value })}
+                      people={peopleOptions}
+                      excludeId={id}
+                      placeholder="Search for EA..."
+                    />
+                    <div className="md:col-span-2">
+                      <MultiPersonSelect
+                        label="Standard Delegates"
+                        values={formData.standardDelegateIds || []}
+                        onChange={(values) => setFormData({ ...formData, standardDelegateIds: values })}
+                        people={peopleOptions}
+                        excludeId={id}
+                        placeholder="Search to add delegates..."
+                      />
+                    </div>
+                    <Input
+                      label="Entra Object ID"
+                      value={formData.entraObjectId || ''}
+                      onChange={(e) => setFormData({ ...formData, entraObjectId: e.target.value })}
+                      placeholder="Azure AD / Entra ID"
+                    />
                     <div className="flex items-center">
                       <label className="flex items-center gap-2 cursor-pointer">
                         <input
@@ -596,6 +852,41 @@ export function AdminUserEditPage() {
                       {user.managerId
                         ? peopleOptions.find((p) => p.id === user.managerId)?.displayName || user.managerId
                         : '-'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Home Office</dt>
+                    <dd className="mt-1 text-sm text-gray-900">
+                      {user.homeOfficeId
+                        ? offices.find((o) => o.id === user.homeOfficeId)?.name || user.homeOfficeName || user.homeOfficeId
+                        : '-'}
+                    </dd>
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500">Executive Assistant</dt>
+                    <dd className="mt-1 text-sm text-gray-900">
+                      {user.executiveAssistantId
+                        ? peopleOptions.find((p) => p.id === user.executiveAssistantId)?.displayName || user.executiveAssistantId
+                        : '-'}
+                    </dd>
+                  </div>
+                  <div className="md:col-span-2">
+                    <dt className="text-sm font-medium text-gray-500">Standard Delegates</dt>
+                    <dd className="mt-1">
+                      {user.standardDelegateIds && user.standardDelegateIds.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {user.standardDelegateIds.map((delegateId) => {
+                            const delegate = peopleOptions.find((p) => p.id === delegateId);
+                            return (
+                              <span key={delegateId} className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                {delegate?.displayName || delegateId}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <span className="text-sm text-gray-900">-</span>
+                      )}
                     </dd>
                   </div>
                   <div>
@@ -1081,8 +1372,9 @@ export function AdminUserEditPage() {
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tenant</label>
+            <label htmlFor="tenant-select" className="block text-sm font-medium text-gray-700 mb-1">Tenant</label>
             <select
+              id="tenant-select"
               value={newMembershipTenantId}
               onChange={(e) => setNewMembershipTenantId(e.target.value)}
               className="w-full px-3 py-2 border rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
