@@ -9,6 +9,8 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using MyScheduling.Core.Entities;
 using MyScheduling.Api;
+using Microsoft.Identity.Web;
+using MyScheduling.Api.Services;
 
 // MyScheduling API - Production Ready
 var builder = WebApplication.CreateBuilder(args);
@@ -59,6 +61,14 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddHttpContextAccessor();
+
+// Azure AD SSO Configuration - for validating tokens from frontend MSAL
+var azureAdEnabled = builder.Configuration.GetValue<bool>("AzureAd:Enabled");
+if (azureAdEnabled)
+{
+    builder.Services.Configure<AzureAdSsoOptions>(builder.Configuration.GetSection("AzureAd"));
+    builder.Services.AddSingleton<IAzureAdTokenValidator, AzureAdTokenValidator>();
+}
 
 // CORS - Environment-specific configuration
 if (builder.Environment.IsDevelopment())
@@ -148,7 +158,16 @@ builder.Services.AddScoped<ResumeExportService>();
 
 // Register Magic Link and Email Services
 builder.Services.AddScoped<IMagicLinkService, MagicLinkService>();
-builder.Services.AddScoped<IEmailService, EmailService>();
+
+// Use Azure Email Service if configured, otherwise fall back to SMTP
+if (!string.IsNullOrEmpty(builder.Configuration["AzureEmail:ConnectionString"]))
+{
+    builder.Services.AddScoped<IEmailService, AzureEmailService>();
+}
+else
+{
+    builder.Services.AddScoped<IEmailService, EmailService>();
+}
 
 // Register Impersonation Service
 builder.Services.AddScoped<IImpersonationService, ImpersonationService>();

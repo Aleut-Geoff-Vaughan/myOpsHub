@@ -6,6 +6,8 @@ import {
   laborCategoriesService,
   careerJobFamiliesService,
   type CreateProjectRoleAssignmentDto,
+  type UpdateProjectRoleAssignmentDto,
+  type ProjectRoleAssignment,
   type LaborCategory,
   type CareerJobFamily,
   ProjectRoleAssignmentStatus,
@@ -19,23 +21,34 @@ interface AddPositionModalProps {
   projectId: string;
   projectName: string;
   tenantId: string;
+  editAssignment?: ProjectRoleAssignment;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export function AddPositionModal({ projectId, projectName, tenantId, onClose, onSuccess }: AddPositionModalProps) {
-  const [positionTitle, setPositionTitle] = useState('');
-  const [assigneeType, setAssigneeType] = useState<'user' | 'tbd'>('tbd');
-  const [selectedUserId, setSelectedUserId] = useState('');
-  const [userSearchTerm, setUserSearchTerm] = useState('');
+export function AddPositionModal({ projectId, projectName, tenantId, editAssignment, onClose, onSuccess }: AddPositionModalProps) {
+  const isEditMode = !!editAssignment;
+
+  const [positionTitle, setPositionTitle] = useState(editAssignment?.positionTitle || '');
+  const [assigneeType, setAssigneeType] = useState<'user' | 'tbd'>(
+    editAssignment ? (editAssignment.isTbd ? 'tbd' : 'user') : 'tbd'
+  );
+  const [selectedUserId, setSelectedUserId] = useState(editAssignment?.userId || '');
+  const [userSearchTerm, setUserSearchTerm] = useState(editAssignment?.assigneeName || editAssignment?.userName || '');
   const [showUserDropdown, setShowUserDropdown] = useState(false);
-  const [tbdDescription, setTbdDescription] = useState('');
-  const [selectedWbsId, setSelectedWbsId] = useState('');
-  const [selectedLaborCategoryId, setSelectedLaborCategoryId] = useState('');
-  const [selectedCareerJobFamilyId, setSelectedCareerJobFamilyId] = useState('');
-  const [careerLevel, setCareerLevel] = useState<number | undefined>();
-  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
-  const [endDate, setEndDate] = useState('');
+  const [tbdDescription, setTbdDescription] = useState(editAssignment?.tbdDescription || '');
+  const [selectedWbsId, setSelectedWbsId] = useState(editAssignment?.wbsElementId || '');
+  const [selectedLaborCategoryId, setSelectedLaborCategoryId] = useState(editAssignment?.laborCategoryId || '');
+  const [selectedCareerJobFamilyId, setSelectedCareerJobFamilyId] = useState(editAssignment?.careerJobFamilyId || '');
+  const [careerLevel, setCareerLevel] = useState<number | undefined>(editAssignment?.careerLevel);
+  const [startDate, setStartDate] = useState(
+    editAssignment?.startDate
+      ? new Date(editAssignment.startDate).toISOString().split('T')[0]
+      : new Date().toISOString().split('T')[0]
+  );
+  const [endDate, setEndDate] = useState(
+    editAssignment?.endDate ? new Date(editAssignment.endDate).toISOString().split('T')[0] : ''
+  );
 
   const userSearchRef = useRef<HTMLDivElement>(null);
 
@@ -138,6 +151,19 @@ export function AddPositionModal({ projectId, projectName, tenantId, onClose, on
     },
   });
 
+  // Update mutation
+  const updateMutation = useMutation({
+    mutationFn: (dto: UpdateProjectRoleAssignmentDto) =>
+      projectRoleAssignmentsService.update(editAssignment!.id, dto),
+    onSuccess: () => {
+      toast.success('Position updated successfully');
+      onSuccess();
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update position');
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -151,24 +177,41 @@ export function AddPositionModal({ projectId, projectName, tenantId, onClose, on
       return;
     }
 
-    const dto: CreateProjectRoleAssignmentDto = {
-      tenantId,
-      projectId,
-      positionTitle: positionTitle.trim(),
-      isTbd: assigneeType === 'tbd',
-      tbdDescription: assigneeType === 'tbd' ? tbdDescription.trim() || undefined : undefined,
-      userId: assigneeType === 'user' ? selectedUserId : undefined,
-      wbsElementId: selectedWbsId || undefined,
-      laborCategoryId: selectedLaborCategoryId || undefined,
-      careerJobFamilyId: selectedCareerJobFamilyId || undefined,
-      careerLevel: careerLevel || undefined,
-      startDate,
-      endDate: endDate || undefined,
-      status: ProjectRoleAssignmentStatus.Active,
-    };
-
-    createMutation.mutate(dto);
+    if (isEditMode) {
+      // Use UpdateProjectRoleAssignmentDto for updates
+      const updateDto: UpdateProjectRoleAssignmentDto = {
+        positionTitle: positionTitle.trim(),
+        wbsElementId: selectedWbsId || undefined,
+        laborCategoryId: selectedLaborCategoryId || undefined,
+        careerJobFamilyId: selectedCareerJobFamilyId || undefined,
+        careerLevel: careerLevel || undefined,
+        startDate,
+        endDate: endDate || undefined,
+        tbdDescription: assigneeType === 'tbd' ? tbdDescription.trim() || undefined : undefined,
+      };
+      updateMutation.mutate(updateDto);
+    } else {
+      // Use CreateProjectRoleAssignmentDto for new positions
+      const createDto: CreateProjectRoleAssignmentDto = {
+        tenantId,
+        projectId,
+        positionTitle: positionTitle.trim(),
+        isTbd: assigneeType === 'tbd',
+        tbdDescription: assigneeType === 'tbd' ? tbdDescription.trim() || undefined : undefined,
+        userId: assigneeType === 'user' ? selectedUserId : undefined,
+        wbsElementId: selectedWbsId || undefined,
+        laborCategoryId: selectedLaborCategoryId || undefined,
+        careerJobFamilyId: selectedCareerJobFamilyId || undefined,
+        careerLevel: careerLevel || undefined,
+        startDate,
+        endDate: endDate || undefined,
+        status: ProjectRoleAssignmentStatus.Active,
+      };
+      createMutation.mutate(createDto);
+    }
   };
+
+  const isPending = createMutation.isPending || updateMutation.isPending;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -185,10 +228,10 @@ export function AddPositionModal({ projectId, projectName, tenantId, onClose, on
             <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
               <div className="mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">
-                  Add Position to {projectName}
+                  {isEditMode ? 'Edit Position' : `Add Position to ${projectName}`}
                 </h3>
                 <p className="text-sm text-gray-500 mt-1">
-                  Create a new position assignment for forecasting
+                  {isEditMode ? 'Update the position assignment details' : 'Create a new position assignment for forecasting'}
                 </p>
               </div>
 
@@ -464,10 +507,10 @@ export function AddPositionModal({ projectId, projectName, tenantId, onClose, on
             <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse gap-2">
               <button
                 type="submit"
-                disabled={createMutation.isPending}
+                disabled={isPending}
                 className="w-full sm:w-auto px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {createMutation.isPending ? 'Adding...' : 'Add Position'}
+                {isPending ? (isEditMode ? 'Saving...' : 'Adding...') : (isEditMode ? 'Save Changes' : 'Add Position')}
               </button>
               <button
                 type="button"

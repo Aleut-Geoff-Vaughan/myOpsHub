@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { authService, type TenantAccessInfo, type LoginResponse } from '../services/authService';
+import { ssoLoginPopup, ssoLogout, isSsoEnabled } from '../services/ssoService';
 
 export enum AppRole {
   Employee = 'Employee',
@@ -63,6 +64,8 @@ interface AuthState {
   // Actions
   login: (email: string, password: string) => Promise<void>;
   loginWithMagicLink: (token: string) => Promise<void>;
+  loginWithSso: () => Promise<void>;
+  checkSsoEnabled: () => Promise<boolean>;
   loginFromResponse: (response: LoginResponse) => void;
   selectWorkspace: (workspace: Workspace) => void;
   switchWorkspace: () => void;
@@ -123,6 +126,44 @@ export const useAuthStore = create<AuthState>()(
         }
       },
 
+      loginWithSso: async () => {
+        try {
+          const result = await ssoLoginPopup();
+
+          if (!result.success) {
+            throw new Error(result.error || 'SSO login failed');
+          }
+
+          // Convert SSO result to LoginResponse format
+          const response: LoginResponse = {
+            token: result.token!,
+            expiresAt: result.expiresAt!.toISOString(),
+            userId: result.userId!,
+            email: result.email!,
+            displayName: result.displayName!,
+            isSystemAdmin: result.isSystemAdmin!,
+            tenantAccess: result.tenantAccess || [],
+          };
+
+          get().loginFromResponse(response);
+        } catch (error) {
+          set({
+            user: null,
+            token: null,
+            tokenExpiresAt: null,
+            availableTenants: [],
+            currentWorkspace: null,
+            isAuthenticated: false,
+            impersonation: null
+          });
+          throw error;
+        }
+      },
+
+      checkSsoEnabled: async () => {
+        return await isSsoEnabled();
+      },
+
       loginFromResponse: (response: LoginResponse) => {
         const user: User = {
           id: response.userId,
@@ -165,6 +206,8 @@ export const useAuthStore = create<AuthState>()(
 
         try {
           await authService.logout();
+          // Also clear SSO state
+          await ssoLogout();
         } catch (error) {
           console.error('Logout error:', error);
         } finally {

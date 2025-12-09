@@ -16,6 +16,7 @@ import { NonLaborCostsGrid } from '../components/NonLaborCostsGrid';
 import { useFiscalYear, getFiscalYearStartDate, type MonthInfo } from '../hooks/useFiscalYear';
 
 type GranularityMode = 'monthly' | 'weekly';
+type GroupByMode = 'wbs' | 'user';
 
 export function ProjectForecastGridPage() {
   const { projectId } = useParams<{ projectId: string }>();
@@ -28,12 +29,16 @@ export function ProjectForecastGridPage() {
   const fiscalYear = useFiscalYear();
 
   const [granularity, setGranularity] = useState<GranularityMode>('monthly');
+  const [groupBy, setGroupBy] = useState<GroupByMode>('wbs');
   const [selectedFiscalYear, setSelectedFiscalYear] = useState(fiscalYear.currentFiscalYear);
   const [selectedQuarter, setSelectedQuarter] = useState<number | null>(null);
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [cellValues, setCellValues] = useState<Record<string, number>>({});
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+  const [selectedAssignment, setSelectedAssignment] = useState<ProjectRoleAssignment | null>(null);
   const [showAddPositionModal, setShowAddPositionModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Fetch project
   const { data: project, isLoading: projectLoading } = useQuery({
@@ -136,6 +141,21 @@ export function ProjectForecastGridPage() {
     },
   });
 
+  // Delete assignment mutation
+  const deleteAssignmentMutation = useMutation({
+    mutationFn: (assignmentId: string) => projectRoleAssignmentsService.delete(assignmentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project-assignments', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-forecasts'] });
+      setShowDeleteConfirm(false);
+      setSelectedAssignment(null);
+      toast.success('Assignment deleted');
+    },
+    onError: () => {
+      toast.error('Failed to delete assignment');
+    },
+  });
+
   // Generate month columns using fiscal year
   const months: MonthInfo[] = useMemo(() => {
     // Get start date for the fiscal year
@@ -164,15 +184,16 @@ export function ProjectForecastGridPage() {
 
   // Group assignments by WBS
   const assignmentsByWbs = useMemo(() => {
-    const groups: Record<string, { wbsCode: string; wbsDescription: string; assignments: ProjectRoleAssignment[] }> = {};
+    const groups: Record<string, { groupKey: string; groupLabel: string; groupSubLabel: string; assignments: ProjectRoleAssignment[] }> = {};
     const noWbs: ProjectRoleAssignment[] = [];
 
     assignments.forEach(a => {
       if (a.wbsElementId && a.wbsElementCode) {
         if (!groups[a.wbsElementId]) {
           groups[a.wbsElementId] = {
-            wbsCode: a.wbsElementCode,
-            wbsDescription: a.wbsElementDescription || '',
+            groupKey: a.wbsElementId,
+            groupLabel: a.wbsElementCode,
+            groupSubLabel: a.wbsElementDescription || '',
             assignments: [],
           };
         }
@@ -182,12 +203,46 @@ export function ProjectForecastGridPage() {
       }
     });
 
-    const result = Object.values(groups).sort((a, b) => a.wbsCode.localeCompare(b.wbsCode));
+    const result = Object.values(groups).sort((a, b) => a.groupLabel.localeCompare(b.groupLabel));
     if (noWbs.length > 0) {
-      result.push({ wbsCode: 'No WBS', wbsDescription: 'Unassigned', assignments: noWbs });
+      result.push({ groupKey: 'no-wbs', groupLabel: 'No WBS', groupSubLabel: 'Unassigned', assignments: noWbs });
     }
     return result;
   }, [assignments]);
+
+  // Group assignments by User
+  const assignmentsByUser = useMemo(() => {
+    const groups: Record<string, { groupKey: string; groupLabel: string; groupSubLabel: string; assignments: ProjectRoleAssignment[] }> = {};
+    const unassigned: ProjectRoleAssignment[] = [];
+
+    assignments.forEach(a => {
+      const assigneeKey = a.userId || a.subcontractorId;
+      if (assigneeKey && a.assigneeName && !a.isTbd) {
+        if (!groups[assigneeKey]) {
+          groups[assigneeKey] = {
+            groupKey: assigneeKey,
+            groupLabel: a.assigneeName,
+            groupSubLabel: a.subcontractorCompanyName || '',
+            assignments: [],
+          };
+        }
+        groups[assigneeKey].assignments.push(a);
+      } else {
+        unassigned.push(a);
+      }
+    });
+
+    const result = Object.values(groups).sort((a, b) => a.groupLabel.localeCompare(b.groupLabel));
+    if (unassigned.length > 0) {
+      result.push({ groupKey: 'unassigned', groupLabel: 'TBD / Unassigned', groupSubLabel: '', assignments: unassigned });
+    }
+    return result;
+  }, [assignments]);
+
+  // Select the active grouping based on toggle
+  const groupedAssignments = useMemo(() => {
+    return groupBy === 'wbs' ? assignmentsByWbs : assignmentsByUser;
+  }, [groupBy, assignmentsByWbs, assignmentsByUser]);
 
   // Calculate totals
   const totals = useMemo(() => {
@@ -321,15 +376,37 @@ export function ProjectForecastGridPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
+          {/* Group By Toggle */}
+          <div className="bg-gray-100 rounded-lg p-1 inline-flex">
+            <button
+              type="button"
+              onClick={() => setGroupBy('wbs')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${groupBy === 'wbs' ? 'bg-white shadow text-emerald-700' : 'text-gray-600 hover:text-gray-900'}`}
+              title="Group by WBS Element"
+            >
+              By WBS
+            </button>
+            <button
+              type="button"
+              onClick={() => setGroupBy('user')}
+              className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${groupBy === 'user' ? 'bg-white shadow text-emerald-700' : 'text-gray-600 hover:text-gray-900'}`}
+              title="Group by Assignee"
+            >
+              By User
+            </button>
+          </div>
+
           {/* Granularity Toggle */}
           <div className="bg-gray-100 rounded-lg p-1 inline-flex">
             <button
+              type="button"
               onClick={() => setGranularity('monthly')}
               className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${granularity === 'monthly' ? 'bg-white shadow text-emerald-700' : 'text-gray-600 hover:text-gray-900'}`}
             >
               Monthly
             </button>
             <button
+              type="button"
               onClick={() => setGranularity('weekly')}
               className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${granularity === 'weekly' ? 'bg-white shadow text-emerald-700' : 'text-gray-600 hover:text-gray-900'}`}
             >
@@ -340,6 +417,7 @@ export function ProjectForecastGridPage() {
           {/* Fiscal/Calendar Year Toggle */}
           {!fiscalYear.isCalendarYear && (
             <button
+              type="button"
               onClick={fiscalYear.toggleMode}
               className={`px-3 py-2 text-sm font-medium rounded-lg border transition-colors ${
                 fiscalYear.mode === 'fiscal'
@@ -397,6 +475,7 @@ export function ProjectForecastGridPage() {
           {/* Actions */}
           {selectedRows.size > 0 && (
             <button
+              type="button"
               onClick={handleSubmitSelected}
               disabled={submitForecastsMutation.isPending}
               className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm font-medium hover:bg-emerald-700 disabled:opacity-50"
@@ -435,7 +514,8 @@ export function ProjectForecastGridPage() {
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50 sticky top-0 z-10">
               <tr>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase w-8">
+                <th scope="col" className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase w-8">
+                  <span className="sr-only">Select all</span>
                   <input
                     type="checkbox"
                     onChange={(e) => {
@@ -446,6 +526,7 @@ export function ProjectForecastGridPage() {
                       }
                     }}
                     checked={selectedRows.size === assignments.length && assignments.length > 0}
+                    aria-label="Select all rows"
                     className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
                   />
                 </th>
@@ -463,10 +544,11 @@ export function ProjectForecastGridPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
-              {assignmentsByWbs.map(group => (
-                <WbsGroup
-                  key={group.wbsCode}
+              {groupedAssignments.map(group => (
+                <AssignmentGroup
+                  key={group.groupKey}
                   group={group}
+                  groupBy={groupBy}
                   months={months}
                   forecastMap={forecastMap}
                   editingCell={editingCell}
@@ -477,6 +559,14 @@ export function ProjectForecastGridPage() {
                   onCellBlur={handleCellBlur}
                   onKeyDown={handleKeyDown}
                   onRowSelect={handleRowSelect}
+                  onEditRow={(assignment) => {
+                    setSelectedAssignment(assignment);
+                    setShowEditModal(true);
+                  }}
+                  onDeleteRow={(assignment) => {
+                    setSelectedAssignment(assignment);
+                    setShowDeleteConfirm(true);
+                  }}
                 />
               ))}
               {/* Totals Row */}
@@ -542,12 +632,72 @@ export function ProjectForecastGridPage() {
           }}
         />
       )}
+
+      {/* Edit Position Modal */}
+      {showEditModal && selectedAssignment && project && (
+        <AddPositionModal
+          projectId={projectId!}
+          projectName={project.name}
+          tenantId={tenantId}
+          editAssignment={selectedAssignment}
+          onClose={() => {
+            setShowEditModal(false);
+            setSelectedAssignment(null);
+          }}
+          onSuccess={() => {
+            queryClient.invalidateQueries({ queryKey: ['project-assignments', projectId] });
+            setShowEditModal(false);
+            setSelectedAssignment(null);
+          }}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && selectedAssignment && (
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/30" onClick={() => setShowDeleteConfirm(false)} />
+            <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">Delete Assignment</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Are you sure you want to delete the assignment for{' '}
+                <span className="font-medium">{selectedAssignment.positionTitle}</span>
+                {selectedAssignment.assigneeName && (
+                  <> assigned to <span className="font-medium">{selectedAssignment.assigneeName}</span></>
+                )}
+                ? This will also delete all associated forecasts.
+              </p>
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDeleteConfirm(false);
+                    setSelectedAssignment(null);
+                  }}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => deleteAssignmentMutation.mutate(selectedAssignment.id)}
+                  disabled={deleteAssignmentMutation.isPending}
+                  className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 disabled:opacity-50"
+                >
+                  {deleteAssignmentMutation.isPending ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-interface WbsGroupProps {
-  group: { wbsCode: string; wbsDescription: string; assignments: ProjectRoleAssignment[] };
+interface AssignmentGroupProps {
+  group: { groupKey: string; groupLabel: string; groupSubLabel: string; assignments: ProjectRoleAssignment[] };
+  groupBy: GroupByMode;
   months: MonthInfo[];
   forecastMap: Record<string, Forecast>;
   editingCell: string | null;
@@ -558,10 +708,13 @@ interface WbsGroupProps {
   onCellBlur: (assignmentId: string, year: number, month: number) => void;
   onKeyDown: (e: React.KeyboardEvent, assignmentId: string, year: number, month: number) => void;
   onRowSelect: (assignmentId: string) => void;
+  onEditRow: (assignment: ProjectRoleAssignment) => void;
+  onDeleteRow: (assignment: ProjectRoleAssignment) => void;
 }
 
-function WbsGroup({
+function AssignmentGroup({
   group,
+  groupBy,
   months,
   forecastMap,
   editingCell,
@@ -572,11 +725,13 @@ function WbsGroup({
   onCellBlur,
   onKeyDown,
   onRowSelect,
-}: WbsGroupProps) {
+  onEditRow,
+  onDeleteRow,
+}: AssignmentGroupProps) {
   const [expanded, setExpanded] = useState(true);
 
-  // Calculate WBS totals
-  const wbsTotals = useMemo(() => {
+  // Calculate group totals
+  const groupTotals = useMemo(() => {
     const byMonth: Record<string, number> = {};
     let total = 0;
 
@@ -600,11 +755,12 @@ function WbsGroup({
 
   return (
     <>
-      {/* WBS Header Row */}
+      {/* Group Header Row */}
       <tr className="bg-gray-100">
         <td className="px-3 py-2"></td>
         <td className="px-4 py-2 sticky left-0 bg-gray-100">
           <button
+            type="button"
             onClick={() => setExpanded(!expanded)}
             className="flex items-center gap-2 text-sm font-medium text-gray-700"
           >
@@ -616,22 +772,28 @@ function WbsGroup({
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
-            {group.wbsCode}
-            {group.wbsDescription && (
-              <span className="text-gray-500 font-normal">- {group.wbsDescription}</span>
+            {groupBy === 'user' && (
+              <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
             )}
+            {group.groupLabel}
+            {group.groupSubLabel && (
+              <span className="text-gray-500 font-normal">- {group.groupSubLabel}</span>
+            )}
+            <span className="text-xs text-gray-400 font-normal">({group.assignments.length})</span>
           </button>
         </td>
         {months.map(m => {
           const key = `${m.year}-${m.month}`;
           return (
             <td key={key} className="px-3 py-2 text-center text-xs text-gray-600">
-              {wbsTotals.byMonth[key] || ''}
+              {groupTotals.byMonth[key] || ''}
             </td>
           );
         })}
         <td className="px-4 py-2 text-right text-xs font-medium text-gray-700 sticky right-0 bg-gray-100">
-          {wbsTotals.total || ''}
+          {groupTotals.total || ''}
         </td>
       </tr>
       {/* Assignment Rows */}
@@ -639,6 +801,7 @@ function WbsGroup({
         <AssignmentRow
           key={assignment.id}
           assignment={assignment}
+          groupBy={groupBy}
           months={months}
           forecastMap={forecastMap}
           editingCell={editingCell}
@@ -649,6 +812,8 @@ function WbsGroup({
           onCellBlur={onCellBlur}
           onKeyDown={onKeyDown}
           onSelect={() => onRowSelect(assignment.id)}
+          onEdit={() => onEditRow(assignment)}
+          onDelete={() => onDeleteRow(assignment)}
         />
       ))}
     </>
@@ -657,6 +822,7 @@ function WbsGroup({
 
 interface AssignmentRowProps {
   assignment: ProjectRoleAssignment;
+  groupBy: GroupByMode;
   months: MonthInfo[];
   forecastMap: Record<string, Forecast>;
   editingCell: string | null;
@@ -667,10 +833,13 @@ interface AssignmentRowProps {
   onCellBlur: (assignmentId: string, year: number, month: number) => void;
   onKeyDown: (e: React.KeyboardEvent, assignmentId: string, year: number, month: number) => void;
   onSelect: () => void;
+  onEdit: () => void;
+  onDelete: () => void;
 }
 
 function AssignmentRow({
   assignment,
+  groupBy,
   months,
   forecastMap,
   editingCell,
@@ -681,7 +850,11 @@ function AssignmentRow({
   onCellBlur,
   onKeyDown,
   onSelect,
+  onEdit,
+  onDelete,
 }: AssignmentRowProps) {
+  const [showActions, setShowActions] = useState(false);
+
   const rowTotal = useMemo(() => {
     return months.reduce((sum, m) => {
       const key = `${assignment.id}-${m.year}-${m.month}`;
@@ -701,24 +874,65 @@ function AssignmentRow({
     return 'bg-white';
   };
 
+  // When grouped by user, show WBS info; when grouped by WBS, show user info
+  const primaryLabel = groupBy === 'user'
+    ? assignment.positionTitle
+    : assignment.positionTitle;
+
+  const secondaryLabel = groupBy === 'user'
+    ? (assignment.wbsElementCode ? `WBS: ${assignment.wbsElementCode}` : 'No WBS')
+    : (assignment.assigneeName || (assignment.isTbd ? 'TBD' : 'Unassigned'));
+
   return (
-    <tr className={`hover:bg-gray-50 ${isSelected ? 'bg-emerald-50' : ''}`}>
+    <tr
+      className={`hover:bg-gray-50 ${isSelected ? 'bg-emerald-50' : ''} group`}
+      onMouseEnter={() => setShowActions(true)}
+      onMouseLeave={() => setShowActions(false)}
+    >
       <td className="px-3 py-2">
         <input
           type="checkbox"
           checked={isSelected}
           onChange={onSelect}
+          aria-label={`Select ${assignment.positionTitle}`}
           className="rounded border-gray-300 text-emerald-600 focus:ring-emerald-500"
         />
       </td>
-      <td className="px-4 py-2 sticky left-0 bg-white">
-        <div className="text-sm font-medium text-gray-900">{assignment.positionTitle}</div>
-        <div className="text-xs text-gray-500">
-          {assignment.assigneeName}
-          {assignment.isTbd && <span className="ml-1 text-amber-600">(TBD)</span>}
-          {assignment.subcontractorCompanyName && (
-            <span className="ml-1 text-cyan-600">({assignment.subcontractorCompanyName})</span>
-          )}
+      <td className={`px-4 py-2 sticky left-0 ${isSelected ? 'bg-emerald-50' : 'bg-white'} group-hover:bg-gray-50`}>
+        <div className="flex items-center justify-between">
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-medium text-gray-900 truncate">{primaryLabel}</div>
+            <div className="text-xs text-gray-500 truncate">
+              {secondaryLabel}
+              {groupBy === 'wbs' && assignment.isTbd && <span className="ml-1 text-amber-600">(TBD)</span>}
+              {groupBy === 'wbs' && assignment.subcontractorCompanyName && (
+                <span className="ml-1 text-cyan-600">({assignment.subcontractorCompanyName})</span>
+              )}
+            </div>
+          </div>
+          {/* Edit/Delete Actions */}
+          <div className={`flex items-center gap-1 ml-2 transition-opacity ${showActions ? 'opacity-100' : 'opacity-0'}`}>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onEdit(); }}
+              className="p-1 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded"
+              title="Edit assignment"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); onDelete(); }}
+              className="p-1 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded"
+              title="Delete assignment"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          </div>
         </div>
       </td>
       {months.map(m => {
@@ -741,6 +955,7 @@ function AssignmentRow({
                 onChange={(e) => onCellChange(cellKey, e.target.value)}
                 onBlur={() => onCellBlur(assignment.id, m.year, m.month)}
                 onKeyDown={(e) => onKeyDown(e, assignment.id, m.year, m.month)}
+                aria-label={`Hours for ${assignment.positionTitle} in ${m.label}`}
                 className="w-16 px-1 py-0.5 text-center text-sm border border-emerald-500 rounded focus:ring-2 focus:ring-emerald-500"
                 autoFocus
                 min={0}
@@ -754,7 +969,7 @@ function AssignmentRow({
           </td>
         );
       })}
-      <td className="px-4 py-2 text-right text-sm font-medium text-gray-900 sticky right-0 bg-white">
+      <td className={`px-4 py-2 text-right text-sm font-medium text-gray-900 sticky right-0 ${isSelected ? 'bg-emerald-50' : 'bg-white'} group-hover:bg-gray-50`}>
         {rowTotal > 0 ? rowTotal : '-'}
       </td>
     </tr>

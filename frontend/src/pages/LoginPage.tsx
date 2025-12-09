@@ -5,7 +5,7 @@ import { useAuthStore } from '../stores/authStore';
 import { buildApiUrl } from '../config/api';
 import { Link } from 'react-router-dom';
 import { authService } from '../services/authService';
-import { Mail, Lock, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, ArrowLeft, Loader2 } from 'lucide-react';
 
 interface HealthStatus {
   status: string;
@@ -22,15 +22,19 @@ export function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isSsoLoading, setIsSsoLoading] = useState(false);
   const [error, setError] = useState('');
   const [healthStatus, setHealthStatus] = useState<HealthStatus | null>(null);
   const [healthError, setHealthError] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [loginMode, setLoginMode] = useState<LoginMode>('password');
   const [magicLinkSent, setMagicLinkSent] = useState(false);
+  const [ssoEnabled, setSsoEnabled] = useState<boolean | null>(null);
 
   const navigate = useNavigate();
   const login = useAuthStore((state) => state.login);
+  const loginWithSso = useAuthStore((state) => state.loginWithSso);
+  const checkSsoEnabled = useAuthStore((state) => state.checkSsoEnabled);
 
   // Health check on component mount
   useEffect(() => {
@@ -58,6 +62,37 @@ export function LoginPage() {
       setEmail(stored);
     }
   }, []);
+
+  // Check if SSO is enabled
+  useEffect(() => {
+    const checkSso = async () => {
+      try {
+        const enabled = await checkSsoEnabled();
+        setSsoEnabled(enabled);
+      } catch (err) {
+        console.warn('Failed to check SSO status:', err);
+        setSsoEnabled(false);
+      }
+    };
+    checkSso();
+  }, [checkSsoEnabled]);
+
+  const handleSsoLogin = async () => {
+    setError('');
+    setIsSsoLoading(true);
+
+    try {
+      await loginWithSso();
+      toast.success('SSO login successful!');
+      navigate('/select-workspace');
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'SSO login failed. Please try again.';
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setIsSsoLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -259,19 +294,31 @@ export function LoginPage() {
                   <span>Sign in with Email Link</span>
                 </button>
 
-                <button
-                  type="button"
-                  className="w-full bg-white border border-gray-300 hover:border-gray-400 text-gray-800 font-medium py-3 px-4 rounded-lg transition shadow-sm flex items-center justify-center gap-2"
-                  onClick={() => toast('Login with Microsoft coming soon')}
-                >
-                  <svg className="w-5 h-5" viewBox="0 0 23 23" aria-hidden="true">
-                    <rect width="10.5" height="10.5" x="0.5" y="0.5" fill="#F35325" />
-                    <rect width="10.5" height="10.5" x="12" y="0.5" fill="#81BC06" />
-                    <rect width="10.5" height="10.5" x="0.5" y="12" fill="#05A6F0" />
-                    <rect width="10.5" height="10.5" x="12" y="12" fill="#FFBA08" />
-                  </svg>
-                  <span>Sign in with Microsoft</span>
-                </button>
+                {ssoEnabled && (
+                  <button
+                    type="button"
+                    className="w-full bg-white border border-gray-300 hover:border-blue-400 hover:bg-blue-50 text-gray-800 font-medium py-3 px-4 rounded-lg transition shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={handleSsoLogin}
+                    disabled={isSsoLoading || isLoading}
+                  >
+                    {isSsoLoading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        <span>Signing in with Microsoft...</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" viewBox="0 0 23 23" aria-hidden="true">
+                          <rect width="10.5" height="10.5" x="0.5" y="0.5" fill="#F35325" />
+                          <rect width="10.5" height="10.5" x="12" y="0.5" fill="#81BC06" />
+                          <rect width="10.5" height="10.5" x="0.5" y="12" fill="#05A6F0" />
+                          <rect width="10.5" height="10.5" x="12" y="12" fill="#FFBA08" />
+                        </svg>
+                        <span>Sign in with Microsoft</span>
+                      </>
+                    )}
+                  </button>
+                )}
               </div>
             </form>
           )}
@@ -338,7 +385,7 @@ export function LoginPage() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 px-4 rounded-lg transition disabled:opacity-60 disabled:cursor-not-allowed border border-primary-700 shadow-sm tracking-wide"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 px-4 rounded-lg transition disabled:opacity-60 disabled:cursor-not-allowed border border-blue-700 shadow-sm tracking-wide"
               >
                 {isLoading ? (
                   <span className="flex items-center justify-center">
@@ -351,7 +398,7 @@ export function LoginPage() {
                 ) : (
                   <span className="flex items-center justify-center gap-2">
                     <Mail className="h-4 w-4" />
-                    Send Login Link
+                    Send Magic Link
                   </span>
                 )}
               </button>

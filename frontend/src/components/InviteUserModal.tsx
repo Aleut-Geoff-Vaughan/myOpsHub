@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { AppRole } from '../types/api';
@@ -7,6 +7,7 @@ import type { CreateInvitationRequest } from '../services/userInvitationsService
 import { Modal } from './ui/Modal';
 import { RoleSelector } from './RoleSelector';
 import { RoleTemplates } from './RoleTemplates';
+import { useTenants } from '../hooks/useTenants';
 
 interface InviteUserModalProps {
   isOpen: boolean;
@@ -21,6 +22,14 @@ export function InviteUserModal({ isOpen, onClose, tenantId, tenantName }: Invit
   const [selectedRoles, setSelectedRoles] = useState<AppRole[]>([]);
   const [showTemplates, setShowTemplates] = useState(true);
   const queryClient = useQueryClient();
+  const { data: tenants, isLoading: tenantsLoading } = useTenants();
+
+  // Update selectedTenantId when tenantId prop changes
+  useEffect(() => {
+    if (tenantId) {
+      setSelectedTenantId(tenantId);
+    }
+  }, [tenantId]);
 
   const createInvitationMutation = useMutation({
     mutationFn: (request: CreateInvitationRequest) => userInvitationsService.createInvitation(request),
@@ -98,16 +107,24 @@ export function InviteUserModal({ isOpen, onClose, tenantId, tenantName }: Invit
             <label htmlFor="tenant" className="block text-sm font-medium text-gray-700 mb-2">
               Tenant <span className="text-red-500">*</span>
             </label>
-            <input
-              type="text"
+            <select
               id="tenant"
               value={selectedTenantId}
               onChange={(e) => setSelectedTenantId(e.target.value)}
-              placeholder="Enter Tenant ID"
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
               required
-              disabled={createInvitationMutation.isPending}
-            />
+              disabled={createInvitationMutation.isPending || tenantsLoading}
+            >
+              <option value="">Select a tenant...</option>
+              {tenants?.map((tenant) => (
+                <option key={tenant.id} value={tenant.id}>
+                  {tenant.name}
+                </option>
+              ))}
+            </select>
+            {tenantsLoading && (
+              <p className="mt-1 text-xs text-gray-500">Loading tenants...</p>
+            )}
           </div>
         )}
 

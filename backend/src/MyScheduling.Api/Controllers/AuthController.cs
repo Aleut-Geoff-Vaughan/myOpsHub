@@ -8,6 +8,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using MyScheduling.Api.Services;
 
 namespace MyScheduling.Api.Controllers;
 
@@ -21,6 +22,7 @@ public class AuthController : ControllerBase
     private readonly IHttpContextAccessor _httpContextAccessor;
     private readonly IMagicLinkService _magicLinkService;
     private readonly IEmailService _emailService;
+    private readonly IAzureAdTokenValidator? _azureAdTokenValidator;
     private const int MaxFailedLoginAttempts = 5;
     private const int LockoutDurationMinutes = 30;
 
@@ -30,7 +32,8 @@ public class AuthController : ControllerBase
         IConfiguration configuration,
         IHttpContextAccessor httpContextAccessor,
         IMagicLinkService magicLinkService,
-        IEmailService emailService)
+        IEmailService emailService,
+        IAzureAdTokenValidator? azureAdTokenValidator = null)
     {
         _context = context;
         _logger = logger;
@@ -38,6 +41,7 @@ public class AuthController : ControllerBase
         _httpContextAccessor = httpContextAccessor;
         _magicLinkService = magicLinkService;
         _emailService = emailService;
+        _azureAdTokenValidator = azureAdTokenValidator;
     }
 
     [HttpPost("login")]
@@ -460,6 +464,145 @@ public class AuthController : ControllerBase
         }
     }
 
+    // ==================== AZURE AD SSO ENDPOINTS ====================
+
+    /// <summary>
+    /// Check if Azure AD SSO is enabled and return configuration
+    /// </summary>
+    [HttpGet("sso/config")]
+    public IActionResult GetSsoConfig()
+    {
+        var ssoEnabled = _azureAdTokenValidator?.IsEnabled ?? false;
+        var clientId = _configuration["AzureAd:ClientId"] ?? "";
+        var tenantId = _configuration["AzureAd:TenantId"] ?? "";
+        var instance = _configuration["AzureAd:Instance"] ?? "https://login.microsoftonline.com/";
+
+        return Ok(new SsoConfigResponse
+        {
+            Enabled = ssoEnabled,
+            ClientId = ssoEnabled ? clientId : "",
+            TenantId = ssoEnabled ? tenantId : "",
+            Authority = ssoEnabled ? $"{instance.TrimEnd('/')}/{tenantId}" : "",
+            RedirectUri = "" // Frontend will set this based on window.location.origin
+        });
+    }
+
+    /// <summary>
+    /// Exchange an Azure AD access token for a MyScheduling JWT
+    /// The frontend obtains an Azure AD token via MSAL, then calls this endpoint
+    /// </summary>
+    [HttpPost("sso/login")]
+    public async Task<ActionResult<LoginResponse>> SsoLogin([FromBody] SsoLoginRequest request)
+    {
+        try
+        {
+            if (_azureAdTokenValidator == null || !_azureAdTokenValidator.IsEnabled)
+            {
+                return BadRequest(new { message = "Azure AD SSO is not enabled" });
+            }
+
+            if (string.IsNullOrWhiteSpace(request.AccessToken))
+            {
+                return BadRequest(new { message = "Access token is required" });
+            }
+
+            // Validate the Azure AD token
+            var validationResult = await _azureAdTokenValidator.ValidateTokenAsync(request.AccessToken);
+
+            if (!validationResult.IsValid)
+            {
+                _logger.LogWarning("SSO login failed: {Error}", validationResult.ErrorMessage);
+                await LogLoginAsync(null, false, validationResult.Email ?? "unknown", loginMethod: "AzureAD");
+                return Unauthorized(new { message = validationResult.ErrorMessage ?? "Invalid token" });
+            }
+
+            // Get the email from the token - this is the SSO identifier
+            var ssoEmail = validationResult.Email?.Trim().ToLowerInvariant();
+
+            if (string.IsNullOrWhiteSpace(ssoEmail))
+            {
+                _logger.LogWarning("SSO login failed: No email in Azure AD token");
+                return Unauthorized(new { message = "Unable to determine user email from Azure AD token" });
+            }
+
+            // Find user by:
+            // 1. EntraObjectId field (contains the SSO email for the user)
+            // 2. Fallback to Email field
+            var user = await _context.Users
+                .Include(u => u.TenantMemberships)
+                    .ThenInclude(tm => tm.Tenant)
+                .FirstOrDefaultAsync(u =>
+                    u.EntraObjectId.ToLower() == ssoEmail ||
+                    u.Email.ToLower() == ssoEmail);
+
+            if (user == null)
+            {
+                _logger.LogWarning("SSO login failed: No user found for email {Email}", ssoEmail);
+                await LogLoginAsync(null, false, ssoEmail, loginMethod: "AzureAD");
+                return Unauthorized(new
+                {
+                    message = "No account found for this Microsoft account. Please contact your administrator to create an account."
+                });
+            }
+
+            // Check if user is active
+            if (!user.IsActive)
+            {
+                _logger.LogWarning("SSO login attempt for inactive user: {Email}", ssoEmail);
+                await LogLoginAsync(user, false, loginMethod: "AzureAD");
+                return Unauthorized(new { message = "Account is inactive. Please contact your administrator." });
+            }
+
+            // Update EntraObjectId if it was matched by Email but EntraObjectId is empty
+            if (string.IsNullOrEmpty(user.EntraObjectId) || user.EntraObjectId.ToLower() != ssoEmail)
+            {
+                user.EntraObjectId = ssoEmail;
+                _logger.LogInformation("Updated EntraObjectId for user {UserId} to {Email}", user.Id, ssoEmail);
+            }
+
+            // Successful SSO login - update last login
+            user.LastLoginAt = DateTime.UtcNow;
+            user.FailedLoginAttempts = 0;
+            user.LockedOutUntil = null;
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Successful SSO login for user {Email}", user.Email);
+
+            // Build tenant access list
+            var tenantAccess = user.TenantMemberships
+                .Where(tm => tm.IsActive)
+                .Select(tm => new TenantAccessInfo
+                {
+                    TenantId = tm.TenantId,
+                    TenantName = tm.Tenant.Name,
+                    Roles = tm.Roles.Select(r => r.ToString()).ToArray()
+                })
+                .ToList();
+
+            // Generate our JWT token
+            var token = GenerateJwtToken(user, tenantAccess);
+
+            var response = new LoginResponse
+            {
+                Token = token.Token,
+                ExpiresAt = token.ExpiresAt,
+                UserId = user.Id,
+                Email = user.Email,
+                DisplayName = user.DisplayName,
+                IsSystemAdmin = user.IsSystemAdmin,
+                TenantAccess = tenantAccess
+            };
+
+            await LogLoginAsync(user, true, loginMethod: "AzureAD");
+            return Ok(response);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during SSO login");
+            return StatusCode(500, new { message = "An error occurred during SSO login" });
+        }
+    }
+
     private async Task LogLoginAsync(User? user, bool isSuccess, string? emailOverride = null, string loginMethod = "Password")
     {
         try
@@ -599,4 +742,19 @@ public class ImpersonationContext
 {
     public Guid OriginalUserId { get; set; }
     public Guid SessionId { get; set; }
+}
+
+// SSO DTOs
+public class SsoConfigResponse
+{
+    public bool Enabled { get; set; }
+    public string ClientId { get; set; } = string.Empty;
+    public string TenantId { get; set; } = string.Empty;
+    public string Authority { get; set; } = string.Empty;
+    public string RedirectUri { get; set; } = string.Empty;
+}
+
+public class SsoLoginRequest
+{
+    public required string AccessToken { get; set; }
 }
