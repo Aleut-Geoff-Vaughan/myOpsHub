@@ -175,6 +175,21 @@ builder.Services.AddScoped<IImpersonationService, ImpersonationService>();
 // Register Working Days Service
 builder.Services.AddScoped<IWorkingDaysService, WorkingDaysService>();
 
+// Register File Storage Service - Use Azure Blob in production, LocalFileSystem for development
+var fileStorageProvider = builder.Configuration["FileStorage:Provider"] ?? "LocalFileSystem";
+if (fileStorageProvider.Equals("AzureBlob", StringComparison.OrdinalIgnoreCase) &&
+    !string.IsNullOrEmpty(builder.Configuration["AzureStorage:ConnectionString"]))
+{
+    builder.Services.AddScoped<IFileStorageService, AzureBlobStorageService>();
+}
+else
+{
+    builder.Services.AddScoped<IFileStorageService, LocalFileStorageService>();
+}
+
+// Register Certification Expiry Notification Service
+builder.Services.AddScoped<CertificationExpiryNotificationService>();
+
 // Health Checks
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<MySchedulingDbContext>("database");

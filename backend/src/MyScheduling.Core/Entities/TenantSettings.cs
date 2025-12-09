@@ -52,6 +52,11 @@ public class TenantSettings : BaseEntity
     public bool RequireBudgetApproval { get; set; } = false;
     public int DefaultBudgetMonthsAhead { get; set; } = 12; // How many months ahead budgets can be created
 
+    // Certification Expiry Notification Settings
+    public int CertificationExpiryWarningDays { get; set; } = 90; // Show in UI within this many days
+    public int CertificationExpiryEmailDays { get; set; } = 30; // Send email within this many days
+    public bool EnableCertificationExpiryEmails { get; set; } = true; // Whether to send email notifications
+
     // Navigation properties
     public virtual Tenant Tenant { get; set; } = null!;
 }

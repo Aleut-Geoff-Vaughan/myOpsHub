@@ -31,6 +31,7 @@ public class MySchedulingDbContext : DbContext
     public DbSet<PersonSkill> PersonSkills => Set<PersonSkill>();
     public DbSet<Certification> Certifications => Set<Certification>();
     public DbSet<PersonCertification> PersonCertifications => Set<PersonCertification>();
+    public DbSet<CertificationExpiryNotification> CertificationExpiryNotifications => Set<CertificationExpiryNotification>();
 
     // File Storage
     public DbSet<StoredFile> StoredFiles => Set<StoredFile>();

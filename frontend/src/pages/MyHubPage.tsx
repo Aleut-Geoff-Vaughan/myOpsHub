@@ -25,6 +25,7 @@ import {
   List,
   Mail,
 } from 'lucide-react';
+import { ExpiringCertificationsWidget } from '../components/dashboard/ExpiringCertificationsWidget';
 
 // Types for the detail modal
 type ModalType = 'schedule' | 'booking' | 'doa' | 'assignment' | 'forecast';
@@ -912,6 +913,11 @@ export function MyHubPage() {
           color="text-cyan-600"
           suffix="hrs"
         />
+      </div>
+
+      {/* Expiring Certifications Widget */}
+      <div className="mt-6">
+        <ExpiringCertificationsWidget />
       </div>
 
       {/* Detail Modal */}

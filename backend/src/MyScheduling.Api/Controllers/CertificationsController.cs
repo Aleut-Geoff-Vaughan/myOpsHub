@@ -305,6 +305,155 @@ public class CertificationsController : ControllerBase
         return NoContent();
     }
 
+    // ==================== EXPIRING CERTIFICATIONS (User-facing) ====================
+
+    // GET: api/certifications/expiring
+    /// <summary>
+    /// Get current user's expiring certifications within the configured warning period (default 90 days)
+    /// </summary>
+    [HttpGet("expiring")]
+    public async Task<ActionResult<ExpiringCertificationsResponse>> GetMyExpiringCertifications()
+    {
+        var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized();
+        }
+
+        // Get tenant-specific warning days (default 90)
+        var tenantId = GetCurrentTenantId();
+        var warningDays = 90;
+        if (tenantId.HasValue)
+        {
+            var tenantSettings = await _context.TenantSettings
+                .FirstOrDefaultAsync(ts => ts.TenantId == tenantId.Value);
+            if (tenantSettings != null)
+            {
+                warningDays = tenantSettings.CertificationExpiryWarningDays;
+            }
+        }
+
+        var cutoffDate = DateTime.UtcNow.AddDays(warningDays);
+
+        var expiringCerts = await _context.PersonCertifications
+            .Include(pc => pc.Certification)
+            .Where(pc => pc.UserId == userId &&
+                        pc.ExpiryDate != null &&
+                        pc.ExpiryDate <= cutoffDate &&
+                        pc.ExpiryDate >= DateTime.UtcNow.AddDays(-30)) // Include recently expired (30 days)
+            .OrderBy(pc => pc.ExpiryDate)
+            .Select(pc => new ExpiringCertificationItem
+            {
+                Id = pc.Id,
+                CertificationId = pc.CertificationId,
+                CertificationName = pc.Certification!.Name,
+                Issuer = pc.Certification.Issuer,
+                ExpiryDate = pc.ExpiryDate!.Value,
+                DaysRemaining = (int)(pc.ExpiryDate!.Value - DateTime.UtcNow).TotalDays,
+                UrgencyLevel = GetUrgencyLevel((int)(pc.ExpiryDate!.Value - DateTime.UtcNow).TotalDays)
+            })
+            .ToListAsync();
+
+        return Ok(new ExpiringCertificationsResponse
+        {
+            Items = expiringCerts,
+            TotalCount = expiringCerts.Count,
+            WarningDays = warningDays
+        });
+    }
+
+    // GET: api/certifications/expiring/team
+    /// <summary>
+    /// Get expiring certifications for team members (requires ManageResumes permission)
+    /// </summary>
+    [HttpGet("expiring/team")]
+    [RequiresPermission(Resource = "Resume", Action = PermissionAction.Read)]
+    public async Task<ActionResult<TeamExpiringCertificationsResponse>> GetTeamExpiringCertifications()
+    {
+        var tenantId = GetCurrentTenantId();
+        if (!tenantId.HasValue)
+        {
+            return BadRequest(new { message = "Invalid tenant context" });
+        }
+
+        // Get tenant-specific warning days
+        var warningDays = 90;
+        var tenantSettings = await _context.TenantSettings
+            .FirstOrDefaultAsync(ts => ts.TenantId == tenantId.Value);
+        if (tenantSettings != null)
+        {
+            warningDays = tenantSettings.CertificationExpiryWarningDays;
+        }
+
+        var cutoffDate = DateTime.UtcNow.AddDays(warningDays);
+
+        // Get users in tenant
+        var tenantUserIds = await _context.TenantMemberships
+            .Where(tm => tm.TenantId == tenantId.Value)
+            .Select(tm => tm.UserId)
+            .ToListAsync();
+
+        var expiringCerts = await _context.PersonCertifications
+            .Include(pc => pc.Certification)
+            .Include(pc => pc.User)
+            .Where(pc => tenantUserIds.Contains(pc.UserId) &&
+                        pc.ExpiryDate != null &&
+                        pc.ExpiryDate <= cutoffDate &&
+                        pc.ExpiryDate >= DateTime.UtcNow.AddDays(-30))
+            .OrderBy(pc => pc.ExpiryDate)
+            .Select(pc => new TeamExpiringCertificationItem
+            {
+                Id = pc.Id,
+                UserId = pc.UserId,
+                UserName = pc.User!.DisplayName ?? pc.User.Email ?? "Unknown",
+                UserEmail = pc.User.Email ?? "",
+                CertificationId = pc.CertificationId,
+                CertificationName = pc.Certification!.Name,
+                Issuer = pc.Certification.Issuer,
+                ExpiryDate = pc.ExpiryDate!.Value,
+                DaysRemaining = (int)(pc.ExpiryDate!.Value - DateTime.UtcNow).TotalDays,
+                UrgencyLevel = GetUrgencyLevel((int)(pc.ExpiryDate!.Value - DateTime.UtcNow).TotalDays)
+            })
+            .ToListAsync();
+
+        return Ok(new TeamExpiringCertificationsResponse
+        {
+            Items = expiringCerts,
+            TotalCount = expiringCerts.Count,
+            WarningDays = warningDays
+        });
+    }
+
+    private static string GetUrgencyLevel(int daysRemaining)
+    {
+        if (daysRemaining < 0) return "expired";
+        if (daysRemaining <= 30) return "critical";
+        if (daysRemaining <= 60) return "warning";
+        return "info";
+    }
+
+    private Guid? GetCurrentTenantId()
+    {
+        // Check X-Tenant-Id header first
+        if (Request.Headers.TryGetValue("X-Tenant-Id", out var headerTenantId) &&
+            Guid.TryParse(headerTenantId.FirstOrDefault(), out var parsedHeaderTenantId))
+        {
+            var userTenantIds = User.FindAll("TenantId")
+                .Select(c => Guid.TryParse(c.Value, out var tid) ? tid : Guid.Empty)
+                .Where(id => id != Guid.Empty)
+                .ToList();
+            if (userTenantIds.Contains(parsedHeaderTenantId))
+                return parsedHeaderTenantId;
+        }
+
+        // Fallback to first TenantId claim
+        var tenantIdClaim = User.FindFirst("TenantId")?.Value;
+        if (!string.IsNullOrEmpty(tenantIdClaim) && Guid.TryParse(tenantIdClaim, out var parsedTenantId))
+            return parsedTenantId;
+
+        return null;
+    }
+
     // ==================== ADMIN ENDPOINTS ====================
 
     // GET: api/certifications/admin/stats
@@ -461,4 +610,44 @@ public class ExpiringCertification
     public string UserName { get; set; } = string.Empty;
     public string CertificationName { get; set; } = string.Empty;
     public DateTime ExpiryDate { get; set; }
+}
+
+// User-facing expiring certifications DTOs
+public class ExpiringCertificationsResponse
+{
+    public List<ExpiringCertificationItem> Items { get; set; } = new();
+    public int TotalCount { get; set; }
+    public int WarningDays { get; set; }
+}
+
+public class ExpiringCertificationItem
+{
+    public Guid Id { get; set; }
+    public Guid CertificationId { get; set; }
+    public string CertificationName { get; set; } = string.Empty;
+    public string? Issuer { get; set; }
+    public DateTime ExpiryDate { get; set; }
+    public int DaysRemaining { get; set; }
+    public string UrgencyLevel { get; set; } = string.Empty; // "expired", "critical", "warning", "info"
+}
+
+public class TeamExpiringCertificationsResponse
+{
+    public List<TeamExpiringCertificationItem> Items { get; set; } = new();
+    public int TotalCount { get; set; }
+    public int WarningDays { get; set; }
+}
+
+public class TeamExpiringCertificationItem
+{
+    public Guid Id { get; set; }
+    public Guid UserId { get; set; }
+    public string UserName { get; set; } = string.Empty;
+    public string UserEmail { get; set; } = string.Empty;
+    public Guid CertificationId { get; set; }
+    public string CertificationName { get; set; } = string.Empty;
+    public string? Issuer { get; set; }
+    public DateTime ExpiryDate { get; set; }
+    public int DaysRemaining { get; set; }
+    public string UrgencyLevel { get; set; } = string.Empty;
 }
