@@ -8,6 +8,7 @@ interface TemplateCardProps {
   onEdit: (template: WorkLocationTemplate) => void;
   onDelete: (id: string) => void;
   onApply: (template: WorkLocationTemplate) => void;
+  onClone: (template: WorkLocationTemplate) => void;
   isOwner: boolean;
 }
 
@@ -75,6 +76,7 @@ export const TemplateCard: React.FC<TemplateCardProps> = ({
   onEdit,
   onDelete,
   onApply,
+  onClone,
   isOwner,
 }) => {
   return (
@@ -97,6 +99,13 @@ export const TemplateCard: React.FC<TemplateCardProps> = ({
             className="px-3 py-1 text-sm font-medium text-white bg-indigo-600 rounded hover:bg-indigo-700 transition-colors"
           >
             Apply
+          </button>
+          <button
+            onClick={() => onClone(template)}
+            className="px-3 py-1 text-sm font-medium text-indigo-600 bg-indigo-50 rounded hover:bg-indigo-100 transition-colors"
+            title="Clone this template"
+          >
+            Clone
           </button>
           {isOwner && (
             <>

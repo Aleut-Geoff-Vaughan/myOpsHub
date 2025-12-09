@@ -127,7 +127,6 @@ export function ManagerLayout() {
       items: [
         { name: 'Projects', path: '/manager/projects', icon: icons.projects, roles: [AppRole.ProjectManager, AppRole.ResourceManager, AppRole.SysAdmin] },
         { name: 'WBS', path: '/manager/wbs', icon: icons.wbs, roles: [AppRole.ProjectManager, AppRole.ResourceManager, AppRole.SysAdmin] },
-        { name: 'Templates', path: '/manager/templates', icon: icons.templates },
         { name: 'Team Resumes', path: '/manager/resumes', icon: icons.resumes, roles: [AppRole.TeamLead, AppRole.ProjectManager, AppRole.ResourceManager, AppRole.TenantAdmin, AppRole.SysAdmin] },
         { name: 'Facilities', path: '/manager/facilities', icon: icons.facilities, roles: [AppRole.OfficeManager, AppRole.ResourceManager, AppRole.TenantAdmin, AppRole.SysAdmin] },
       ],

@@ -215,7 +215,6 @@ function App() {
               <Route path="team-calendar/admin" element={<TeamCalendarAdminPage />} />
               <Route path="projects" element={<ProjectsPage />} />
               <Route path="wbs" element={<WbsPage />} />
-              <Route path="templates" element={<TemplatesPage />} />
               <Route path="facilities" element={<FacilitiesPage />} />
               <Route path="resumes" element={<ManagerResumesPage />} />
               <Route path="staffing-admin" element={<StaffingAdminPage />} />

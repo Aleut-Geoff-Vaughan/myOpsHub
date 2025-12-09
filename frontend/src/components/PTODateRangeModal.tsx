@@ -93,7 +93,7 @@ export function PTODateRangeModal({
           workDate,
           locationType: WorkLocationType.PTO,
           dayPortion: DayPortion.FullDay,
-          notes: notes || 'PTO',
+          notes: notes.trim() || undefined, // Clear notes if empty, don't default to 'PTO'
         };
 
         try {
@@ -108,7 +108,11 @@ export function PTODateRangeModal({
               if (existing) {
                 await updateMutation.mutateAsync({
                   id: existing.id,
-                  preference: { ...existing, ...preferenceData },
+                  preference: {
+                    ...existing,
+                    ...preferenceData,
+                    notes: notes.trim() || '', // Explicitly set to empty string to clear existing notes
+                  },
                 });
               }
             } catch (fetchError) {

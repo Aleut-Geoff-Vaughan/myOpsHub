@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useTemplates, useApplyTemplate } from '../hooks/useTemplates';
+import { TemplateEditor } from './TemplateEditor';
 import type { WorkLocationTemplate } from '../types/template';
 import { TemplateType } from '../types/template';
 import { WorkLocationType } from '../types/api';
+import { useAuthStore } from '../stores/authStore';
 
 interface ApplyTemplateSelectModalProps {
   isOpen: boolean;
@@ -63,8 +65,10 @@ export const ApplyTemplateSelectModal: React.FC<ApplyTemplateSelectModalProps> =
   const queryClient = useQueryClient();
   const { data: templates = [], isLoading } = useTemplates();
   const applyTemplate = useApplyTemplate();
+  const currentUser = useAuthStore((state) => state.user);
 
   const [selectedTemplate, setSelectedTemplate] = useState<WorkLocationTemplate | null>(null);
+  const [editingTemplate, setEditingTemplate] = useState<WorkLocationTemplate | null>(null);
   const [startDate, setStartDate] = useState(() => {
     const today = new Date();
     const monday = new Date(today);
@@ -76,6 +80,9 @@ export const ApplyTemplateSelectModal: React.FC<ApplyTemplateSelectModalProps> =
   const [weekCount, setWeekCount] = useState(1);
 
   if (!isOpen) return null;
+
+  // Check if current user owns the template
+  const isOwner = selectedTemplate?.userId === currentUser?.id;
 
   const handleApply = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -238,7 +245,21 @@ export const ApplyTemplateSelectModal: React.FC<ApplyTemplateSelectModalProps> =
         <form onSubmit={handleApply} className="px-6 py-4 space-y-6">
           {/* Preview of template */}
           <div className="bg-gray-50 rounded-lg p-3">
-            <p className="text-xs font-medium text-gray-700 mb-2">Template Schedule:</p>
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-medium text-gray-700">Template Schedule:</p>
+              {isOwner && (
+                <button
+                  type="button"
+                  onClick={() => setEditingTemplate(selectedTemplate)}
+                  className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded transition-colors"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  Edit
+                </button>
+              )}
+            </div>
             <div className="flex gap-1">
               {selectedTemplate.items.map((item, idx) => (
                 <div
@@ -320,6 +341,21 @@ export const ApplyTemplateSelectModal: React.FC<ApplyTemplateSelectModalProps> =
           </div>
         </form>
       </div>
+
+      {/* Template Editor Modal */}
+      {editingTemplate && (
+        <TemplateEditor
+          template={editingTemplate}
+          onClose={() => {
+            setEditingTemplate(null);
+            // Refresh the selected template data after edit
+            const updatedTemplate = templates.find(t => t.id === editingTemplate.id);
+            if (updatedTemplate) {
+              setSelectedTemplate(updatedTemplate);
+            }
+          }}
+        />
+      )}
     </div>
   );
 };

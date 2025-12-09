@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
-import { useTemplates, useDeleteTemplate } from '../hooks/useTemplates';
+import { useTemplates, useDeleteTemplate, useCreateTemplate } from '../hooks/useTemplates';
 import { TemplateCard } from './TemplateCard';
 import { TemplateEditor } from './TemplateEditor';
 import { TemplateApplyModal } from './TemplateApplyModal';
 import type { WorkLocationTemplate } from '../types/template';
 import { useAuthStore } from '../stores/authStore';
+import toast from 'react-hot-toast';
 
 export const TemplateList: React.FC = () => {
   const { data: templates, isLoading, error } = useTemplates();
   const deleteTemplate = useDeleteTemplate();
+  const createTemplate = useCreateTemplate();
+  const currentWorkspace = useAuthStore((state) => state.currentWorkspace);
   const currentUser = useAuthStore((state) => state.user);
 
   const [isEditorOpen, setIsEditorOpen] = useState(false);
@@ -40,6 +43,39 @@ export const TemplateList: React.FC = () => {
 
   const handleApply = (template: WorkLocationTemplate) => {
     setApplyingTemplate(template);
+  };
+
+  const handleClone = async (template: WorkLocationTemplate) => {
+    if (!currentWorkspace?.tenantId) {
+      toast.error('Please select a workspace first');
+      return;
+    }
+
+    try {
+      await createTemplate.mutateAsync({
+        tenantId: currentWorkspace.tenantId,
+        name: `${template.name} (Copy)`,
+        description: template.description,
+        type: template.type,
+        isShared: false, // Cloned templates are private by default
+        items: template.items.map((item) => ({
+          dayOffset: item.dayOffset,
+          dayOfWeek: item.dayOfWeek,
+          locationType: item.locationType,
+          dayPortion: item.dayPortion,
+          officeId: item.officeId,
+          remoteLocation: item.remoteLocation,
+          city: item.city,
+          state: item.state,
+          country: item.country,
+          notes: item.notes,
+        })),
+      });
+      toast.success('Template cloned successfully');
+    } catch (error) {
+      console.error('Failed to clone template:', error);
+      toast.error('Failed to clone template. Please try again.');
+    }
   };
 
   const handleEditorClose = () => {
@@ -89,6 +125,7 @@ export const TemplateList: React.FC = () => {
           </p>
         </div>
         <button
+          type="button"
           onClick={handleCreateNew}
           className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
         >
@@ -117,6 +154,7 @@ export const TemplateList: React.FC = () => {
               Get started by creating your first work location template.
             </p>
             <button
+              type="button"
               onClick={handleCreateNew}
               className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors font-medium"
             >
@@ -137,6 +175,7 @@ export const TemplateList: React.FC = () => {
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                     onApply={handleApply}
+                    onClone={handleClone}
                     isOwner={true}
                   />
                 ))}
@@ -155,6 +194,7 @@ export const TemplateList: React.FC = () => {
                     onEdit={handleEdit}
                     onDelete={handleDelete}
                     onApply={handleApply}
+                    onClone={handleClone}
                     isOwner={false}
                   />
                 ))}
