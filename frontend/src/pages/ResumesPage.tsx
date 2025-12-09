@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileText, Plus, Upload, Edit } from 'lucide-react';
+import { FileText, Plus, Upload, Edit, PenLine } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { ResumeVersionTile } from '../components/resume/ResumeVersionTile';
@@ -11,6 +11,7 @@ import { getMyResume, createResume, getVersions, createVersion } from '../servic
 import { useFiles, useUploadFile, useDeleteFile, useDownloadFile } from '../hooks/useFileStorage';
 import { useAuthStore } from '../stores/authStore';
 import type { ResumeProfile, ResumeVersion } from '../types/api';
+import { ResumeStatus } from '../types/api';
 import toast from 'react-hot-toast';
 
 export function ResumesPage() {
@@ -102,6 +103,23 @@ export function ResumesPage() {
     setShowUploadModal(false);
   };
 
+  const getStatusBadge = (status: ResumeStatus) => {
+    const statusConfig: Record<ResumeStatus, { label: string; className: string }> = {
+      [ResumeStatus.Draft]: { label: 'Draft', className: 'bg-gray-100 text-gray-700' },
+      [ResumeStatus.PendingReview]: { label: 'Pending Review', className: 'bg-yellow-100 text-yellow-700' },
+      [ResumeStatus.Approved]: { label: 'Approved', className: 'bg-green-100 text-green-700' },
+      [ResumeStatus.ChangesRequested]: { label: 'Changes Requested', className: 'bg-orange-100 text-orange-700' },
+      [ResumeStatus.Active]: { label: 'Active', className: 'bg-blue-100 text-blue-700' },
+      [ResumeStatus.Archived]: { label: 'Archived', className: 'bg-gray-100 text-gray-500' },
+    };
+    const config = statusConfig[status] || statusConfig[ResumeStatus.Draft];
+    return (
+      <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded-full ${config.className}`}>
+        {config.label}
+      </span>
+    );
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -184,26 +202,49 @@ export function ResumesPage() {
       {/* Resume Versions Grid */}
       <div>
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Resume Versions</h2>
-        {versions.length === 0 ? (
-          <Card className="p-8 text-center">
-            <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-            <p className="text-gray-500 mb-4">No versions yet. Create your first version to get started.</p>
-            <Button onClick={handleCreateVersion} disabled={creatingVersion}>
-              <Plus className="w-4 h-4 mr-2" />
-              Create First Version
-            </Button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* Current Draft Tile - Always shown */}
+          <Card
+            className="cursor-pointer hover:shadow-md transition-all hover:border-blue-300 border-2 border-dashed border-blue-300 bg-blue-50/30"
+            onClick={() => navigate(`/resumes/${resume.id}`)}
+          >
+            <div className="p-5">
+              <div className="flex items-start justify-between mb-3">
+                <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <PenLine className="w-5 h-5 text-blue-600" />
+                </div>
+                {getStatusBadge(resume.status)}
+              </div>
+
+              <div className="space-y-1">
+                <p className="text-sm text-blue-600 font-medium">Current</p>
+                <h3 className="font-semibold text-gray-900 truncate">
+                  Working Draft
+                </h3>
+                <p className="text-sm text-gray-500">
+                  {new Date(resume.updatedAt || resume.createdAt).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                  })}
+                </p>
+              </div>
+
+              <p className="mt-2 text-sm text-gray-600">
+                Your current resume content
+              </p>
+            </div>
           </Card>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {versions.map((version) => (
-              <ResumeVersionTile
-                key={version.id}
-                version={version}
-                onClick={() => handleVersionClick(version)}
-              />
-            ))}
-          </div>
-        )}
+
+          {/* Saved Versions */}
+          {versions.map((version) => (
+            <ResumeVersionTile
+              key={version.id}
+              version={version}
+              onClick={() => handleVersionClick(version)}
+            />
+          ))}
+        </div>
       </div>
 
       {/* Expiring Certifications */}

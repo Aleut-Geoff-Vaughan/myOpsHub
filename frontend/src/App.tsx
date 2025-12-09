@@ -10,7 +10,7 @@ import { AdminLayout } from './components/layout/AdminLayout';
 // DashboardPage removed - MyHubPage is now the home page
 import { ProjectsPage } from './pages/ProjectsPage';
 import { WbsPage } from './pages/WbsPage';
-import { StaffingPage } from './pages/StaffingPage';
+import { MyStaffingPlanPage } from './pages/MyStaffingPlanPage';
 import { HotelingPage } from './pages/HotelingPage';
 import { FacilitiesPage } from './pages/FacilitiesPage';
 import { ResumesPage } from './pages/ResumesPage';
@@ -189,7 +189,7 @@ function App() {
               <Route index element={<MyHubPage />} />
               <Route path="schedule" element={<MySchedulePage />} />
               <Route path="templates" element={<TemplatesPage />} />
-              <Route path="staffing" element={<StaffingPage />} />
+              <Route path="staffing" element={<MyStaffingPlanPage />} />
               <Route path="hoteling" element={<HotelingPage />} />
               <Route path="resumes" element={<ResumesPage />} />
               <Route path="resumes/:id" element={<ResumeProfilePage />} />

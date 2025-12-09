@@ -27,8 +27,15 @@ public class AzureBlobStorageService : IFileStorageService
         _context = context;
         _logger = logger;
 
-        var connectionString = configuration["AzureStorage:ConnectionString"]
-            ?? throw new InvalidOperationException("AzureStorage:ConnectionString is not configured");
+        // Check environment variable first, then fall back to config
+        var connectionString = Environment.GetEnvironmentVariable("AZURE_STORAGE_CONNECTION_STRING")
+            ?? configuration["AzureStorage:ConnectionString"];
+
+        if (string.IsNullOrEmpty(connectionString))
+        {
+            throw new InvalidOperationException("Azure Storage connection string is not configured. Set AZURE_STORAGE_CONNECTION_STRING environment variable or AzureStorage:ConnectionString in appsettings.");
+        }
+
         _containerName = configuration["AzureStorage:ContainerName"] ?? "myscheduling-files";
 
         _blobServiceClient = new BlobServiceClient(connectionString);

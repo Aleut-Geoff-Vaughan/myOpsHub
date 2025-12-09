@@ -6,25 +6,24 @@ Focused, current backlog. Historical notes are in `docs/archive/`.
 
 ## Critical / Blocking Issues
 
-### 1. Azure Blob Storage Implementation (HIGH)
-**Status:** Interface exists, no implementation
-**Impact:** Profile photos and resume attachments cannot be stored
-**Files:**
-- [IFileStorageService.cs](backend/src/MyScheduling.Core/Interfaces/IFileStorageService.cs) - Interface defined
-- [StoredFile.cs](backend/src/MyScheduling.Core/Entities/StoredFile.cs) - Entity ready
-- [UsersController.cs:615-689](backend/src/MyScheduling.Api/Controllers/UsersController.cs#L615-L689) - Profile photo endpoint stubbed (only saves URL, no file)
+### 1. Azure Blob Storage Implementation (COMPLETE)
+**Status:** Fully implemented and configured
 
-**What's needed:**
-- Install `Azure.Storage.Blobs` NuGet package
-- Create `AzureBlobStorageService.cs` implementing `IFileStorageService`
-- Add configuration to `appsettings.json`:
-  - `Storage:Mode` (Blob|Local)
-  - `Storage:ConnectionString` or `UseManagedIdentity`
-  - `Storage:ContainerProfiles`, `Storage:ContainerDocuments`
-  - `Storage:MaxBytes`, `Storage:AllowedContentTypes`
-- Register service in `Program.cs`
-- Update `UploadProfilePhoto()` to use the service
-- Implement resume attachments feature
+**What's working:**
+- [AzureBlobStorageService.cs](backend/src/MyScheduling.Infrastructure/Services/AzureBlobStorageService.cs) - Full Azure Blob implementation
+- [LocalFileStorageService.cs](backend/src/MyScheduling.Infrastructure/Services/LocalFileStorageService.cs) - Local dev fallback
+- [FilesController.cs](backend/src/MyScheduling.Api/Controllers/FilesController.cs) - REST API with upload, list, download, delete
+- [IFileStorageService.cs](backend/src/MyScheduling.Core/Interfaces/IFileStorageService.cs) - Interface with versioning, search, SAS URLs
+- [StoredFile.cs](backend/src/MyScheduling.Core/Entities/StoredFile.cs) - Entity with access logs, versioning
+- Frontend: `fileStorageService.ts`, `useFileStorage.ts` hooks
+
+**Configuration:**
+- Environment variable: `AZURE_STORAGE_CONNECTION_STRING` (set in Azure App Service)
+- Container: `myscheduling-files`
+- Provider selection: `FileStorage:Provider` in appsettings.json ("AzureBlob" | "Local")
+
+**Remaining optional work:**
+- [ ] Profile photo endpoint still uses old stubbed approach - could be updated to use `IFileStorageService`
 
 ### 2. Automated Testing (HIGH)
 **Status:** Zero automated tests exist
@@ -177,11 +176,11 @@ These are nice-to-have features for later consideration:
 |---------|--------|-------|
 | Work Location Templates | Complete | Apply, clone, edit all working |
 | Resumes | Complete | Versions, approvals, export, share |
-| Resume Attachments | Not Started | Needs Azure Blob implementation |
+| Resume Attachments | Complete | Azure Blob + local fallback |
 | Staffing Requests | Complete | Full approval workflow |
 | Staffing Timeline | Basic | Simple bars, not interactive Gantt |
 | WBS Management | Mostly Complete | Pagination fixed, bulk ops need refinement |
-| Profile Photos | Stubbed | Endpoint exists, no file storage |
+| Profile Photos | Stubbed | Could use IFileStorageService |
 | Authorization | Complete | All controllers protected |
 | Automated Tests | None | Manual testing only |
 
