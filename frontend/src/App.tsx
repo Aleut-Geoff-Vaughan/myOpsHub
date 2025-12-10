@@ -63,7 +63,27 @@ import { AdminImpersonationPage } from './pages/AdminImpersonationPage';
 import { AdminUserEditPage } from './pages/AdminUserEditPage';
 import { AdminTeamCalendarsPage } from './pages/AdminTeamCalendarsPage';
 import { ForecastLayout } from './components/layout/ForecastLayout';
+import { FacilitiesLayout } from './components/layout/FacilitiesLayout';
 import { ForecastDashboardPage } from './pages/ForecastDashboardPage';
+import { FacilitiesDashboardPage } from './pages/FacilitiesDashboardPage';
+import { FacilitiesAdminPage } from './pages/facilities/FacilitiesAdminPage';
+import { OfficeManagementPage } from './pages/facilities/OfficeManagementPage';
+import { OfficeDirectoryPage } from './pages/facilities/OfficeDirectoryPage';
+import { CheckInPage } from './pages/facilities/CheckInPage';
+import { WhosHerePage } from './pages/facilities/WhosHerePage';
+import { AnnouncementsPage } from './pages/facilities/AnnouncementsPage';
+import { TravelGuidesPage } from './pages/facilities/TravelGuidesPage';
+import { OfficeDetailPage } from './pages/facilities/OfficeDetailPage';
+import { LeaseManagementPage } from './pages/facilities/LeaseManagementPage';
+import { LeaseDetailPage } from './pages/facilities/LeaseDetailPage';
+import { OptionYearsCalendarPage } from './pages/facilities/OptionYearsCalendarPage';
+import { FieldAssignmentsPage } from './pages/facilities/FieldAssignmentsPage';
+import { ClientSitesPage } from './pages/facilities/ClientSitesPage';
+import { ClearancesPage } from './pages/facilities/ClearancesPage';
+import { ForeignTravelPage } from './pages/facilities/ForeignTravelPage';
+import { ScifAccessPage } from './pages/facilities/ScifAccessPage';
+import { UsageAnalyticsPage } from './pages/facilities/UsageAnalyticsPage';
+import { FacilitiesSettingsPage } from './pages/facilities/FacilitiesSettingsPage';
 import { MyForecastsPage } from './pages/MyForecastsPage';
 import { ForecastProjectsPage } from './pages/ForecastProjectsPage';
 import { ProjectForecastGridPage } from './pages/ProjectForecastGridPage';
@@ -252,6 +272,39 @@ function App() {
               <Route path="subcontractors" element={<AdminSubcontractorCompaniesPage />} />
               <Route path="schedules" element={<AdminForecastSchedulesPage />} />
               <Route path="forecasts" element={<AdminForecastsPage />} />
+            </Route>
+
+            {/* myFacilities Portal Routes (sidebar nav) */}
+            <Route
+              path="/facilities"
+              element={
+                <ProtectedRoute>
+                  <FacilitiesLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<FacilitiesDashboardPage />} />
+              <Route path="check-in" element={<CheckInPage />} />
+              <Route path="whos-here" element={<WhosHerePage />} />
+              <Route path="offices" element={<OfficeDirectoryPage />} />
+              <Route path="offices/:officeId" element={<OfficeDetailPage />} />
+              <Route path="travel-guides" element={<TravelGuidesPage />} />
+              <Route path="announcements" element={<AnnouncementsPage />} />
+              <Route path="leases" element={<LeaseManagementPage />} />
+              <Route path="leases/:leaseId" element={<LeaseDetailPage />} />
+              <Route path="option-years" element={<OptionYearsCalendarPage />} />
+              <Route path="field-assignments" element={<FieldAssignmentsPage />} />
+              <Route path="client-sites" element={<ClientSitesPage />} />
+              <Route path="clearances" element={<ClearancesPage />} />
+              <Route path="foreign-travel" element={<ForeignTravelPage />} />
+              <Route path="scif-access" element={<ScifAccessPage />} />
+              <Route path="analytics" element={<UsageAnalyticsPage />} />
+              <Route path="settings" element={<FacilitiesSettingsPage />} />
+              {/* Admin Pages - migrated from /admin */}
+              <Route path="admin" element={<FacilitiesAdminPage />} />
+              <Route path="admin/offices" element={<OfficeManagementPage />} />
+              <Route path="admin/offices/:officeId" element={<AdminOfficeDetailPage />} />
+              <Route path="admin/spaces/:spaceId" element={<AdminSpaceDetailPage />} />
             </Route>
 
             <Route path="*" element={<Navigate to={isAuthenticated ? "/" : "/login"} replace />} />

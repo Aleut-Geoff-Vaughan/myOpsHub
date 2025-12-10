@@ -100,6 +100,30 @@ public class MySchedulingDbContext : DbContext
     public DbSet<DOATemplate> DOATemplates => Set<DOATemplate>();
     public DbSet<TenantSettings> TenantSettings => Set<TenantSettings>();
 
+    // Facilities Portal - Lease Management
+    public DbSet<Lease> Leases => Set<Lease>();
+    public DbSet<LeaseOptionYear> LeaseOptionYears => Set<LeaseOptionYear>();
+    public DbSet<LeaseAmendment> LeaseAmendments => Set<LeaseAmendment>();
+    public DbSet<LeaseAttachment> LeaseAttachments => Set<LeaseAttachment>();
+
+    // Facilities Portal - Travel Guides & Info
+    public DbSet<OfficeTravelGuide> OfficeTravelGuides => Set<OfficeTravelGuide>();
+    public DbSet<OfficePoc> OfficePocs => Set<OfficePoc>();
+    public DbSet<FacilityAnnouncement> FacilityAnnouncements => Set<FacilityAnnouncement>();
+    public DbSet<AnnouncementAcknowledgment> AnnouncementAcknowledgments => Set<AnnouncementAcknowledgment>();
+
+    // Facilities Portal - Field Personnel & FSO
+    public DbSet<ClientSiteDetail> ClientSiteDetails => Set<ClientSiteDetail>();
+    public DbSet<FieldAssignment> FieldAssignments => Set<FieldAssignment>();
+    public DbSet<EmployeeClearance> EmployeeClearances => Set<EmployeeClearance>();
+    public DbSet<ForeignTravelRecord> ForeignTravelRecords => Set<ForeignTravelRecord>();
+    public DbSet<ScifAccessLog> ScifAccessLogs => Set<ScifAccessLog>();
+
+    // Facilities Portal - Check-In & Analytics
+    public DbSet<FacilityCheckIn> FacilityCheckIns => Set<FacilityCheckIn>();
+    public DbSet<FacilityAttributeDefinition> FacilityAttributeDefinitions => Set<FacilityAttributeDefinition>();
+    public DbSet<FacilityUsageDaily> FacilityUsageDaily => Set<FacilityUsageDaily>();
+
     // Team Calendars
     public DbSet<TeamCalendar> TeamCalendars => Set<TeamCalendar>();
     public DbSet<TeamCalendarMember> TeamCalendarMembers => Set<TeamCalendarMember>();
@@ -144,6 +168,7 @@ public class MySchedulingDbContext : DbContext
         ConfigureGroups(modelBuilder);
         ConfigureDataArchive(modelBuilder);
         ConfigureAuthentication(modelBuilder);
+        ConfigureFacilitiesPortal(modelBuilder);
 
         // Apply global query filters for soft deletes
         ApplySoftDeleteFilter(modelBuilder);
@@ -1708,6 +1733,473 @@ public class MySchedulingDbContext : DbContext
             entity.HasIndex(e => new { e.TenantId, e.EntityType, e.FieldName, e.IsActive });
             entity.HasIndex(e => new { e.EntityType, e.ExecutionOrder });
             entity.HasIndex(e => new { e.TenantId, e.IsActive });
+        });
+    }
+
+    private void ConfigureFacilitiesPortal(ModelBuilder modelBuilder)
+    {
+        // ============================================================================
+        // LEASE MANAGEMENT
+        // ============================================================================
+
+        modelBuilder.Entity<Lease>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.LeaseNumber).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.ExternalLeaseId).HasMaxLength(100);
+            entity.Property(e => e.LandlordName).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.LandlordContactName).HasMaxLength(200);
+            entity.Property(e => e.LandlordEmail).HasMaxLength(255);
+            entity.Property(e => e.LandlordPhone).HasMaxLength(50);
+            entity.Property(e => e.PropertyManagementCompany).HasMaxLength(200);
+            entity.Property(e => e.PropertyManagerName).HasMaxLength(200);
+            entity.Property(e => e.PropertyManagerEmail).HasMaxLength(255);
+            entity.Property(e => e.PropertyManagerPhone).HasMaxLength(50);
+            entity.Property(e => e.SquareFootage).HasPrecision(12, 2);
+            entity.Property(e => e.UsableSquareFootage).HasPrecision(12, 2);
+            entity.Property(e => e.BaseRentMonthly).HasPrecision(12, 2);
+            entity.Property(e => e.CamChargesMonthly).HasPrecision(12, 2);
+            entity.Property(e => e.UtilitiesMonthly).HasPrecision(12, 2);
+            entity.Property(e => e.TaxesMonthly).HasPrecision(12, 2);
+            entity.Property(e => e.InsuranceMonthly).HasPrecision(12, 2);
+            entity.Property(e => e.OtherChargesMonthly).HasPrecision(12, 2);
+            entity.Property(e => e.OtherChargesDescription).HasMaxLength(500);
+            entity.Property(e => e.SecurityDeposit).HasPrecision(12, 2);
+            entity.Property(e => e.EscalationPercentage).HasPrecision(5, 2);
+            entity.Property(e => e.EarlyTerminationFee).HasPrecision(12, 2);
+            entity.Property(e => e.ScifDetails).HasMaxLength(1000);
+            entity.Property(e => e.InsuranceProvider).HasMaxLength(200);
+            entity.Property(e => e.InsurancePolicyNumber).HasMaxLength(100);
+            entity.Property(e => e.InsuranceCoverageAmount).HasPrecision(14, 2);
+            entity.Property(e => e.CriticalClauses).HasColumnType("jsonb");
+            entity.Property(e => e.SpecialTerms).HasMaxLength(4000);
+            entity.Property(e => e.Notes).HasMaxLength(2000);
+            entity.Property(e => e.CustomAttributes).HasColumnType("jsonb");
+
+            entity.HasIndex(e => new { e.TenantId, e.OfficeId, e.Status });
+            entity.HasIndex(e => new { e.TenantId, e.LeaseEndDate });
+            entity.HasIndex(e => new { e.TenantId, e.LeaseNumber }).IsUnique();
+
+            entity.HasOne(e => e.Office)
+                .WithMany()
+                .HasForeignKey(e => e.OfficeId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<LeaseOptionYear>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ProposedRentMonthly).HasPrecision(12, 2);
+            entity.Property(e => e.Notes).HasMaxLength(1000);
+
+            entity.HasIndex(e => new { e.TenantId, e.LeaseId, e.OptionNumber });
+            entity.HasIndex(e => new { e.Status, e.ExerciseDeadline });
+
+            entity.HasOne(e => e.Lease)
+                .WithMany(l => l.OptionYears)
+                .HasForeignKey(e => e.LeaseId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.ExercisedBy)
+                .WithMany()
+                .HasForeignKey(e => e.ExercisedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<LeaseAmendment>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.AmendmentNumber).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Description).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.RentChange).HasPrecision(12, 2);
+            entity.Property(e => e.SquareFootageChange).HasPrecision(12, 2);
+            entity.Property(e => e.Terms).HasMaxLength(4000);
+
+            entity.HasIndex(e => new { e.TenantId, e.LeaseId, e.EffectiveDate });
+
+            entity.HasOne(e => e.Lease)
+                .WithMany(l => l.Amendments)
+                .HasForeignKey(e => e.LeaseId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.ProcessedBy)
+                .WithMany()
+                .HasForeignKey(e => e.ProcessedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<LeaseAttachment>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.FileName).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.StoragePath).IsRequired().HasMaxLength(1000);
+            entity.Property(e => e.ContentType).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Description).HasMaxLength(500);
+
+            entity.HasIndex(e => new { e.TenantId, e.LeaseId, e.Type });
+            entity.HasIndex(e => e.AmendmentId);
+
+            entity.HasOne(e => e.Lease)
+                .WithMany(l => l.Attachments)
+                .HasForeignKey(e => e.LeaseId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Amendment)
+                .WithMany(a => a.Attachments)
+                .HasForeignKey(e => e.AmendmentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.UploadedBy)
+                .WithMany()
+                .HasForeignKey(e => e.UploadedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ============================================================================
+        // TRAVEL GUIDES & INFO
+        // ============================================================================
+
+        modelBuilder.Entity<OfficeTravelGuide>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.NearestAirport).HasMaxLength(200);
+            entity.Property(e => e.AirportCode).HasMaxLength(10);
+            entity.Property(e => e.AirportDistance).HasMaxLength(100);
+            entity.Property(e => e.RecommendedGroundTransport).HasMaxLength(1000);
+            entity.Property(e => e.PublicTransitOptions).HasMaxLength(2000);
+            entity.Property(e => e.DrivingDirections).HasMaxLength(2000);
+            entity.Property(e => e.ParkingInstructions).HasMaxLength(1000);
+            entity.Property(e => e.ParkingDailyCost).HasPrecision(8, 2);
+            entity.Property(e => e.RecommendedHotels).HasColumnType("jsonb");
+            entity.Property(e => e.CorporateHotelCode).HasMaxLength(50);
+            entity.Property(e => e.NeighborhoodTips).HasMaxLength(1000);
+            entity.Property(e => e.BuildingHours).HasMaxLength(500);
+            entity.Property(e => e.AfterHoursAccess).HasMaxLength(1000);
+            entity.Property(e => e.VisitorCheckIn).HasMaxLength(1000);
+            entity.Property(e => e.SecurityRequirements).HasMaxLength(1000);
+            entity.Property(e => e.BadgeInstructions).HasMaxLength(1000);
+            entity.Property(e => e.DressCode).HasMaxLength(500);
+            entity.Property(e => e.CafeteriaInfo).HasMaxLength(1000);
+            entity.Property(e => e.NearbyRestaurants).HasColumnType("jsonb");
+            entity.Property(e => e.WifiInstructions).HasMaxLength(500);
+            entity.Property(e => e.ConferenceRoomBooking).HasMaxLength(500);
+            entity.Property(e => e.PrintingInstructions).HasMaxLength(500);
+            entity.Property(e => e.Amenities).HasMaxLength(1000);
+            entity.Property(e => e.ReceptionPhone).HasMaxLength(50);
+            entity.Property(e => e.SecurityPhone).HasMaxLength(50);
+            entity.Property(e => e.FacilitiesEmail).HasMaxLength(255);
+            entity.Property(e => e.EmergencyContact).HasMaxLength(200);
+            entity.Property(e => e.WelcomeMessage).HasMaxLength(4000);
+            entity.Property(e => e.ImportantNotes).HasMaxLength(4000);
+            entity.Property(e => e.PhotoGallery).HasColumnType("jsonb");
+            entity.Property(e => e.VideoTourUrl).HasMaxLength(500);
+            entity.Property(e => e.VirtualTourUrl).HasMaxLength(500);
+            entity.Property(e => e.CurrentAnnouncements).HasColumnType("jsonb");
+            entity.Property(e => e.SpecialInstructions).HasMaxLength(2000);
+            entity.Property(e => e.CustomAttributes).HasColumnType("jsonb");
+
+            entity.HasIndex(e => new { e.TenantId, e.OfficeId }).IsUnique();
+
+            entity.HasOne(e => e.Office)
+                .WithMany()
+                .HasForeignKey(e => e.OfficeId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.LastUpdatedBy)
+                .WithMany()
+                .HasForeignKey(e => e.LastUpdatedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<OfficePoc>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Title).HasMaxLength(200);
+            entity.Property(e => e.Email).HasMaxLength(255);
+            entity.Property(e => e.Phone).HasMaxLength(50);
+            entity.Property(e => e.MobilePhone).HasMaxLength(50);
+            entity.Property(e => e.Responsibilities).HasMaxLength(500);
+
+            entity.HasIndex(e => new { e.TenantId, e.OfficeId, e.Role });
+            entity.HasIndex(e => new { e.OfficeId, e.IsPrimary });
+
+            entity.HasOne(e => e.Office)
+                .WithMany()
+                .HasForeignKey(e => e.OfficeId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<FacilityAnnouncement>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Content).IsRequired().HasMaxLength(4000);
+
+            entity.HasIndex(e => new { e.TenantId, e.OfficeId, e.IsActive });
+            entity.HasIndex(e => new { e.TenantId, e.Priority, e.IsActive });
+            entity.HasIndex(e => new { e.EffectiveDate, e.ExpirationDate });
+
+            entity.HasOne(e => e.Office)
+                .WithMany()
+                .HasForeignKey(e => e.OfficeId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.AuthoredBy)
+                .WithMany()
+                .HasForeignKey(e => e.AuthoredByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<AnnouncementAcknowledgment>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+
+            entity.HasIndex(e => new { e.AnnouncementId, e.UserId }).IsUnique();
+            entity.HasIndex(e => e.UserId);
+
+            entity.HasOne(e => e.Announcement)
+                .WithMany(a => a.Acknowledgments)
+                .HasForeignKey(e => e.AnnouncementId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ============================================================================
+        // FIELD PERSONNEL & FSO
+        // ============================================================================
+
+        modelBuilder.Entity<ClientSiteDetail>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ClientName).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.ContractNumber).HasMaxLength(100);
+            entity.Property(e => e.TaskOrderNumber).HasMaxLength(100);
+            entity.Property(e => e.ClientPocName).HasMaxLength(200);
+            entity.Property(e => e.ClientPocEmail).HasMaxLength(255);
+            entity.Property(e => e.ClientPocPhone).HasMaxLength(50);
+            entity.Property(e => e.BadgeType).HasMaxLength(50);
+            entity.Property(e => e.BadgeInstructions).HasMaxLength(1000);
+            entity.Property(e => e.ScifAccessInstructions).HasMaxLength(1000);
+            entity.Property(e => e.SecurityPocName).HasMaxLength(200);
+            entity.Property(e => e.SecurityPocEmail).HasMaxLength(255);
+            entity.Property(e => e.SecurityPocPhone).HasMaxLength(50);
+            entity.Property(e => e.SiteHours).HasMaxLength(500);
+            entity.Property(e => e.AccessInstructions).HasMaxLength(1000);
+            entity.Property(e => e.CheckInProcedure).HasMaxLength(1000);
+            entity.Property(e => e.EscortRequirements).HasMaxLength(500);
+            entity.Property(e => e.NetworkAccess).HasMaxLength(500);
+            entity.Property(e => e.ItSupportContact).HasMaxLength(200);
+            entity.Property(e => e.ApprovedDevices).HasMaxLength(500);
+            entity.Property(e => e.CustomAttributes).HasColumnType("jsonb");
+
+            entity.HasIndex(e => new { e.TenantId, e.OfficeId }).IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.RequiredClearance });
+
+            entity.HasOne(e => e.Office)
+                .WithMany()
+                .HasForeignKey(e => e.OfficeId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.AssignedFso)
+                .WithMany()
+                .HasForeignKey(e => e.AssignedFsoUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<FieldAssignment>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.ProjectName).HasMaxLength(200);
+            entity.Property(e => e.TaskDescription).HasMaxLength(500);
+            entity.Property(e => e.ContractNumber).HasMaxLength(100);
+            entity.Property(e => e.BillRate).HasPrecision(12, 2);
+            entity.Property(e => e.BadgeNumber).HasMaxLength(50);
+            entity.Property(e => e.ApprovalNotes).HasMaxLength(1000);
+            entity.Property(e => e.Notes).HasMaxLength(2000);
+
+            entity.HasIndex(e => new { e.TenantId, e.UserId, e.Status });
+            entity.HasIndex(e => new { e.TenantId, e.ClientSiteOfficeId, e.Status });
+            entity.HasIndex(e => new { e.StartDate, e.EndDate });
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.ClientSiteOffice)
+                .WithMany()
+                .HasForeignKey(e => e.ClientSiteOfficeId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.ApprovedBy)
+                .WithMany()
+                .HasForeignKey(e => e.ApprovedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.ClearanceVerifiedBy)
+                .WithMany()
+                .HasForeignKey(e => e.ClearanceVerifiedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<EmployeeClearance>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.InvestigationType).HasMaxLength(50);
+            entity.Property(e => e.PolygraphType).HasMaxLength(50);
+            entity.Property(e => e.SciCompartments).HasColumnType("jsonb");
+            entity.Property(e => e.SponsoringAgency).HasMaxLength(200);
+            entity.Property(e => e.ContractorCode).HasMaxLength(50);
+            entity.Property(e => e.Notes).HasMaxLength(2000);
+
+            entity.HasIndex(e => new { e.TenantId, e.UserId, e.Status });
+            entity.HasIndex(e => new { e.TenantId, e.Level, e.Status });
+            entity.HasIndex(e => e.ExpirationDate);
+            entity.HasIndex(e => e.ReinvestigationDate);
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.VerifiedBy)
+                .WithMany()
+                .HasForeignKey(e => e.VerifiedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<ForeignTravelRecord>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.DestinationCountry).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.DestinationCity).HasMaxLength(100);
+            entity.Property(e => e.PurposeDescription).HasMaxLength(500);
+            entity.Property(e => e.ApprovalNotes).HasMaxLength(1000);
+            entity.Property(e => e.DebriefingNotes).HasMaxLength(2000);
+            entity.Property(e => e.ForeignContacts).HasColumnType("jsonb");
+            entity.Property(e => e.Notes).HasMaxLength(2000);
+
+            entity.HasIndex(e => new { e.TenantId, e.UserId, e.Status });
+            entity.HasIndex(e => new { e.TenantId, e.Status, e.DepartureDate });
+            entity.HasIndex(e => new { e.DepartureDate, e.ReturnDate });
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.BriefedBy)
+                .WithMany()
+                .HasForeignKey(e => e.BriefedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.ApprovedBy)
+                .WithMany()
+                .HasForeignKey(e => e.ApprovedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.DebriefedBy)
+                .WithMany()
+                .HasForeignKey(e => e.DebriefedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<ScifAccessLog>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Purpose).HasMaxLength(500);
+            entity.Property(e => e.BadgeNumber).HasMaxLength(50);
+            entity.Property(e => e.Notes).HasMaxLength(500);
+
+            entity.HasIndex(e => new { e.TenantId, e.OfficeId, e.AccessTime });
+            entity.HasIndex(e => new { e.TenantId, e.UserId, e.AccessTime });
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Office)
+                .WithMany()
+                .HasForeignKey(e => e.OfficeId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Escort)
+                .WithMany()
+                .HasForeignKey(e => e.EscortUserId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        // ============================================================================
+        // CHECK-IN & ANALYTICS
+        // ============================================================================
+
+        modelBuilder.Entity<FacilityCheckIn>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.BadgeId).HasMaxLength(100);
+            entity.Property(e => e.QrCode).HasMaxLength(500);
+            entity.Property(e => e.Notes).HasMaxLength(500);
+            entity.Property(e => e.DeviceInfo).HasMaxLength(500);
+
+            entity.HasIndex(e => new { e.TenantId, e.OfficeId, e.CheckInTime });
+            entity.HasIndex(e => new { e.TenantId, e.UserId, e.CheckInTime });
+            entity.HasIndex(e => new { e.Method, e.CheckInTime });
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Office)
+                .WithMany()
+                .HasForeignKey(e => e.OfficeId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Space)
+                .WithMany()
+                .HasForeignKey(e => e.SpaceId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<FacilityAttributeDefinition>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.DisplayName).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.DefaultValue).HasMaxLength(500);
+            entity.Property(e => e.ValidationRule).HasMaxLength(500);
+            entity.Property(e => e.Options).HasColumnType("jsonb");
+
+            entity.HasIndex(e => new { e.TenantId, e.EntityType, e.IsActive });
+            entity.HasIndex(e => new { e.TenantId, e.Name }).IsUnique();
+        });
+
+        modelBuilder.Entity<FacilityUsageDaily>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.UtilizationRate).HasPrecision(5, 2);
+            entity.Property(e => e.AverageStayHours).HasPrecision(5, 2);
+            entity.Property(e => e.UtilizationBySpaceType).HasColumnType("jsonb");
+
+            entity.HasIndex(e => new { e.TenantId, e.OfficeId, e.Date }).IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.Date });
+
+            entity.HasOne(e => e.Office)
+                .WithMany()
+                .HasForeignKey(e => e.OfficeId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 

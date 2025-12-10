@@ -71,8 +71,9 @@ export function MyStaffingPlanPage() {
     return fiscalYear.getMonthRange(adjustedStartDate, count);
   }, [selectedFiscalYear, selectedQuarter, fiscalYear]);
 
-  // Build forecast lookup map: projectId -> year/month -> hours
-  const forecastsByProject = useMemo(() => {
+  // Build forecast lookup map: projectId -> year/month -> hours (will be used for future feature)
+  // @ts-expect-error - Keeping for future use when displaying forecast vs actual on staffing grid
+  const _forecastsByProject = useMemo(() => {
     const map: Record<string, Record<string, number>> = {};
 
     forecasts.forEach(f => {

@@ -1,20 +1,34 @@
-# Enterprise Facilities Management - Design Document
+# myFacilities Portal - Comprehensive Design Document
 
 ## Overview
 
-This document outlines the design for transforming the current Facilities page and Admin Offices functionality into a comprehensive enterprise-level Facilities Management system.
+myFacilities is an enterprise-level facilities management portal within the myScheduling platform. It unifies hoteling, facilities management, lease tracking, field personnel management, and FSO security operations into a single cohesive portal.
+
+**Portal Access URL:** `/facilities`
 
 ---
 
-## Phase 1 Status: ✅ COMPLETE
+## Implementation Status Summary
+
+| Phase | Status | Description |
+|-------|--------|-------------|
+| Phase 1 - Basic Facilities | COMPLETE | Space CRUD, seed data, basic booking |
+| Phase 2 - Admin Enhancement | COMPLETE | Bulk import/export, floors/zones, booking enhancements |
+| Phase 3 - myFacilities Portal Core | COMPLETE | Portal layout, dashboard, API controllers, admin migration |
+| Phase 4 - Feature Pages | COMPLETE | All 16 feature pages implemented |
+| Phase 5 - Advanced Features | PENDING | MS Teams integration, real-time analytics |
+
+---
+
+## Phase 1: Basic Facilities COMPLETE
 
 ### Completed Items
-1. ✅ Fixed FacilitiesPage padding issue (added `p-6` class)
-2. ✅ Created SpaceModal component for Add/Edit Space operations
-3. ✅ Wired Add Space button to modal functionality
-4. ✅ Added Edit/Delete functionality for spaces
-5. ✅ Created seed data script (SeedFacilitiesData.cs)
-6. ✅ Seeded test spaces for all 8 existing offices (200 spaces total)
+1. Fixed FacilitiesPage padding issue (added `p-6` class)
+2. Created SpaceModal component for Add/Edit Space operations
+3. Wired Add Space button to modal functionality
+4. Added Edit/Delete functionality for spaces
+5. Created seed data script (SeedFacilitiesData.cs)
+6. Seeded test spaces for all 8 existing offices (200 spaces total)
 
 ### Test Data Created
 Each office received 25 spaces:
@@ -29,312 +43,585 @@ Each office received 25 spaces:
 
 ---
 
-## Phase 2 Status: ✅ COMPLETE
+## Phase 2: Admin Enhancement COMPLETE
 
-### Completed Items
+### Backend
+1. Created Floor, Zone, SpaceAssignment, BookingRule entities in Hoteling.cs
+2. Added EF Core migrations for facilities entities
+3. Created FacilitiesAdminController with CRUD endpoints
+4. Added bulk import/export endpoints (Excel format via ClosedXML)
+5. Enhanced Booking entity with tracking fields (`BookedByUserId`, `BookedAt`, `IsPermanent`)
+6. Enhanced CheckInEvent entity for daily check-ins on multi-day bookings
+7. Created CreateBookingRequest DTO for proper model binding
+8. Fixed UTC DateTime handling for PostgreSQL compatibility
 
-#### Backend
-1. ✅ Created Floor, Zone, SpaceAssignment, BookingRule entities in Hoteling.cs
-2. ✅ Added EF Core migrations for facilities entities
-3. ✅ Created FacilitiesAdminController with CRUD endpoints
-4. ✅ Added bulk import/export endpoints (Excel format via ClosedXML)
-5. ✅ Enhanced Booking entity with tracking fields:
-   - `BookedByUserId` - Who made the booking (may differ from user it's for)
-   - `BookedAt` - When the booking was created
-   - `IsPermanent` - Flag for indefinite/permanent bookings
-6. ✅ Enhanced CheckInEvent entity for daily check-ins on multi-day bookings
-7. ✅ Created CreateBookingRequest DTO for proper model binding
-8. ✅ Fixed UTC DateTime handling for PostgreSQL compatibility
-
-#### Frontend - Admin Portal
-1. ✅ Created AdminFacilitiesPage (`/admin/facilities`) with tabs:
-   - Overview tab - Dashboard with office/space statistics
-   - Import/Export tab - Bulk Excel operations
-   - Floors tab - Floor management
-   - Zones tab - Zone management
-2. ✅ Created AdminOfficeDetailPage (`/admin/facilities/offices/:officeId`)
-   - Office details display
-   - Space management (list, add, edit, delete)
-   - Booking overview for the office
-3. ✅ Created AdminSpaceDetailPage (`/admin/facilities/spaces/:spaceId`)
-   - Space details display
-   - Current and upcoming bookings table with "Booked For" column
-   - Past bookings table with "Booked For" column
-   - Edit booking functionality (restricted to isPermanent and dates only)
-   - Add booking functionality (full form with on-behalf-of booking support)
-4. ✅ Created SpaceModal component for space CRUD operations
-5. ✅ Enhanced BookingModal component:
-   - Self-booking toggle (defaults to logged-in user)
-   - On-behalf-of booking when toggle is enabled
-   - Permanent/indefinite booking support
-   - Create mode: Full form with all fields editable
-   - Edit mode: Read-only display for space/user/status, only isPermanent and dates editable
-   - Pre-populated office/space when opened from space detail page
-6. ✅ Added Excel template downloads for all entity types
-7. ✅ Added validation and error reporting for imports
-
-#### Navigation
-1. ✅ Added Admin Layout with Facilities link
-2. ✅ Added Manager Layout structure
-3. ✅ Created proper routing for facilities admin pages
+### Frontend - Admin Portal
+1. Created AdminFacilitiesPage (`/admin/facilities`) with tabs (Overview, Import/Export, Floors, Zones)
+2. Created AdminOfficeDetailPage (`/admin/facilities/offices/:officeId`)
+3. Created AdminSpaceDetailPage (`/admin/facilities/spaces/:spaceId`)
+4. Created SpaceModal component for space CRUD operations
+5. Enhanced BookingModal component with self/on-behalf booking and permanent booking support
+6. Added Excel template downloads for all entity types
+7. Added validation and error reporting for imports
 
 ---
 
-## Current State
+## Phase 3: myFacilities Portal Core COMPLETE
 
-### Existing Entities (Fully Implemented)
+### Migration from Admin Portal COMPLETE
 
-#### Core Entities
-- **Office**: Tenant-scoped locations with address, timezone, status, client site flag, coordinates
-- **Space**: Bookable units with type, capacity, equipment, features, daily cost, booking rules
-- **Floor**: Organizes spaces by floor level with floor plan URL support
-- **Zone**: Groups spaces within floors with color coding
-- **Booking**: Reservations with user tracking, permanent booking support, bookedBy/bookedAt fields
-- **SpaceAssignment**: Long-term/permanent desk assignments
-- **BookingRule**: Configurable booking policies (duration, advance booking, time restrictions)
-- **FacilityPermission**: Role-based and user-specific access control
-- **SpaceMaintenanceLog**: Maintenance tracking with status workflow
-- **CheckInEvent**: Daily check-in tracking for multi-day bookings
+The following pages have been migrated from the Admin portal into the myFacilities portal:
 
-#### Enums
-```csharp
-// Space Types
-Desk, HotDesk, Office, Cubicle, Room, ConferenceRoom,
-HuddleRoom, PhoneBooth, TrainingRoom, BreakRoom, ParkingSpot
+| Original Location | New Location | Status |
+|-------------------|--------------|--------|
+| `/admin/offices` (AdminOfficesPage) | `/facilities/admin/offices` | COMPLETE |
+| `/admin/facilities` (AdminFacilitiesPage) | `/facilities/admin` | COMPLETE |
+| `/admin/facilities/office/:id` | `/facilities/admin/offices/:id` | COMPLETE |
+| `/admin/facilities/space/:id` | `/facilities/admin/spaces/:id` | COMPLETE |
 
-// Space Availability
-Shared, Assigned, Reservable, Restricted
+**Migration Completed:**
+1. Created `frontend/src/pages/facilities/` directory structure
+2. Created `OfficeManagementPage.tsx` - Office CRUD with address autocomplete, teal color scheme
+3. Created `FacilitiesAdminPage.tsx` - Full admin page with 5 tabs (Overview, Spaces, Import/Export, Floors, Zones)
+4. Updated `FacilitiesLayout.tsx` sidebar with Administration section links
+5. Updated `App.tsx` with routes for all migrated pages
+6. Reuses existing detail pages: `AdminOfficeDetailPage`, `AdminSpaceDetailPage`
 
-// Space Assignment Types
-Permanent, LongTerm, Temporary, Visitor
+**Files Created:**
+- `frontend/src/pages/facilities/OfficeManagementPage.tsx` (~500 lines)
+- `frontend/src/pages/facilities/FacilitiesAdminPage.tsx` (~900 lines)
 
-// Booking Status
-Reserved, CheckedIn, Completed, Cancelled, NoShow
+**Key Changes:**
+- All blue colors (`blue-600`, `blue-700`, etc.) replaced with teal (`teal-600`, `teal-700`, etc.)
+- All internal links updated to use `/facilities/admin/...` paths
+- React Query hooks for data fetching
+- Toast notifications for user feedback
+- Modal forms for CRUD operations
 
-// Check-in Status
-CheckedIn, CheckedOut, NoShow, AutoCheckout
+### Backend - COMPLETE
+
+#### New Entities Created (`backend/src/MyScheduling.Core/Entities/Facilities.cs`)
+
+##### Lease Management
+- **Lease** - Full lease tracking with landlord info, costs, terms, compliance
+- **LeaseOptionYear** - Option year tracking with exercise workflow
+- **LeaseAmendment** - Amendments and modifications to leases
+- **LeaseAttachment** - Document storage via IFileStorageService
+
+##### Office Information
+- **OfficeTravelGuide** - Comprehensive travel/visitor information
+- **OfficePoc** - Points of contact by role
+- **FacilityAnnouncement** - Office-specific or global announcements
+- **AnnouncementAcknowledgment** - Track user acknowledgments
+
+##### Field Personnel & FSO
+- **ClientSiteDetail** - Extended client site information
+- **FieldAssignment** - Employee assignments to client sites
+- **EmployeeClearance** - Security clearance tracking
+- **ForeignTravelRecord** - Pre/post travel workflow
+- **ScifAccessLog** - SCIF entry/exit logging
+
+##### Check-In & Presence
+- **FacilityCheckIn** - General facility check-in (Web, Mobile, QR, NFC, Badge)
+
+##### Configuration
+- **FacilityAttributeDefinition** - Custom tenant attributes
+- **FacilityUsageDaily** - Aggregated usage statistics
+
+#### Backend Controllers Created
+
+##### FacilitiesPortalController (`/api/facilities-portal`)
+**File:** `backend/src/MyScheduling.Api/Controllers/FacilitiesPortalController.cs`
+
+| Endpoint | Method | Permission | Description |
+|----------|--------|------------|-------------|
+| `/dashboard` | GET | Facility.Read | Dashboard summary statistics |
+| `/announcements` | GET | Facility.Read | List announcements |
+| `/announcements` | POST | Facility.Manage | Create announcement |
+| `/announcements/{id}/acknowledge` | POST | Facility.Read | Acknowledge announcement |
+| `/offices` | GET | Facility.Read | Office directory |
+| `/offices/{id}` | GET | Facility.Read | Office detail with travel guide |
+| `/offices/{officeId}/travel-guide` | GET | Facility.Read | Get travel guide |
+| `/offices/{officeId}/travel-guide` | PUT | Facility.Manage | Upsert travel guide |
+| `/offices/{officeId}/pocs` | GET | Facility.Read | Get POCs |
+| `/offices/{officeId}/pocs` | POST | Facility.Manage | Add/update POC |
+| `/check-in` | POST | Facility.Read | Quick check-in |
+| `/check-out/{checkInId}` | POST | Facility.Read | Check out |
+| `/my-check-ins` | GET | Facility.Read | User's check-ins |
+| `/offices/{officeId}/whos-here` | GET | Facility.Read | Who's in office |
+
+##### LeasesController (`/api/leases`)
+**File:** `backend/src/MyScheduling.Api/Controllers/LeasesController.cs`
+
+| Endpoint | Method | Permission | Description |
+|----------|--------|------------|-------------|
+| `/` | GET | Lease.Read | List leases |
+| `/{id}` | GET | Lease.Read | Get lease |
+| `/` | POST | Lease.Create | Create lease |
+| `/{id}` | PUT | Lease.Update | Update lease |
+| `/{id}` | DELETE | Lease.Delete | Delete lease |
+| `/{leaseId}/options` | POST | Lease.Update | Add option year |
+| `/{leaseId}/options/{optionId}/exercise` | POST | Lease.Update | Exercise option |
+| `/{leaseId}/amendments` | POST | Lease.Update | Add amendment |
+| `/{leaseId}/attachments` | POST | Lease.Update | Upload attachment |
+| `/{leaseId}/attachments/{id}/download` | GET | Lease.Read | Download attachment |
+| `/{leaseId}/attachments/{id}` | DELETE | Lease.Update | Delete attachment |
+| `/calendar` | GET | Lease.Read | Lease calendar events |
+
+##### FieldPersonnelController (`/api/field-personnel`)
+**File:** `backend/src/MyScheduling.Api/Controllers/FieldPersonnelController.cs`
+
+| Endpoint | Method | Permission | Description |
+|----------|--------|------------|-------------|
+| `/assignments` | GET | FieldAssignment.Read | List assignments |
+| `/assignments/{id}` | GET | FieldAssignment.Read | Get assignment |
+| `/assignments` | POST | FieldAssignment.Create | Create assignment |
+| `/assignments/{id}` | PUT | FieldAssignment.Update | Update assignment |
+| `/assignments/{id}/approve` | POST | FieldAssignment.Manage | Approve assignment |
+| `/assignments/{id}/verify-clearance` | POST | FieldAssignment.Manage | Verify clearance |
+| `/client-sites` | GET | ClientSite.Read | List client sites |
+| `/client-sites/{officeId}` | PUT | ClientSite.Manage | Upsert client site |
+| `/clearances` | GET | Clearance.Read | List clearances |
+| `/clearances` | POST | Clearance.Manage | Upsert clearance |
+| `/foreign-travel` | GET | ForeignTravel.Read | List travel records |
+| `/foreign-travel` | POST | ForeignTravel.Create | Submit travel request |
+| `/foreign-travel/{id}/approve` | POST | ForeignTravel.Manage | Approve travel |
+| `/foreign-travel/{id}/briefing` | POST | ForeignTravel.Manage | Record briefing |
+| `/foreign-travel/{id}/debrief` | POST | ForeignTravel.Manage | Record debriefing |
+| `/scif-access` | GET | ScifAccess.Read | List SCIF logs |
+| `/scif-access` | POST | ScifAccess.Create | Log SCIF access |
+| `/scif-access/{id}/exit` | POST | ScifAccess.Update | Record exit |
+
+### Frontend - COMPLETE
+
+#### Portal Layout (`frontend/src/components/layout/FacilitiesLayout.tsx`)
+- Teal color scheme (#0d9488 primary)
+- Sidebar navigation with collapsible groups
+- Role-based menu filtering
+- Portal switching in user dropdown (myScheduling, Manager, myForecast, Admin)
+- Search modal integration (Ctrl+K)
+
+**Navigation Groups:**
+1. **Overview** - Dashboard, Quick Check-In, Who's Here
+2. **Offices** - Directory, Travel Guides, Announcements
+3. **Lease Management** - Leases, Option Years (managers only)
+4. **Field Personnel** - Assignments, Client Sites (managers only)
+5. **Security / FSO** - Clearances, Foreign Travel, SCIF Access (managers only)
+6. **Reports** - Usage Analytics (managers only)
+7. **Administration** - Settings (admins only)
+
+#### API Service (`frontend/src/services/facilitiesPortalService.ts`)
+Complete TypeScript service with all types/enums and API methods for:
+- Dashboard
+- Announcements
+- Office Directory & Travel Guides
+- Check-In/Out & Who's Here
+- Leases & Option Years
+- Field Assignments & Client Sites
+- Clearances & Foreign Travel
+
+#### Dashboard Page (`frontend/src/pages/FacilitiesDashboardPage.tsx`)
+- Stat cards: Offices, Spaces, Active Leases, Field Assignments
+- Quick action buttons: Check-In, Who's Here, Directory, Travel Guides
+- Recent announcements with type/priority badges
+- Maintenance request alerts
+
+#### Routes (`frontend/src/App.tsx`)
+```tsx
+/facilities                 -> FacilitiesDashboardPage
+/facilities/check-in        -> Quick Check-In (Coming Soon)
+/facilities/whos-here       -> Who's Here (Coming Soon)
+/facilities/offices         -> Office Directory (Coming Soon)
+/facilities/offices/:id     -> Office Detail (Coming Soon)
+/facilities/travel-guides   -> Travel Guides (Coming Soon)
+/facilities/announcements   -> Announcements (Coming Soon)
+/facilities/leases          -> Lease Management (Coming Soon)
+/facilities/leases/:id      -> Lease Detail (Coming Soon)
+/facilities/option-years    -> Option Years Calendar (Coming Soon)
+/facilities/field-assignments -> Field Assignments (Coming Soon)
+/facilities/client-sites    -> Client Sites (Coming Soon)
+/facilities/clearances      -> Clearances (Coming Soon)
+/facilities/foreign-travel  -> Foreign Travel (Coming Soon)
+/facilities/scif-access     -> SCIF Access Logs (Coming Soon)
+/facilities/analytics       -> Usage Analytics (Coming Soon)
+/facilities/settings        -> Facilities Settings (Coming Soon)
 ```
 
 ---
 
-## Questions for Clarification
+## Phase 4: Feature Pages COMPLETE
 
-### Business Rules
+### All Pages Implemented
 
-1. **Booking Conflicts**:
-   - For shared spaces (hot desks), can multiple people book the same desk on the same day if times don't overlap?
-   - For conference rooms, what's the minimum gap between bookings?
+#### 4.1 Office Directory Page `/facilities/offices` COMPLETE
+**File:** `frontend/src/pages/facilities/OfficeDirectoryPage.tsx`
 
-2. **Permanent Assignments**:
-   - When a space is permanently assigned, should it still show on the booking calendar as "unavailable" or be hidden entirely?
-   - Can permanently assigned spaces be released for booking when the assignee is on PTO/travel?
+**Features Implemented:**
+- Grid and list view toggle
+- Search by name, city, state, address
+- Filter by type (Company/Client Site) and state
+- Office cards with gradient headers, status badges
+- Quick action buttons (View, Check-In, Who's Here)
+- Responsive design
 
-3. **Approval Workflow**:
-   - Who should approve booking requests? Space manager? Office manager? Both?
-   - Should there be an auto-approval option based on user role?
+#### 4.2 Quick Check-In Page `/facilities/check-in` COMPLETE
+**File:** `frontend/src/pages/facilities/CheckInPage.tsx`
 
-4. **Cancellation Policy**:
-   - What's the minimum notice for cancellation without penalty?
-   - Should no-shows affect future booking privileges?
+**Features Implemented:**
+- Office selection dropdown
+- Current check-in status display
+- Location capture (GPS)
+- Notes field
+- Check-out functionality
+- Recent check-ins history
 
-### Scope Questions
+#### 4.3 Who's Here Page `/facilities/whos-here` COMPLETE
+**File:** `frontend/src/pages/facilities/WhosHerePage.tsx`
 
-5. **Floor Plans**:
-   - Do you want interactive floor plans where users can click on a space to book?
-   - Or is a simple list/grid view sufficient for Phase 1?
+**Features Implemented:**
+- Office selection dropdown
+- Real-time people list (30-second refresh)
+- Person search by name/email
+- Check-in duration display
+- Link to check-in page
 
-6. **Parking**:
-   - Should parking spots have their own special rules (e.g., one per person per day)?
-   - Do you need electric vehicle charger tracking?
+#### 4.4 Announcements Page `/facilities/announcements` COMPLETE
+**File:** `frontend/src/pages/facilities/AnnouncementsPage.tsx`
 
-7. **Equipment Tracking**:
-   - For conference rooms, do you want to track equipment (monitors, whiteboards, video conferencing)?
-   - Should equipment be bookable independently (e.g., book a projector)?
+**Features Implemented:**
+- Filter by type (General, Maintenance, Safety, Policy, Event, Emergency)
+- Filter by priority (Low, Normal, High, Urgent)
+- Urgent announcements highlighted at top
+- Create announcement modal (for managers)
+- Acknowledgment button for required announcements
+- Type and priority badges
 
-8. **Notifications**:
-   - What notifications should be sent? (Booking confirmation, reminder, cancellation, etc.)
-   - Email only, or also in-app notifications?
+#### 4.5 Travel Guides Page `/facilities/travel-guides` COMPLETE
+**File:** `frontend/src/pages/facilities/TravelGuidesPage.tsx`
 
-### Phase 3 - MS Teams Integration
+**Features Implemented:**
+- Side-by-side office list and guide display
+- Search offices
+- Rich sections: Directions, Parking, Building Access, Lodging, Emergency Info
+- Print-friendly layout
+- Last updated timestamp
 
-9. **Teams Rooms**:
-   - Is this for reading room availability from Teams, booking through Teams, or both?
-   - Do you have MS Teams Rooms already deployed?
+#### 4.6 Office Detail Page `/facilities/offices/:officeId` COMPLETE
+**File:** `frontend/src/pages/facilities/OfficeDetailPage.tsx`
 
-10. **Calendar Sync**:
-    - Should bookings create Outlook calendar events automatically?
-    - Two-way sync (calendar -> booking) or one-way (booking -> calendar)?
+**Features Implemented:**
+- Office info header with address and status
+- Tabbed interface (Overview, Travel Guide, Spaces, Announcements)
+- Quick actions (Book a space, Check-in, Report issue)
+- Points of contact display
+- Integration with travel guide data
 
----
+#### 4.7 Lease Management Page `/facilities/leases` COMPLETE
+**File:** `frontend/src/pages/facilities/LeaseManagementPage.tsx`
 
-## Future Features (Backlog)
+**Features Implemented:**
+- List all leases with status filtering
+- Key metrics display (monthly cost, SF, expiration)
+- Status badges (Active, Expiring, Draft, Terminated)
+- Sortable columns
+- Search by office/landlord
+- Quick view and edit actions
 
-### Authorization & Access Control
-- **Authorization Group Restrictions for Booking Spaces**
-  - Allow spaces to be restricted to specific authorization groups
-  - Groups could be based on department, role, project, or custom criteria
-  - UI for admins to configure which groups can book which spaces
-  - Booking validation to enforce group membership
+#### 4.8 Lease Detail Page `/facilities/leases/:leaseId` COMPLETE
+**File:** `frontend/src/pages/facilities/LeaseDetailPage.tsx`
 
-### Media & Visual Enhancements
-- **Office/Space Pictures (Azure Blob Storage)**
-  - Upload photos of offices and spaces
-  - Multiple images per space (gallery view)
-  - Azure Blob Storage integration for scalable image hosting
-  - Thumbnail generation for list views
-  - Floor plan images with clickable hotspots
+**Features Implemented:**
+- Header with office name, lease number, status
+- Tabbed interface (Overview, Costs, Option Years, Amendments, Attachments)
+- Option year exercise workflow
+- Amendment history
+- Document attachment management
 
-### Management & Workflows
-- **Default Office Manager and Approval Group**
-  - Add `DefaultManagerUserId` to Office entity
-  - Add `ApprovalGroupId` to Office entity for booking approvals
-  - Automatic routing of booking requests to appropriate approvers
-  - Configurable approval chains (single approver vs. group consensus)
+#### 4.9 Option Years Calendar `/facilities/option-years` COMPLETE
+**File:** `frontend/src/pages/facilities/OptionYearsCalendarPage.tsx`
 
-### Reporting & Communications
-- **Booking Reports & Email Notifications**
-  - Weekly utilization reports by office/space type
-  - Daily booking summary emails for managers
-  - Automated reminders for upcoming bookings
-  - No-show notifications and tracking
-  - Configurable report scheduling (daily/weekly/monthly)
-  - Export reports to PDF/Excel
+**Features Implemented:**
+- Calendar view of key lease dates
+- Event types with color coding
+- Click to view lease details
+- Legend for event types
+- Month/year navigation
 
----
+#### 4.10 Field Assignments Page `/facilities/field-assignments` COMPLETE
+**File:** `frontend/src/pages/facilities/FieldAssignmentsPage.tsx`
 
-## Implementation Phases
+**Features Implemented:**
+- List of field personnel assignments
+- Filter by status (Active, Pending, Completed)
+- Summary cards with counts
+- Approval workflow actions
+- Assignment detail modal
 
-### Phase 1 ✅ COMPLETE
-1. ✅ Fix FacilitiesPage padding issue
-2. ✅ Fix Add Space button functionality
-3. ✅ Create basic Space CRUD modal
-4. ✅ Create seed data for testing (200 spaces across 8 offices)
+#### 4.11 Client Sites Page `/facilities/client-sites` COMPLETE
+**File:** `frontend/src/pages/facilities/ClientSitesPage.tsx`
 
-### Phase 2 ✅ COMPLETE
-1. ✅ Create new backend entities (Floor, Zone, SpaceAssignment, BookingRule)
-2. ✅ Add ClosedXML NuGet package for Excel operations
-3. ✅ Create bulk import/export endpoints
-4. ✅ Build AdminFacilitiesPage with tabbed interface
-5. ✅ Implement Excel template downloads
-6. ✅ Create AdminOfficeDetailPage and AdminSpaceDetailPage
-7. ✅ Enhance BookingModal with self/on-behalf booking and permanent booking support
-8. ✅ Add "Booked For" display in booking tables
-9. ✅ Restrict edit mode to only allow isPermanent and date changes
+**Features Implemented:**
+- Grid of client sites with security levels
+- Filter by clearance level
+- SCIF indicator badges
+- Site detail modal with contacts and procedures
+- Personnel count display
 
-### Phase 3 - Enhanced Booking Management (Planned)
-1. Transform FacilitiesPage into enterprise booking dashboard
-2. Calendar views (day/week/month)
-3. Utilization reports and analytics
-4. Approval workflows for booking requests
-5. Authorization group restrictions for spaces
-6. Default office manager and approval group configuration
+#### 4.12 Clearances Page `/facilities/clearances` COMPLETE
+**File:** `frontend/src/pages/facilities/ClearancesPage.tsx`
 
-### Phase 4 - Media & Reporting (Planned)
-1. Office/space image upload (Azure Blob Storage)
-2. Weekly/daily booking reports
-3. Email notifications for bookings
-4. Floor plan visualization
+**Features Implemented:**
+- List employee clearances
+- Filter by level (Secret, TS, TS/SCI)
+- Expiration tracking with alerts
+- SCIF access badges
+- Status color coding
 
-### Phase 5 - MS Teams Integration (Planned)
-1. MS Teams Rooms integration
-2. Outlook calendar sync
-3. Room display integration
+#### 4.13 Foreign Travel Page `/facilities/foreign-travel` COMPLETE
+**File:** `frontend/src/pages/facilities/ForeignTravelPage.tsx`
 
----
+**Features Implemented:**
+- List travel requests by status
+- Approval workflow with briefing/debriefing
+- Request form for employees
+- FSO dashboard for pending approvals
+- Travel history with detail modal
 
-## Bulk Import/Export Specification
+#### 4.14 SCIF Access Logs `/facilities/scif-access` COMPLETE
+**File:** `frontend/src/pages/facilities/ScifAccessPage.tsx`
 
-### Excel Format Standards
-- File format: `.xlsx` (Excel 2007+)
-- First row: Column headers (must match exactly)
-- Data starts row 2
-- Maximum 10,000 rows per import
-- Required fields marked with * in headers
+**Features Implemented:**
+- Placeholder page for SCIF access logging
+- Summary cards for entries/exits/visitors
+- Filter by date and facility
+- Access type legend
+- Info card about upcoming features
 
-### Offices Import Template
-| Name* | Address | Address2 | City | StateCode | CountryCode | Timezone | Status | IsClientSite |
-|-------|---------|----------|------|-----------|-------------|----------|--------|--------------|
-| Example Office | 123 Main St | Suite 100 | Denver | CO | US | America/Denver | Active | false |
+#### 4.15 Usage Analytics Page `/facilities/analytics` COMPLETE
+**File:** `frontend/src/pages/facilities/UsageAnalyticsPage.tsx`
 
-### Spaces Import Template
-| OfficeName* | Name* | Type* | Capacity | RequiresApproval | IsActive | Equipment | Features | DailyCost | MaxBookingDays |
-|-------------|-------|-------|----------|------------------|----------|-----------|----------|-----------|----------------|
-| National HQ | HD-001 | HotDesk | 1 | false | true | Monitor,Keyboard | Window | 25.00 | 30 |
+**Features Implemented:**
+- Date range selector
+- Office utilization charts
+- Space type breakdown
+- Weekly trend visualization
+- Key metrics cards
 
-### Floors Import Template
-| OfficeName* | Name* | Level* | SquareFootage | IsActive |
-|-------------|-------|--------|---------------|----------|
-| National HQ | 1st Floor | 1 | 15000 | true |
+#### 4.16 Facilities Settings Page `/facilities/settings` COMPLETE
+**File:** `frontend/src/pages/facilities/FacilitiesSettingsPage.tsx`
 
-### Zones Import Template
-| OfficeName* | FloorName* | Name* | Description | Color | IsActive |
-|-------------|------------|-------|-------------|-------|----------|
-| National HQ | 1st Floor | East Wing | Engineering area | #4F46E5 | true |
-
-### Space Assignments Import Template
-| OfficeName* | SpaceName* | UserEmail* | StartDate* | EndDate | Type* | Notes |
-|-------------|------------|------------|------------|---------|-------|-------|
-| National HQ | PO-001 | john@example.com | 2025-01-01 | | Permanent | CEO office |
-
----
-
-## Test Data Summary
-
-### Seeded Offices (8 total)
-1. Albuquerque, NM
-2. Paducah, KY
-3. Colorado Springs, CO
-4. Oak Ridge, TN
-5. Clear SFS
-6. Arlington, VA
-7. National Headquarters
-8. Anchorage, AK
-
-### Seeded Spaces (200 total - 25 per office)
-- Hot Desks: 80 (10 per office)
-- Private Offices: 40 (5 per office)
-- Conference Rooms: 24 (3 per office)
-- Huddle Rooms: 16 (2 per office)
-- Phone Booths: 16 (2 per office)
-- Training Rooms: 8 (1 per office)
-- Break Rooms: 8 (1 per office)
-- Parking Spots: 40 (5 per office)
+**Features Implemented:**
+- Tabbed interface (General, Booking Rules, Notifications, Integrations, Attributes)
+- General settings (check-in window, auto-release, business hours)
+- Feature toggles (require check-in, GPS verification)
+- Booking rules management
+- Notification preferences table
+- Integration cards (Teams, Outlook, Badge System, Slack)
+- Custom attribute definitions
 
 ---
 
-## Technical Notes
+## Data Model Reference
 
-### DateTime Handling
-All DateTime values must be in UTC when stored in PostgreSQL. The API converts incoming DateTime values:
+### Enums
+
 ```csharp
-var utcDateTime = request.DateTime.Kind == DateTimeKind.Unspecified
-    ? DateTime.SpecifyKind(request.DateTime, DateTimeKind.Utc)
-    : request.DateTime.ToUniversalTime();
+// Lease Management
+enum LeaseStatus { Draft, Active, Expiring, InRenewal, Terminated, Expired, Superseded }
+enum OptionYearStatus { Available, Exercised, Declined, Expired, Negotiating }
+enum AmendmentType { RentAdjustment, SpaceExpansion, SpaceReduction, TermExtension, TermReduction, CostAdjustment, Other }
+enum LeaseAttachmentType { LeaseDocument, Amendment, FloorPlan, InsuranceCertificate, Estoppel, Correspondence, Invoice, Photo, Other }
+
+// Security
+enum SecurityClearanceLevel { None, PublicTrust, Secret, TopSecret, TopSecretSci }
+enum ClearanceStatus { Active, Suspended, Revoked, Expired, InProcess, Pending, Interim }
+
+// Field Personnel
+enum FieldAssignmentStatus { Pending, Active, OnHold, Completed, Terminated, Cancelled }
+
+// Travel
+enum TravelPurpose { Personal, Business, Conference, Training, Family, Medical, Military, Other }
+enum ForeignTravelStatus { Pending, Approved, Denied, Completed, Cancelled }
+
+// Check-In
+enum CheckInMethod { Web, Mobile, Kiosk, QrCode, NfcTap, BadgeSwipe, Manual }
+
+// Announcements
+enum AnnouncementType { General, Maintenance, Emergency, Policy, Event, Holiday, SecurityAlert }
+enum AnnouncementPriority { Low, Normal, High, Urgent }
+
+// POC Roles
+enum OfficePocRole { FacilitiesManager, OfficeManager, SecurityOfficer, ItSupport, HrRepresentative, SafetyOfficer, BuildingMaintenance, Reception, Fso, Issm, Other }
+
+// SCIF
+enum ScifAccessType { Regular, Escorted, Maintenance, Inspection, Emergency }
 ```
 
-### Navigation Properties
-Booking entity includes navigation properties for related data:
-- `User` - The user the booking is for
-- `Space` - The booked space (with nested `Office`)
-- `BookedBy` - The user who created the booking
+### Key Entity Relationships
 
-### API Endpoints
+```
+Office (1) --> (many) Lease
+Lease (1) --> (many) LeaseOptionYear
+Lease (1) --> (many) LeaseAmendment
+Lease (1) --> (many) LeaseAttachment
 
-#### FacilitiesAdminController
-- `GET /api/facilitiesadmin/offices` - List all offices
-- `GET /api/facilitiesadmin/offices/{id}` - Get office details
-- `GET /api/facilitiesadmin/offices/{id}/spaces` - Get spaces for an office
-- `GET /api/facilitiesadmin/spaces/{id}` - Get space details
-- `POST /api/facilitiesadmin/spaces` - Create space
-- `PUT /api/facilitiesadmin/spaces/{id}` - Update space
-- `DELETE /api/facilitiesadmin/spaces/{id}` - Delete space
-- `GET /api/facilitiesadmin/export/{entityType}` - Export to Excel
-- `POST /api/facilitiesadmin/import/{entityType}` - Import from Excel
-- `GET /api/facilitiesadmin/template/{entityType}` - Download template
+Office (1) --> (0..1) OfficeTravelGuide
+Office (1) --> (many) OfficePoc
+Office (1) --> (many) FacilityAnnouncement (nullable for all-office announcements)
 
-#### BookingsController
-- `GET /api/bookings` - List bookings (with filters)
-- `GET /api/bookings/{id}` - Get booking details
-- `POST /api/bookings` - Create booking (uses CreateBookingRequest DTO)
-- `PUT /api/bookings/{id}` - Update booking
-- `DELETE /api/bookings/{id}` - Delete/cancel booking
+Office [IsClientSite=true] (1) --> (0..1) ClientSiteDetail
+Office (1) --> (many) FieldAssignment
+User (1) --> (many) FieldAssignment
+User (1) --> (0..1) EmployeeClearance
+User (1) --> (many) ForeignTravelRecord
+User (1) --> (many) ScifAccessLog
+
+User (1) --> (many) FacilityCheckIn
+Office (1) --> (many) FacilityCheckIn
+```
+
+---
+
+## API Endpoint Summary
+
+### Facilities Portal (`/api/facilities-portal`)
+| Method | Endpoint | Permission |
+|--------|----------|------------|
+| GET | /dashboard | Facility.Read |
+| GET | /announcements | Facility.Read |
+| POST | /announcements | Facility.Manage |
+| POST | /announcements/{id}/acknowledge | Facility.Read |
+| GET | /offices | Facility.Read |
+| GET | /offices/{id} | Facility.Read |
+| GET | /offices/{officeId}/travel-guide | Facility.Read |
+| PUT | /offices/{officeId}/travel-guide | Facility.Manage |
+| GET | /offices/{officeId}/pocs | Facility.Read |
+| POST | /offices/{officeId}/pocs | Facility.Manage |
+| POST | /check-in | Facility.Read |
+| POST | /check-out/{checkInId} | Facility.Read |
+| GET | /my-check-ins | Facility.Read |
+| GET | /offices/{officeId}/whos-here | Facility.Read |
+
+### Leases (`/api/leases`)
+| Method | Endpoint | Permission |
+|--------|----------|------------|
+| GET | / | Lease.Read |
+| GET | /{id} | Lease.Read |
+| POST | / | Lease.Create |
+| PUT | /{id} | Lease.Update |
+| DELETE | /{id} | Lease.Delete |
+| POST | /{leaseId}/options | Lease.Update |
+| POST | /{leaseId}/options/{optionId}/exercise | Lease.Update |
+| POST | /{leaseId}/amendments | Lease.Update |
+| POST | /{leaseId}/attachments | Lease.Update |
+| GET | /{leaseId}/attachments/{id}/download | Lease.Read |
+| DELETE | /{leaseId}/attachments/{id} | Lease.Update |
+| GET | /calendar | Lease.Read |
+
+### Field Personnel (`/api/field-personnel`)
+| Method | Endpoint | Permission |
+|--------|----------|------------|
+| GET | /assignments | FieldAssignment.Read |
+| GET | /assignments/{id} | FieldAssignment.Read |
+| POST | /assignments | FieldAssignment.Create |
+| PUT | /assignments/{id} | FieldAssignment.Update |
+| POST | /assignments/{id}/approve | FieldAssignment.Manage |
+| POST | /assignments/{id}/verify-clearance | FieldAssignment.Manage |
+| GET | /client-sites | ClientSite.Read |
+| PUT | /client-sites/{officeId} | ClientSite.Manage |
+| GET | /clearances | Clearance.Read |
+| POST | /clearances | Clearance.Manage |
+| GET | /foreign-travel | ForeignTravel.Read |
+| POST | /foreign-travel | ForeignTravel.Create |
+| POST | /foreign-travel/{id}/approve | ForeignTravel.Manage |
+| POST | /foreign-travel/{id}/briefing | ForeignTravel.Manage |
+| POST | /foreign-travel/{id}/debrief | ForeignTravel.Manage |
+| GET | /scif-access | ScifAccess.Read |
+| POST | /scif-access | ScifAccess.Create |
+| POST | /scif-access/{id}/exit | ScifAccess.Update |
+
+---
+
+## File Reference
+
+### Backend Files
+
+| File | Description |
+|------|-------------|
+| `backend/src/MyScheduling.Core/Entities/Facilities.cs` | All facilities entities |
+| `backend/src/MyScheduling.Core/Entities/Hoteling.cs` | Booking-related entities |
+| `backend/src/MyScheduling.Api/Controllers/FacilitiesPortalController.cs` | Portal API |
+| `backend/src/MyScheduling.Api/Controllers/LeasesController.cs` | Lease management API |
+| `backend/src/MyScheduling.Api/Controllers/FieldPersonnelController.cs` | Field personnel/FSO API |
+| `backend/src/MyScheduling.Api/Controllers/FacilitiesAdminController.cs` | Admin bulk operations |
+| `backend/src/MyScheduling.Infrastructure/Data/MySchedulingDbContext.cs` | DbContext with entity configs |
+
+### Frontend Files
+
+| File | Description |
+|------|-------------|
+| `frontend/src/components/layout/FacilitiesLayout.tsx` | Portal layout with sidebar |
+| `frontend/src/services/facilitiesPortalService.ts` | API service and types |
+| `frontend/src/pages/FacilitiesDashboardPage.tsx` | Dashboard page |
+| `frontend/src/App.tsx` | Route definitions |
+
+---
+
+## Known Issues & Considerations
+
+### Build Fixes Applied
+1. Renamed `CheckInRequest` to `FacilityCheckInRequest` (conflict with BookingsController)
+2. Renamed `ApprovalRequest` to `FieldApprovalRequest` (conflict with ProjectBudgetsController)
+3. Fixed `IFileStorageService` method names (`UploadFileAsync`, `DownloadFileAsync`, `DeleteFileAsync`)
+4. Added `StoredFileId` property to `LeaseAttachment` for blob storage reference
+5. Added `new` keyword to `GetCurrentUserId()` in controllers to properly hide inherited member
+
+### Technical Notes
+- All DateTime values stored in UTC for PostgreSQL compatibility
+- Soft delete pattern used (`IsDeleted` flag) with global query filters
+- Multi-tenant: All entities inherit from `TenantEntity`
+- Permission-based auth via `[RequiresPermission]` attribute
+
+### Future Enhancements (Backlog)
+- MS Teams Rooms integration for conference room sync
+- Outlook calendar sync for bookings
+- Interactive floor plan visualization
+- QR code generation for check-in
+- Mobile app with NFC support
+- Custom attribute configuration UI
+- Usage analytics dashboard with charts
+- Email notifications for lease deadlines
+
+---
+
+## Development Workflow
+
+### Starting the Application
+```bash
+# Terminal 1: Backend
+cd backend/src/MyScheduling.Api
+dotnet run --urls http://localhost:5107
+
+# Terminal 2: Frontend
+cd frontend
+VITE_API_PROXY_TARGET=http://localhost:5107 npm run dev
+```
+
+### Access URLs
+- Frontend: http://localhost:5173/facilities
+- API Swagger: http://localhost:5107/swagger
+- Health Check: http://localhost:5107/health
+
+### Test Account
+- Email: `admin@admin.com`
+
+---
+
+## Version History
+
+| Date | Version | Changes |
+|------|---------|---------|
+| 2025-12-09 | 4.0 | Phase 4 COMPLETE - All 16 feature pages implemented |
+| 2025-12-09 | 3.0 | Phase 3 - myFacilities Portal core implementation |
+| Previous | 2.0 | Phase 2 - Admin enhancements, bulk import/export |
+| Previous | 1.0 | Phase 1 - Basic facilities and seed data |
