@@ -180,7 +180,7 @@ export function CheckInPage() {
                 className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-teal-500 focus:border-teal-500"
               >
                 <option value="">Choose an office...</option>
-                {offices.filter(o => o.status === 1).map(office => (
+                {offices.filter(o => o.status === 0).map(office => (
                   <option key={office.id} value={office.id}>
                     {office.name} {office.city && `- ${office.city}, ${office.stateCode}`}
                   </option>

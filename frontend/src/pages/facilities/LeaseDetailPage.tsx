@@ -145,8 +145,8 @@ export function LeaseDetailPage() {
     );
   }
 
-  const daysUntilExpiration = differenceInDays(parseISO(lease.endDate), new Date());
-  const isExpiringSoon = daysUntilExpiration >= 0 && daysUntilExpiration <= 90;
+  const daysUntilExpiration = lease.endDate ? differenceInDays(parseISO(lease.endDate), new Date()) : null;
+  const isExpiringSoon = daysUntilExpiration !== null && daysUntilExpiration >= 0 && daysUntilExpiration <= 90;
 
   const tabs = [
     { id: 'overview' as const, label: 'Overview' },
@@ -188,7 +188,7 @@ export function LeaseDetailPage() {
           <div>
             <p className="font-semibold text-red-900">Lease Expiring Soon</p>
             <p className="text-sm text-red-700">
-              This lease expires in {daysUntilExpiration} days on {format(parseISO(lease.endDate), 'MMMM d, yyyy')}.
+              This lease expires in {daysUntilExpiration} days{lease.endDate && ` on ${format(parseISO(lease.endDate), 'MMMM d, yyyy')}`}.
               {optionYears.some(oy => oy.status === OptionYearStatus.NotExercised) &&
                 ' Consider exercising an option year to extend.'}
             </p>
@@ -228,11 +228,11 @@ export function LeaseDetailPage() {
               </div>
               <div className="flex justify-between">
                 <dt className="text-sm text-gray-500">Start Date</dt>
-                <dd className="text-sm font-medium text-gray-900">{format(parseISO(lease.startDate), 'MMM d, yyyy')}</dd>
+                <dd className="text-sm font-medium text-gray-900">{lease.startDate ? format(parseISO(lease.startDate), 'MMM d, yyyy') : '-'}</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-sm text-gray-500">End Date</dt>
-                <dd className="text-sm font-medium text-gray-900">{format(parseISO(lease.endDate), 'MMM d, yyyy')}</dd>
+                <dd className="text-sm font-medium text-gray-900">{lease.endDate ? format(parseISO(lease.endDate), 'MMM d, yyyy') : '-'}</dd>
               </div>
               <div className="flex justify-between">
                 <dt className="text-sm text-gray-500">Base Term</dt>
@@ -412,20 +412,20 @@ export function LeaseDetailPage() {
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {optionYears.map((oy) => {
-                  const deadlineDays = differenceInDays(parseISO(oy.exerciseDeadline), new Date());
-                  const isDeadlineSoon = oy.status === OptionYearStatus.NotExercised && deadlineDays >= 0 && deadlineDays <= 30;
+                  const deadlineDays = oy.exerciseDeadline ? differenceInDays(parseISO(oy.exerciseDeadline), new Date()) : null;
+                  const isDeadlineSoon = oy.status === OptionYearStatus.NotExercised && deadlineDays !== null && deadlineDays >= 0 && deadlineDays <= 30;
                   return (
                     <tr key={oy.id} className={isDeadlineSoon ? 'bg-yellow-50' : 'hover:bg-gray-50'}>
                       <td className="px-6 py-4 font-medium text-gray-900">
                         Year {oy.optionYearNumber}
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-700">
-                        {format(parseISO(oy.startDate), 'MMM d, yyyy')} - {format(parseISO(oy.endDate), 'MMM d, yyyy')}
+                        {oy.startDate ? format(parseISO(oy.startDate), 'MMM d, yyyy') : '-'} - {oy.endDate ? format(parseISO(oy.endDate), 'MMM d, yyyy') : '-'}
                       </td>
                       <td className="px-6 py-4">
                         <div>
-                          <p className="text-sm text-gray-900">{format(parseISO(oy.exerciseDeadline), 'MMM d, yyyy')}</p>
-                          {oy.status === OptionYearStatus.NotExercised && (
+                          <p className="text-sm text-gray-900">{oy.exerciseDeadline ? format(parseISO(oy.exerciseDeadline), 'MMM d, yyyy') : '-'}</p>
+                          {oy.status === OptionYearStatus.NotExercised && deadlineDays !== null && (
                             <p className={`text-xs ${deadlineDays < 0 ? 'text-red-600' : isDeadlineSoon ? 'text-yellow-600' : 'text-gray-500'}`}>
                               {deadlineDays < 0 ? 'Deadline passed' : `${deadlineDays} days remaining`}
                             </p>
