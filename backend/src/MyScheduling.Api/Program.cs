@@ -190,6 +190,9 @@ else
 // Register Certification Expiry Notification Service
 builder.Services.AddScoped<CertificationExpiryNotificationService>();
 
+// Register Workflow Notification Service
+builder.Services.AddScoped<IWorkflowNotificationService, WorkflowNotificationService>();
+
 // Health Checks
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<MySchedulingDbContext>("database");

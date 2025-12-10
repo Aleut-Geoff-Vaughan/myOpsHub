@@ -16,6 +16,7 @@ import {
   UserPlus,
   Building2,
   Loader2,
+  FileKey,
 } from 'lucide-react';
 import { searchService, SEARCH_ENTITY_CONFIG } from '../services/searchService';
 import type {
@@ -31,6 +32,7 @@ import type {
   CertificationSearchResult,
   SubcontractorSearchResult,
   SubcontractorCompanySearchResult,
+  LeaseSearchResult,
   SearchEntityType,
 } from '../types/search';
 
@@ -52,6 +54,7 @@ const COLORS: Record<string, string> = {
   amber: 'bg-amber-100 text-amber-700',
   teal: 'bg-teal-100 text-teal-700',
   slate: 'bg-slate-100 text-slate-700',
+  rose: 'bg-rose-100 text-rose-700',
 };
 
 interface SearchResultItemProps {
@@ -197,6 +200,9 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
         items.push({ url: c.url, type: 'companies' })
       );
     }
+    if (results.leases?.length) {
+      results.leases.forEach((l) => items.push({ url: l.url, type: 'leases' }));
+    }
 
     return items;
   }, [results]);
@@ -274,6 +280,7 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
       'certifications',
       'subcontractors',
       'companies',
+      'leases',
     ];
 
     for (const t of order) {
@@ -311,6 +318,9 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
           break;
         case 'companies':
           index += results?.subcontractorCompanies?.length || 0;
+          break;
+        case 'leases':
+          index += results?.leases?.length || 0;
           break;
       }
     }
@@ -669,6 +679,32 @@ export function SearchModal({ isOpen, onClose }: SearchModalProps) {
                       }}
                     />
                   )}
+
+                {/* Leases */}
+                {results.leases && results.leases.length > 0 && (
+                  <SearchResultSection
+                    type="leases"
+                    results={results.leases}
+                    selectedIndex={selectedIndex}
+                    startIndex={getStartIndex('leases')}
+                    renderItem={(item, _index, isSelected) => {
+                      const lease = item as LeaseSearchResult;
+                      return (
+                        <SearchResultItem
+                          key={lease.id}
+                          icon={FileKey}
+                          color="rose"
+                          title={lease.leaseNumber}
+                          subtitle={`${lease.officeName} - ${lease.landlordName}`}
+                          metadata={lease.status}
+                          url={lease.url}
+                          isSelected={isSelected}
+                          onClick={() => handleSelect(lease.url)}
+                        />
+                      );
+                    }}
+                  />
+                )}
               </>
             ) : (
               <div className="px-4 py-8 text-center text-gray-500">

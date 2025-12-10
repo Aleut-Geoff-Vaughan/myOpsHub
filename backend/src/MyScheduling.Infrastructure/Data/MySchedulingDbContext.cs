@@ -321,6 +321,8 @@ public class MySchedulingDbContext : DbContext
 
             entity.HasIndex(e => new { e.TenantId, e.Code }).IsUnique();
             entity.HasIndex(e => e.ProjectId);
+            entity.HasIndex(e => new { e.ProjectId, e.ApprovalStatus });
+            entity.HasIndex(e => new { e.ProjectId, e.Type });
 
             entity.HasOne(e => e.Project)
                 .WithMany(p => p.WbsElements)

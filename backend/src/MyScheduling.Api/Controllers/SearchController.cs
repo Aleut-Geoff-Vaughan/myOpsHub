@@ -135,6 +135,12 @@ public class SearchController : AuthorizedControllerBase
             response.SubcontractorCompanies = await SearchSubcontractorCompaniesAsync(searchTerm, userTenantIds, limit);
         }
 
+        // Search Leases
+        if (ShouldSearch("leases", searchTypes))
+        {
+            response.Leases = await SearchLeasesAsync(searchTerm, userTenantIds, limit);
+        }
+
         // Calculate total count
         response.TotalCount =
             (response.People?.Count ?? 0) +
@@ -147,7 +153,8 @@ public class SearchController : AuthorizedControllerBase
             (response.Skills?.Count ?? 0) +
             (response.Certifications?.Count ?? 0) +
             (response.Subcontractors?.Count ?? 0) +
-            (response.SubcontractorCompanies?.Count ?? 0);
+            (response.SubcontractorCompanies?.Count ?? 0) +
+            (response.Leases?.Count ?? 0);
 
         return Ok(response);
     }
@@ -390,7 +397,7 @@ public class SearchController : AuthorizedControllerBase
                 City = o.City,
                 StateCode = o.StateCode,
                 Status = o.Status.ToString(),
-                Url = $"/admin/facilities/office/{o.Id}"
+                Url = $"/facilities/offices/{o.Id}"
             })
             .ToListAsync();
     }
@@ -412,7 +419,7 @@ public class SearchController : AuthorizedControllerBase
                 OfficeName = s.Office.Name,
                 Type = s.Type.ToString(),
                 Capacity = s.Capacity,
-                Url = $"/admin/facilities/space/{s.Id}"
+                Url = $"/facilities/spaces/{s.Id}"
             })
             .ToListAsync();
     }
@@ -521,6 +528,31 @@ public class SearchController : AuthorizedControllerBase
             })
             .ToListAsync();
     }
+
+    private async Task<List<LeaseSearchResult>> SearchLeasesAsync(
+        string searchTerm, List<Guid> tenantIds, int limit)
+    {
+        return await _context.Leases
+            .Include(l => l.Office)
+            .Where(l => tenantIds.Contains(l.TenantId))
+            .Where(l => EF.Functions.ILike(l.LeaseNumber, $"%{searchTerm}%") ||
+                       EF.Functions.ILike(l.LandlordName, $"%{searchTerm}%") ||
+                       EF.Functions.ILike(l.Office.Name, $"%{searchTerm}%") ||
+                       (l.ExternalLeaseId != null && EF.Functions.ILike(l.ExternalLeaseId, $"%{searchTerm}%")))
+            .OrderBy(l => l.LeaseNumber)
+            .Take(limit)
+            .Select(l => new LeaseSearchResult
+            {
+                Id = l.Id,
+                LeaseNumber = l.LeaseNumber,
+                OfficeName = l.Office.Name,
+                LandlordName = l.LandlordName,
+                Status = l.Status.ToString(),
+                EndDate = l.LeaseEndDate,
+                Url = $"/facilities/leases/{l.Id}"
+            })
+            .ToListAsync();
+    }
 }
 
 #region DTOs
@@ -542,6 +574,7 @@ public class SearchResponse
     public List<CertificationSearchResult>? Certifications { get; set; }
     public List<SubcontractorSearchResult>? Subcontractors { get; set; }
     public List<SubcontractorCompanySearchResult>? SubcontractorCompanies { get; set; }
+    public List<LeaseSearchResult>? Leases { get; set; }
 }
 
 public class PersonSearchResult
@@ -652,6 +685,17 @@ public class SubcontractorCompanySearchResult
     public string? City { get; set; }
     public string? State { get; set; }
     public int SubcontractorCount { get; set; }
+    public string Url { get; set; } = string.Empty;
+}
+
+public class LeaseSearchResult
+{
+    public Guid Id { get; set; }
+    public string LeaseNumber { get; set; } = string.Empty;
+    public string OfficeName { get; set; } = string.Empty;
+    public string LandlordName { get; set; } = string.Empty;
+    public string Status { get; set; } = string.Empty;
+    public DateOnly EndDate { get; set; }
     public string Url { get; set; } = string.Empty;
 }
 

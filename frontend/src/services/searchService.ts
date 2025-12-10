@@ -138,4 +138,10 @@ export const SEARCH_ENTITY_CONFIG: Record<
     icon: 'Building2',
     color: 'slate',
   },
+  leases: {
+    label: 'Lease',
+    pluralLabel: 'Leases',
+    icon: 'FileKey',
+    color: 'rose',
+  },
 };

@@ -441,7 +441,7 @@ export function LeaseDetailPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4">
-                        {oy.status === OptionYearStatus.NotExercised && deadlineDays >= 0 && (
+                        {oy.status === OptionYearStatus.NotExercised && deadlineDays !== null && deadlineDays >= 0 && (
                           <div className="flex items-center gap-2 justify-end">
                             <button
                               onClick={() => handleExercise(oy)}

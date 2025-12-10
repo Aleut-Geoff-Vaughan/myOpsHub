@@ -100,6 +100,16 @@ export interface SubcontractorCompanySearchResult {
   url: string;
 }
 
+export interface LeaseSearchResult {
+  id: string;
+  leaseNumber: string;
+  officeName: string;
+  landlordName: string;
+  status: string;
+  endDate: string;
+  url: string;
+}
+
 export interface SearchResponse {
   query: string;
   timestamp: string;
@@ -115,6 +125,7 @@ export interface SearchResponse {
   certifications?: CertificationSearchResult[];
   subcontractors?: SubcontractorSearchResult[];
   subcontractorCompanies?: SubcontractorCompanySearchResult[];
+  leases?: LeaseSearchResult[];
 }
 
 export type SearchEntityType =
@@ -128,7 +139,8 @@ export type SearchEntityType =
   | 'skills'
   | 'certifications'
   | 'subcontractors'
-  | 'companies';
+  | 'companies'
+  | 'leases';
 
 export interface SearchParams {
   q: string;

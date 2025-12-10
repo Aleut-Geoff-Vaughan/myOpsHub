@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MyScheduling.Core.Common;
 using MyScheduling.Core.Entities;
+using MyScheduling.Core.Interfaces;
 using MyScheduling.Core.Models;
 using MyScheduling.Infrastructure.Data;
 using MyScheduling.Api.Attributes;
@@ -17,11 +18,16 @@ public class WbsController : AuthorizedControllerBase
 {
     private readonly MySchedulingDbContext _context;
     private readonly ILogger<WbsController> _logger;
+    private readonly IWorkflowNotificationService _notificationService;
 
-    public WbsController(MySchedulingDbContext context, ILogger<WbsController> logger)
+    public WbsController(
+        MySchedulingDbContext context,
+        ILogger<WbsController> logger,
+        IWorkflowNotificationService notificationService)
     {
         _context = context;
         _logger = logger;
+        _notificationService = notificationService;
     }
 
     /// <summary>
@@ -262,6 +268,12 @@ public class WbsController : AuthorizedControllerBase
                 return Conflict($"WBS code {request.Code} already exists in this project");
             }
 
+            // Validate date range
+            if (request.ValidTo.HasValue && request.ValidTo.Value < request.ValidFrom)
+            {
+                return BadRequest("End date (ValidTo) cannot be before start date (ValidFrom)");
+            }
+
             var wbsElement = new WbsElement
             {
                 Id = Guid.NewGuid(),
@@ -338,6 +350,14 @@ public class WbsController : AuthorizedControllerBase
                 wbsElement.ApprovalStatus != WbsApprovalStatus.Rejected)
             {
                 return BadRequest($"Cannot update WBS in {wbsElement.ApprovalStatus} status");
+            }
+
+            // Validate date range if both dates are provided
+            var effectiveValidFrom = request.ValidFrom ?? wbsElement.ValidFrom;
+            var effectiveValidTo = request.ValidTo ?? wbsElement.ValidTo;
+            if (effectiveValidTo.HasValue && effectiveValidTo.Value < effectiveValidFrom)
+            {
+                return BadRequest("End date (ValidTo) cannot be before start date (ValidFrom)");
             }
 
             // Snapshot old values
@@ -438,6 +458,32 @@ public class WbsController : AuthorizedControllerBase
 
             _logger.LogInformation("WBS {WbsId} submitted for approval by user {UserId}", id, GetCurrentUserId());
 
+            // Send notification to approver (fire and forget)
+            var submitterUserId = GetCurrentUserId();
+            var approverId = wbsElement.ApproverUserId;
+            var wbsId = id;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var fullWbs = await _context.WbsElements
+                        .Include(w => w.Project)
+                        .FirstOrDefaultAsync(w => w.Id == wbsId);
+
+                    var submitter = await _context.Users.FindAsync(submitterUserId);
+                    var approver = await _context.Users.FindAsync(approverId);
+
+                    if (fullWbs != null && submitter != null && approver != null)
+                    {
+                        await _notificationService.SendWbsSubmittedForApprovalAsync(fullWbs, submitter, approver);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send WBS submission notification for {WbsId}", wbsId);
+                }
+            });
+
             return NoContent();
         }
         catch (Exception ex)
@@ -499,6 +545,32 @@ public class WbsController : AuthorizedControllerBase
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("WBS {WbsId} approved by user {UserId}", id, GetCurrentUserId());
+
+            // Send notification to creator (fire and forget)
+            var approverUserId = GetCurrentUserId();
+            var creatorId = wbsElement.CreatedByUserId;
+            var wbsId = id;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var fullWbs = await _context.WbsElements
+                        .Include(w => w.Project)
+                        .FirstOrDefaultAsync(w => w.Id == wbsId);
+
+                    var approver = await _context.Users.FindAsync(approverUserId);
+                    var creator = await _context.Users.FindAsync(creatorId);
+
+                    if (fullWbs != null && approver != null && creator != null)
+                    {
+                        await _notificationService.SendWbsApprovedAsync(fullWbs, approver, creator);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send WBS approval notification for {WbsId}", wbsId);
+                }
+            });
 
             return NoContent();
         }
@@ -565,6 +637,33 @@ public class WbsController : AuthorizedControllerBase
 
             _logger.LogInformation("WBS {WbsId} rejected by user {UserId}", id, GetCurrentUserId());
 
+            // Send notification to creator (fire and forget)
+            var rejecterUserId = GetCurrentUserId();
+            var creatorId = wbsElement.CreatedByUserId;
+            var wbsId = id;
+            var rejectionReason = request.Notes!;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var fullWbs = await _context.WbsElements
+                        .Include(w => w.Project)
+                        .FirstOrDefaultAsync(w => w.Id == wbsId);
+
+                    var rejecter = await _context.Users.FindAsync(rejecterUserId);
+                    var creator = await _context.Users.FindAsync(creatorId);
+
+                    if (fullWbs != null && rejecter != null && creator != null)
+                    {
+                        await _notificationService.SendWbsRejectedAsync(fullWbs, rejecter, creator, rejectionReason);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send WBS rejection notification for {WbsId}", wbsId);
+                }
+            });
+
             return NoContent();
         }
         catch (Exception ex)
@@ -625,6 +724,33 @@ public class WbsController : AuthorizedControllerBase
             await _context.SaveChangesAsync();
 
             _logger.LogInformation("WBS {WbsId} suspended by user {UserId}", id, GetCurrentUserId());
+
+            // Send notification to creator (fire and forget)
+            var suspenderUserId = GetCurrentUserId();
+            var creatorId = wbsElement.CreatedByUserId;
+            var wbsId = id;
+            var suspendReason = request.Notes;
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    var fullWbs = await _context.WbsElements
+                        .Include(w => w.Project)
+                        .FirstOrDefaultAsync(w => w.Id == wbsId);
+
+                    var suspender = await _context.Users.FindAsync(suspenderUserId);
+                    var creator = await _context.Users.FindAsync(creatorId);
+
+                    if (fullWbs != null && suspender != null && creator != null)
+                    {
+                        await _notificationService.SendWbsSuspendedAsync(fullWbs, suspender, creator, suspendReason);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to send WBS suspension notification for {WbsId}", wbsId);
+                }
+            });
 
             return NoContent();
         }

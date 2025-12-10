@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using MyScheduling.Api.Attributes;
 using MyScheduling.Core.Entities;
+using MyScheduling.Core.Interfaces;
 using MyScheduling.Infrastructure.Data;
 
 namespace MyScheduling.Api.Controllers;
@@ -12,13 +13,16 @@ public class AssignmentRequestsController : AuthorizedControllerBase
 {
     private readonly MySchedulingDbContext _context;
     private readonly ILogger<AssignmentRequestsController> _logger;
+    private readonly IWorkflowNotificationService _notificationService;
 
     public AssignmentRequestsController(
         MySchedulingDbContext context,
-        ILogger<AssignmentRequestsController> logger)
+        ILogger<AssignmentRequestsController> logger,
+        IWorkflowNotificationService notificationService)
     {
         _context = context;
         _logger = logger;
+        _notificationService = notificationService;
     }
 
     [HttpGet]
@@ -190,6 +194,43 @@ public class AssignmentRequestsController : AuthorizedControllerBase
 
         _logger.LogInformation("Assignment request {RequestId} created by {UserId} for user {TargetUser}", entity.Id, currentUserId, requestedForUserId);
 
+        // Send notifications to approvers (fire and forget)
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var requester = await _context.Users.FindAsync(currentUserId);
+                var requestedFor = currentUserId == requestedForUserId
+                    ? requester
+                    : await _context.Users.FindAsync(requestedForUserId);
+
+                if (requester != null && requestedFor != null && approverGroupId.HasValue)
+                {
+                    // Load the full entity with navigation properties for the notification
+                    var fullEntity = await _context.AssignmentRequests
+                        .Include(r => r.WbsElement)
+                            .ThenInclude(w => w!.Project)
+                        .FirstOrDefaultAsync(r => r.Id == entity.Id);
+
+                    if (fullEntity != null)
+                    {
+                        var approvers = await _context.GroupMembers
+                            .Where(gm => gm.GroupId == approverGroupId.Value && !gm.IsDeleted)
+                            .Select(gm => gm.User)
+                            .Where(u => u != null && u.IsActive)
+                            .ToListAsync();
+
+                        await _notificationService.SendAssignmentRequestCreatedAsync(
+                            fullEntity, requester, requestedFor, approvers!);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send assignment request created notification for {RequestId}", entity.Id);
+            }
+        });
+
         return CreatedAtAction(nameof(Get), new { id = entity.Id }, entity);
     }
 
@@ -265,6 +306,36 @@ public class AssignmentRequestsController : AuthorizedControllerBase
         }
 
         await _context.SaveChangesAsync();
+
+        // Send approval notifications (fire and forget)
+        var approverUserId = GetCurrentUserId();
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var fullRequest = await _context.AssignmentRequests
+                    .Include(r => r.WbsElement)
+                        .ThenInclude(w => w!.Project)
+                    .FirstOrDefaultAsync(r => r.Id == id);
+
+                var approver = await _context.Users.FindAsync(approverUserId);
+                var requester = await _context.Users.FindAsync(fullRequest?.RequestedByUserId);
+                var requestedFor = fullRequest?.RequestedByUserId == fullRequest?.RequestedForUserId
+                    ? requester
+                    : await _context.Users.FindAsync(fullRequest?.RequestedForUserId);
+
+                if (fullRequest != null && approver != null && requester != null && requestedFor != null)
+                {
+                    await _notificationService.SendAssignmentRequestApprovedAsync(
+                        fullRequest, approver, requester, requestedFor);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send assignment request approval notification for {RequestId}", id);
+            }
+        });
+
         return Ok(request);
     }
 
@@ -314,6 +385,37 @@ public class AssignmentRequestsController : AuthorizedControllerBase
         _context.AssignmentHistory.Add(audit);
 
         await _context.SaveChangesAsync();
+
+        // Send rejection notifications (fire and forget)
+        var rejecterUserId = GetCurrentUserId();
+        var rejectionReason = dto.Reason;
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var fullRequest = await _context.AssignmentRequests
+                    .Include(r => r.WbsElement)
+                        .ThenInclude(w => w!.Project)
+                    .FirstOrDefaultAsync(r => r.Id == id);
+
+                var rejecter = await _context.Users.FindAsync(rejecterUserId);
+                var requester = await _context.Users.FindAsync(fullRequest?.RequestedByUserId);
+                var requestedFor = fullRequest?.RequestedByUserId == fullRequest?.RequestedForUserId
+                    ? requester
+                    : await _context.Users.FindAsync(fullRequest?.RequestedForUserId);
+
+                if (fullRequest != null && rejecter != null && requester != null && requestedFor != null)
+                {
+                    await _notificationService.SendAssignmentRequestRejectedAsync(
+                        fullRequest, rejecter, requester, requestedFor, rejectionReason);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send assignment request rejection notification for {RequestId}", id);
+            }
+        });
+
         return Ok(request);
     }
 }
