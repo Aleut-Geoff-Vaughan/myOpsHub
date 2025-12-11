@@ -71,6 +71,12 @@ public static class SeedRolePermissions
         // OfficeManager role permissions - manages facilities
         templates.AddRange(GetOfficeManagerTemplates());
 
+        // ForecastVersion permissions (for all roles that need forecast access)
+        templates.AddRange(GetForecastVersionTemplates());
+
+        // ProjectRoleAssignment permissions
+        templates.AddRange(GetProjectRoleAssignmentTemplates());
+
         return templates;
     }
 
@@ -311,6 +317,82 @@ public static class SeedRolePermissions
                 "View check-in data"),
             CreateTemplate(AppRole.OfficeManager, "CheckIn", PermissionAction.Update, PermissionScope.Tenant,
                 "Override check-in status"),
+        };
+    }
+
+    private static List<RolePermissionTemplate> GetForecastVersionTemplates()
+    {
+        return new List<RolePermissionTemplate>
+        {
+            // Employee - Read own forecast versions
+            CreateTemplate(AppRole.Employee, "ForecastVersion", PermissionAction.Read, PermissionScope.Owner,
+                "View forecast versions for assigned projects"),
+
+            // ProjectManager - Full access to forecast versions for their projects
+            CreateTemplate(AppRole.ProjectManager, "ForecastVersion", PermissionAction.Read, PermissionScope.Owner,
+                "View forecast versions for owned projects"),
+            CreateTemplate(AppRole.ProjectManager, "ForecastVersion", PermissionAction.Create, PermissionScope.Owner,
+                "Create forecast versions for owned projects"),
+            CreateTemplate(AppRole.ProjectManager, "ForecastVersion", PermissionAction.Update, PermissionScope.Owner,
+                "Update forecast versions for owned projects"),
+            CreateTemplate(AppRole.ProjectManager, "ForecastVersion", PermissionAction.Delete, PermissionScope.Owner,
+                "Delete forecast versions for owned projects"),
+
+            // ResourceManager - Read and manage forecast versions
+            CreateTemplate(AppRole.ResourceManager, "ForecastVersion", PermissionAction.Read, PermissionScope.Tenant,
+                "View all forecast versions in tenant"),
+            CreateTemplate(AppRole.ResourceManager, "ForecastVersion", PermissionAction.Create, PermissionScope.Tenant,
+                "Create forecast versions"),
+            CreateTemplate(AppRole.ResourceManager, "ForecastVersion", PermissionAction.Update, PermissionScope.Tenant,
+                "Update forecast versions"),
+            CreateTemplate(AppRole.ResourceManager, "ForecastVersion", PermissionAction.Delete, PermissionScope.Tenant,
+                "Delete forecast versions"),
+
+            // FinanceLead - Full read access
+            CreateTemplate(AppRole.FinanceLead, "ForecastVersion", PermissionAction.Read, PermissionScope.Tenant,
+                "View all forecast versions in tenant"),
+
+            // Executive - Read access
+            CreateTemplate(AppRole.Executive, "ForecastVersion", PermissionAction.Read, PermissionScope.Tenant,
+                "View all forecast versions in tenant"),
+        };
+    }
+
+    private static List<RolePermissionTemplate> GetProjectRoleAssignmentTemplates()
+    {
+        return new List<RolePermissionTemplate>
+        {
+            // Employee - Read own project role assignments
+            CreateTemplate(AppRole.Employee, "ProjectRoleAssignment", PermissionAction.Read, PermissionScope.Owner,
+                "View own project role assignments"),
+
+            // ProjectManager - Manage assignments for their projects
+            CreateTemplate(AppRole.ProjectManager, "ProjectRoleAssignment", PermissionAction.Read, PermissionScope.Owner,
+                "View project role assignments for owned projects"),
+            CreateTemplate(AppRole.ProjectManager, "ProjectRoleAssignment", PermissionAction.Create, PermissionScope.Owner,
+                "Create project role assignments for owned projects"),
+            CreateTemplate(AppRole.ProjectManager, "ProjectRoleAssignment", PermissionAction.Update, PermissionScope.Owner,
+                "Update project role assignments for owned projects"),
+            CreateTemplate(AppRole.ProjectManager, "ProjectRoleAssignment", PermissionAction.Delete, PermissionScope.Owner,
+                "Delete project role assignments for owned projects"),
+
+            // ResourceManager - Full tenant access for resource planning
+            CreateTemplate(AppRole.ResourceManager, "ProjectRoleAssignment", PermissionAction.Read, PermissionScope.Tenant,
+                "View all project role assignments in tenant"),
+            CreateTemplate(AppRole.ResourceManager, "ProjectRoleAssignment", PermissionAction.Create, PermissionScope.Tenant,
+                "Create project role assignments"),
+            CreateTemplate(AppRole.ResourceManager, "ProjectRoleAssignment", PermissionAction.Update, PermissionScope.Tenant,
+                "Update project role assignments"),
+            CreateTemplate(AppRole.ResourceManager, "ProjectRoleAssignment", PermissionAction.Delete, PermissionScope.Tenant,
+                "Delete project role assignments"),
+
+            // FinanceLead - Read access for cost planning
+            CreateTemplate(AppRole.FinanceLead, "ProjectRoleAssignment", PermissionAction.Read, PermissionScope.Tenant,
+                "View all project role assignments in tenant"),
+
+            // Executive - Read access
+            CreateTemplate(AppRole.Executive, "ProjectRoleAssignment", PermissionAction.Read, PermissionScope.Tenant,
+                "View all project role assignments in tenant"),
         };
     }
 

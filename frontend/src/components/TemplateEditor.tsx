@@ -323,12 +323,18 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({ template, onClos
                           value={item.locationType}
                           onChange={(e) => {
                             const newType = Number(e.target.value) as WorkLocationType;
-                            handleItemChange(index, 'locationType', newType);
-                            // Clear officeId when changing location type
-                            if (newType !== WorkLocationType.OfficeNoReservation &&
-                                newType !== WorkLocationType.ClientSite) {
-                              handleItemChange(index, 'officeId', undefined);
-                            }
+                            // Update location type and clear officeId in a single state update
+                            const newItems = [...items];
+                            newItems[index] = {
+                              ...newItems[index],
+                              locationType: newType,
+                              // Clear officeId when switching away from office/client site types
+                              officeId: (newType === WorkLocationType.OfficeNoReservation ||
+                                        newType === WorkLocationType.ClientSite)
+                                ? newItems[index].officeId
+                                : undefined,
+                            };
+                            setItems(newItems);
                           }}
                           className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm"
                         >

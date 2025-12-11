@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { useTemplates, useApplyTemplate } from '../hooks/useTemplates';
+import { useTemplates, useApplyTemplate, useDeleteTemplate } from '../hooks/useTemplates';
 import { TemplateEditor } from './TemplateEditor';
 import type { WorkLocationTemplate } from '../types/template';
 import { TemplateType } from '../types/template';
 import { WorkLocationType } from '../types/api';
 import { useAuthStore } from '../stores/authStore';
+import toast from 'react-hot-toast';
 
 interface ApplyTemplateSelectModalProps {
   isOpen: boolean;
@@ -65,6 +66,7 @@ export const ApplyTemplateSelectModal: React.FC<ApplyTemplateSelectModalProps> =
   const queryClient = useQueryClient();
   const { data: templates = [], isLoading } = useTemplates();
   const applyTemplate = useApplyTemplate();
+  const deleteTemplate = useDeleteTemplate();
   const currentUser = useAuthStore((state) => state.user);
 
   const [selectedTemplate, setSelectedTemplate] = useState<WorkLocationTemplate | null>(null);
@@ -111,6 +113,23 @@ export const ApplyTemplateSelectModal: React.FC<ApplyTemplateSelectModalProps> =
 
   const handleBack = () => {
     setSelectedTemplate(null);
+  };
+
+  const handleDelete = async () => {
+    if (!selectedTemplate) return;
+
+    if (!confirm(`Are you sure you want to delete "${selectedTemplate.name}"? This cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await deleteTemplate.mutateAsync(selectedTemplate.id);
+      toast.success('Template deleted');
+      setSelectedTemplate(null); // Go back to template list
+    } catch (error) {
+      console.error('Failed to delete template:', error);
+      toast.error('Failed to delete template. Please try again.');
+    }
   };
 
   const DAYS_OF_WEEK = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
@@ -248,16 +267,29 @@ export const ApplyTemplateSelectModal: React.FC<ApplyTemplateSelectModalProps> =
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs font-medium text-gray-700">Template Schedule:</p>
               {isOwner && (
-                <button
-                  type="button"
-                  onClick={() => setEditingTemplate(selectedTemplate)}
-                  className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded transition-colors"
-                >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  Edit
-                </button>
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => setEditingTemplate(selectedTemplate)}
+                    className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50 rounded transition-colors"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={deleteTemplate.isPending}
+                    className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Delete
+                  </button>
+                </div>
               )}
             </div>
             <div className="flex gap-1">
