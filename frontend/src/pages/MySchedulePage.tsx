@@ -39,8 +39,18 @@ export function MySchedulePage() {
       endDate = new Date(monday);
       endDate.setDate(endDate.getDate() + 13);
     } else {
-      startDate = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1);
-      endDate = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 0);
+      // For month view, we need to fetch data for the full calendar display,
+      // which includes partial weeks at the beginning and end of the month
+      const firstOfMonth = new Date(referenceDate.getFullYear(), referenceDate.getMonth(), 1);
+      const lastOfMonth = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 0);
+
+      // Start from Monday of the week containing the first day of the month
+      startDate = getMondayOfWeek(firstOfMonth);
+
+      // End on Friday of the week containing the last day of the month
+      const endMonday = getMondayOfWeek(lastOfMonth);
+      endDate = new Date(endMonday);
+      endDate.setDate(endDate.getDate() + 4); // Friday of that week
     }
 
     return {

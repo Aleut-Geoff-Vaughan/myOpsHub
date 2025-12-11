@@ -45,6 +45,7 @@ import { AdminResumesPage } from './pages/AdminResumesPage';
 import { AdminResumeTemplatesPage } from './pages/AdminResumeTemplatesPage';
 import { AdminHolidaysPage } from './pages/AdminHolidaysPage';
 import { AdminCareerJobFamiliesPage } from './pages/AdminCareerJobFamiliesPage';
+import { EmailTestPage } from './pages/admin/EmailTestPage';
 import { AdminSubcontractorCompaniesPage } from './pages/AdminSubcontractorCompaniesPage';
 import { AdminForecastSchedulesPage } from './pages/AdminForecastSchedulesPage';
 import { AdminProjectRoleAssignmentsPage } from './pages/AdminProjectRoleAssignmentsPage';
@@ -195,6 +196,7 @@ function App() {
               <Route path="resume-templates" element={<AdminResumeTemplatesPage />} />
               <Route path="holidays" element={<AdminHolidaysPage />} />
               <Route path="career-families" element={<AdminCareerJobFamiliesPage />} />
+              <Route path="email-test" element={<EmailTestPage />} />
             </Route>
 
             {/* Me Portal Routes (mobile-friendly top nav) */}

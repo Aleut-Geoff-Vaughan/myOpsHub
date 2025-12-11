@@ -33,10 +33,59 @@ export interface CreateInvitationRequest {
   roles: AppRole[];
 }
 
+export interface InvitationResponse {
+  invitation: UserInvitation;
+  invitationUrl: string;
+  emailSubject: string;
+  emailHtmlBody: string;
+  emailPlainTextBody: string;
+}
+
+export interface ResendInvitationResponse {
+  message: string;
+  invitationUrl: string;
+  emailSubject: string;
+  emailHtmlBody: string;
+  emailPlainTextBody: string;
+}
+
+export interface CreateUserDirectRequest {
+  email: string;
+  displayName?: string;
+  tenantId: string;
+  roles: AppRole[];
+  password?: string;
+}
+
+export interface DirectUserCreationResponse {
+  success: boolean;
+  message: string;
+  userId: string;
+  email: string;
+  displayName: string;
+  tenantId: string;
+  tenantName: string;
+  roles: AppRole[];
+  hasPassword: boolean;
+  setPasswordUrl?: string;
+  setPasswordEmailContent?: string;
+}
+
+export interface InvitationEmailContentResponse {
+  invitationId: string;
+  email: string;
+  tenantName: string;
+  invitationUrl: string;
+  expiresAt: string;
+  emailSubject: string;
+  emailHtmlBody: string;
+  emailPlainTextBody: string;
+}
+
 export const userInvitationsService = {
-  // Create a new user invitation
-  async createInvitation(request: CreateInvitationRequest): Promise<UserInvitation> {
-    return api.post<UserInvitation>('/user-invitations', request);
+  // Create a new user invitation - returns email content for manual sending
+  async createInvitation(request: CreateInvitationRequest): Promise<InvitationResponse> {
+    return api.post<InvitationResponse>('/user-invitations', request);
   },
 
   // Get a specific invitation by ID
@@ -57,8 +106,18 @@ export const userInvitationsService = {
     await api.delete<void>(`/user-invitations/${id}`);
   },
 
-  // Resend an invitation email
-  async resendInvitation(id: string): Promise<{ message: string }> {
-    return api.post<{ message: string }>(`/user-invitations/resend/${id}`);
+  // Resend an invitation email - returns email content for manual sending
+  async resendInvitation(id: string): Promise<ResendInvitationResponse> {
+    return api.post<ResendInvitationResponse>(`/user-invitations/resend/${id}`);
+  },
+
+  // Get email content for an existing invitation
+  async getInvitationEmailContent(id: string): Promise<InvitationEmailContentResponse> {
+    return api.get<InvitationEmailContentResponse>(`/user-invitations/${id}/email-content`);
+  },
+
+  // Create user directly without email notification
+  async createUserDirect(request: CreateUserDirectRequest): Promise<DirectUserCreationResponse> {
+    return api.post<DirectUserCreationResponse>('/user-invitations/create-user-direct', request);
   },
 };

@@ -68,6 +68,9 @@ public static class SeedRolePermissions
         // ProjectManager role permissions
         templates.AddRange(GetProjectManagerTemplates());
 
+        // OfficeManager role permissions - manages facilities
+        templates.AddRange(GetOfficeManagerTemplates());
+
         return templates;
     }
 
@@ -222,6 +225,10 @@ public static class SeedRolePermissions
             // Reports - Read
             CreateTemplate(AppRole.Executive, "StaffingReport", PermissionAction.Read, PermissionScope.Tenant,
                 "View staffing and financial reports"),
+
+            // Facilities - Read access for dashboard
+            CreateTemplate(AppRole.Executive, "Facility", PermissionAction.Read, PermissionScope.Tenant,
+                "View facilities dashboard and data"),
         };
     }
 
@@ -260,6 +267,50 @@ public static class SeedRolePermissions
             // Limited financial view for their projects
             CreateTemplate(AppRole.ProjectManager, "ForecastFinancial", PermissionAction.Read, PermissionScope.Owner,
                 "View financial data for owned projects"),
+        };
+    }
+
+    private static List<RolePermissionTemplate> GetOfficeManagerTemplates()
+    {
+        return new List<RolePermissionTemplate>
+        {
+            // Facilities - Full CRUD for managing facilities
+            CreateTemplate(AppRole.OfficeManager, "Facility", PermissionAction.Manage, PermissionScope.Tenant,
+                "Full access to facilities management"),
+            CreateTemplate(AppRole.OfficeManager, "Facility", PermissionAction.Read, PermissionScope.Tenant,
+                "View facilities dashboard and data"),
+            CreateTemplate(AppRole.OfficeManager, "Facility", PermissionAction.Create, PermissionScope.Tenant,
+                "Create facilities"),
+            CreateTemplate(AppRole.OfficeManager, "Facility", PermissionAction.Update, PermissionScope.Tenant,
+                "Update facilities"),
+            CreateTemplate(AppRole.OfficeManager, "Facility", PermissionAction.Delete, PermissionScope.Tenant,
+                "Delete facilities"),
+
+            // Resources (desks, rooms, equipment) - Full CRUD
+            CreateTemplate(AppRole.OfficeManager, "Resource", PermissionAction.Manage, PermissionScope.Tenant,
+                "Full access to resource management"),
+            CreateTemplate(AppRole.OfficeManager, "Resource", PermissionAction.Read, PermissionScope.Tenant,
+                "View resources"),
+            CreateTemplate(AppRole.OfficeManager, "Resource", PermissionAction.Create, PermissionScope.Tenant,
+                "Create resources"),
+            CreateTemplate(AppRole.OfficeManager, "Resource", PermissionAction.Update, PermissionScope.Tenant,
+                "Update resources"),
+            CreateTemplate(AppRole.OfficeManager, "Resource", PermissionAction.Delete, PermissionScope.Tenant,
+                "Delete resources"),
+
+            // Bookings - View all bookings
+            CreateTemplate(AppRole.OfficeManager, "Booking", PermissionAction.Read, PermissionScope.Tenant,
+                "View all bookings in tenant"),
+            CreateTemplate(AppRole.OfficeManager, "Booking", PermissionAction.Update, PermissionScope.Tenant,
+                "Modify bookings (for admin purposes)"),
+            CreateTemplate(AppRole.OfficeManager, "Booking", PermissionAction.Delete, PermissionScope.Tenant,
+                "Cancel bookings (for admin purposes)"),
+
+            // Check-ins - View and manage check-ins
+            CreateTemplate(AppRole.OfficeManager, "CheckIn", PermissionAction.Read, PermissionScope.Tenant,
+                "View check-in data"),
+            CreateTemplate(AppRole.OfficeManager, "CheckIn", PermissionAction.Update, PermissionScope.Tenant,
+                "Override check-in status"),
         };
     }
 

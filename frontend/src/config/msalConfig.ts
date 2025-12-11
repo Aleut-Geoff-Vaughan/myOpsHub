@@ -59,10 +59,12 @@ export async function fetchSsoConfig(): Promise<SsoConfig> {
       // Fall back to fetching from API
       const response = await fetch('/api/auth/sso/config');
       if (!response.ok) {
+        console.warn('[SSO Config] Failed to fetch SSO config, status:', response.status);
         throw new Error('Failed to fetch SSO config');
       }
 
       const apiConfig = await response.json();
+      console.log('[SSO Config] Received from API:', apiConfig);
 
       cachedSsoConfig = {
         enabled: apiConfig.enabled || false,
@@ -72,6 +74,7 @@ export async function fetchSsoConfig(): Promise<SsoConfig> {
         redirectUri: window.location.origin, // Always use current origin for redirect
       };
 
+      console.log('[SSO Config] Final config:', cachedSsoConfig);
       return cachedSsoConfig;
     } catch (error) {
       console.warn('Failed to fetch SSO config, SSO will be disabled:', error);
