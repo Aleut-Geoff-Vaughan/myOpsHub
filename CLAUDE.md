@@ -186,3 +186,40 @@ Host=myscheduling.postgres.database.azure.com;Port=5432;Database=myscheduling;Us
 ```
 
 Set via environment variable: `ConnectionStrings__DefaultConnection`
+
+## Deployment & Secrets Management
+
+### Local Development
+- Secrets are stored in `appsettings.Development.json` (gitignored)
+- `appsettings.json` contains empty placeholders - NEVER commit secrets to this file
+- Copy values from Azure Portal or team password manager to your local Development file
+
+### Azure App Service Configuration
+Secrets are configured in **Azure Portal > App Services > myscheduling-api > Configuration > Application settings**.
+Use double underscore (`__`) for nested .NET configuration keys:
+
+| Setting Name | Description |
+|--------------|-------------|
+| `ConnectionStrings__DefaultConnection` | PostgreSQL connection string |
+| `AzureEmail__ConnectionString` | Azure Communication Services connection string |
+| `AzureEmail__SenderAddress` | Email sender address (from Azure Communication Services) |
+| `AzureEmail__SkipIfNotConfigured` | Set to `false` in production |
+
+### GitHub Secrets (CI/CD)
+Only these secrets are used by GitHub Actions workflows:
+
+| Secret | Used By |
+|--------|---------|
+| `AZURE_WEBAPP_PUBLISH_PROFILE` | Backend deploy to Azure App Service |
+| `AZURE_STATIC_WEB_APPS_API_TOKEN_PROUD_OCEAN_0C7274110` | Frontend deploy to Azure Static Web Apps |
+| `VITE_API_URL` | Frontend build - API base URL |
+
+### GitHub Actions Workflows
+- `.github/workflows/azure-backend-deploy.yml` - Deploys backend on push to `main` (backend/** path)
+- `.github/workflows/azure-static-web-apps-proud-ocean-0c7274110.yml` - Deploys frontend on push to `main`
+
+### Adding New Secrets
+1. Add empty placeholder to `appsettings.json` (committed)
+2. Add actual value to `appsettings.Development.json` (gitignored) for local dev
+3. Add to Azure Portal App Service Configuration for production
+4. Document in this section
