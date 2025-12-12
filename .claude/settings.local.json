@@ -61,7 +61,8 @@
       "Bash(ls:*)",
       "Bash(PGPASSWORD=postgres psql:*)",
       "Bash(git pull:*)",
-      "Bash(powershell -ExecutionPolicy Bypass -Command \"Get-Process -Name ''dotnet'',''MyScheduling.Api'',''node'' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; Write-Host ''Processes stopped''\")"
+      "Bash(powershell -ExecutionPolicy Bypass -Command \"Get-Process -Name ''dotnet'',''MyScheduling.Api'',''node'' -ErrorAction SilentlyContinue | Stop-Process -Force -ErrorAction SilentlyContinue; Write-Host ''Processes stopped''\")",
+      "Bash(ASPNETCORE_ENVIRONMENT=Development dotnet run:*)"
     ],
     "deny": [],
     "ask": []

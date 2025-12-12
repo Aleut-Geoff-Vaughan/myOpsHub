@@ -1,4 +1,5 @@
 import { buildApiUrl } from '../config/api';
+import { logger } from '../services/loggingService';
 
 export class ApiError extends Error {
   constructor(
@@ -76,6 +77,13 @@ export async function apiRequest<T>(
     defaultHeaders['X-Tenant-Id'] = tenantId;
   }
 
+  // Add correlation ID for distributed tracing
+  let correlationId = logger.getCorrelationId();
+  if (!correlationId) {
+    correlationId = logger.generateCorrelationId();
+  }
+  defaultHeaders['X-Correlation-Id'] = correlationId;
+
   // Create AbortController for timeout
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
@@ -89,22 +97,49 @@ export async function apiRequest<T>(
     signal: controller.signal,
   };
 
+  const startTime = performance.now();
+  const method = options.method || 'GET';
+
+  logger.debug(`API Request: ${method} ${endpoint}`, { correlationId }, 'api-client');
+
   try {
     const response = await fetch(url, config);
     clearTimeout(timeoutId);
 
+    const duration = Math.round(performance.now() - startTime);
+
     if (!response.ok) {
       // Handle 401 Unauthorized - token expired or invalid
       if (response.status === 401 && !endpoint.includes('/auth/login')) {
-        // Clear auth storage and redirect to login
-        localStorage.removeItem('auth-storage');
-        window.location.href = '/login';
+        // Don't redirect if already on login/auth page (prevents infinite loop)
+        const isOnAuthPage = window.location.pathname === '/login' ||
+                             window.location.pathname === '/forgot-password' ||
+                             window.location.pathname.startsWith('/magic-link');
+
+        if (!isOnAuthPage) {
+          logger.warn(`API 401 Unauthorized: ${method} ${endpoint}`, { duration, correlationId }, 'api-client');
+          // Clear auth storage and redirect to login
+          localStorage.removeItem('auth-storage');
+          window.location.href = '/login';
+        }
         throw new ApiError(401, 'Unauthorized - Please login again', null);
       }
 
       const errorData = await response.json().catch(() => null);
+      logger.warn(`API Error: ${method} ${endpoint} - ${response.status}`, {
+        status: response.status,
+        duration,
+        correlationId,
+        error: errorData,
+      }, 'api-client');
       throw new ApiError(response.status, response.statusText, errorData);
     }
+
+    logger.debug(`API Response: ${method} ${endpoint} - ${response.status}`, {
+      status: response.status,
+      duration,
+      correlationId,
+    }, 'api-client');
 
     if (response.status === 204) {
       return undefined as T;
@@ -118,11 +153,19 @@ export async function apiRequest<T>(
       throw error;
     }
 
+    const duration = Math.round(performance.now() - startTime);
+
     // Handle abort errors (timeout)
     if (error instanceof Error && error.name === 'AbortError') {
+      logger.error(`API Timeout: ${method} ${endpoint}`, { duration, correlationId }, 'api-client');
       throw new Error('Request timeout - please try again');
     }
 
+    logger.error(`API Network Error: ${method} ${endpoint}`, {
+      duration,
+      correlationId,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    }, 'api-client');
     throw new Error(`Network error: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 }

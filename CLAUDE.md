@@ -164,19 +164,143 @@ john.doe@company.com,2025-01-01,125.50,2025-12-31,Annual rate
 
 ## Testing
 
-Currently manual testing only:
+### Current State (Manual Only)
 - Health check: `http://localhost:5107/health`
 - Swagger: `http://localhost:5107/swagger`
 - Frontend: `http://localhost:5173`
+- Test account: `admin@admin.com`
 
-Test account: `admin@admin.com`
+### Automated Testing (PLANNED)
+
+#### Backend (xUnit)
+Test projects structure:
+```
+backend/tests/
+  MyScheduling.Core.Tests/           # Domain model tests
+  MyScheduling.Infrastructure.Tests/  # Service tests
+  MyScheduling.Api.Tests/            # Controller unit tests
+  MyScheduling.Integration.Tests/    # API integration tests
+```
+
+Commands:
+```bash
+cd backend
+dotnet test                          # Run all tests
+dotnet test --collect:"XPlat Code Coverage"  # With coverage
+```
+
+#### Frontend (Vitest)
+```bash
+cd frontend
+npm run test                         # Run unit tests
+npm run test:coverage                # With coverage
+npm run test:ui                      # Interactive UI
+```
+
+#### E2E (Playwright)
+```bash
+cd frontend
+npx playwright test                  # Run all E2E tests
+npx playwright test --ui             # Interactive mode
+npx playwright show-report           # View results
+```
+
+#### Coverage Targets
+- Month 1: 30%
+- Month 2: 50%
+- Month 3: 60%
+- Long-term: 70%+
 
 ## Known Considerations
 
-- Authorization coverage is incomplete on some controllers
-- No automated test suites yet (xUnit/Vitest/Playwright planned)
+- No automated test suites yet (xUnit/Vitest/Playwright planned - see Testing section)
 - Profile photo upload is stubbed (needs Azure Blob implementation)
 - Review N+1 queries when modifying data access code
+
+## Logging Configuration (PLANNED)
+
+### Backend Logging (Serilog)
+Once implemented, the backend will use Serilog for structured logging:
+
+```json
+{
+  "Serilog": {
+    "MinimumLevel": { "Default": "Information" },
+    "WriteTo": [
+      { "Name": "Console" },
+      { "Name": "File", "Args": { "path": "logs/myscheduling-.log", "rollingInterval": "Day" }}
+    ]
+  },
+  "Logging": { "VerboseMode": false }
+}
+```
+
+### Runtime Log Level Control
+System administrators can toggle verbose logging at runtime:
+
+```bash
+# Get current config
+GET /api/admin/logging/config
+
+# Enable verbose mode
+POST /api/admin/logging/verbose
+{ "enabled": true }
+
+# Set log level
+POST /api/admin/logging/level
+{ "level": "Debug" }  # Options: Verbose, Debug, Information, Warning, Error, Fatal
+```
+
+### Frontend Logging
+Use `logger` from `services/loggingService.ts`:
+- Configuration persisted in localStorage
+- Verbose mode toggle via browser console:
+
+```javascript
+// Enable verbose logging
+__mySchedulingLogger.enableVerbose()
+
+// Disable verbose logging
+__mySchedulingLogger.disableVerbose()
+
+// Get log buffer for debugging
+__mySchedulingLogger.getLogBuffer()
+```
+
+### Correlation IDs
+- Frontend generates correlation ID per session
+- Sent with every API request via `X-Correlation-Id` header
+- Backend returns correlation ID in response headers
+- Useful for tracing requests across frontend and backend logs
+
+## Help System (PLANNED)
+
+### Backend Entity
+`HelpArticle` entity for storing configurable help content:
+- `ContextKey` - Page/route identifier (e.g., "work.staffing", "forecast.budgets")
+- `Title`, `Description` - Display content
+- `JiraArticleUrl` - Link to JIRA knowledge base article
+- `VideoUrl`, `VideoTitle` - Link to video tutorials
+- `ModuleName` - Module category (work, forecast, facilities, admin)
+- `SortOrder`, `IsActive` - Display configuration
+
+### API Endpoints
+```bash
+GET /api/helparticles?contextKey={key}     # Get help for current page
+GET /api/helparticles/module/{name}        # Get all module help
+GET /api/helparticles/search?query={q}     # Search help articles
+POST/PUT/DELETE /api/helparticles          # Admin CRUD
+```
+
+### Frontend Components
+- `HelpButton` - Header icon to open help panel
+- `HelpPanel` - Slide-out panel with articles, videos, search
+- `HelpContext` - Context provider for page-aware help
+- Admin page at `/admin/help-articles` for content management
+
+### JIRA Integration
+Simple link approach - store JIRA URLs directly, open in new tab:
+- Pattern: `https://{domain}.atlassian.net/wiki/spaces/{SPACE}/pages/{ID}`
 
 ## Database
 
@@ -223,3 +347,66 @@ Only these secrets are used by GitHub Actions workflows:
 2. Add actual value to `appsettings.Development.json` (gitignored) for local dev
 3. Add to Azure Portal App Service Configuration for production
 4. Document in this section
+
+## Kubernetes & Multi-Environment (PLANNED)
+
+### Multi-Environment Database Strategy
+
+| Environment | Database | Purpose |
+|-------------|----------|---------|
+| Development | SQLite | Local dev, no external deps |
+| Test | Azure PostgreSQL | Dedicated test instance |
+| Production | Azure PostgreSQL | Current prod database |
+
+### Docker Configuration (PLANNED)
+Backend Dockerfile location: `backend/Dockerfile`
+
+```bash
+# Build container locally
+cd backend
+docker build -t myscheduling-api .
+
+# Run locally
+docker run -p 8080:8080 -e ASPNETCORE_ENVIRONMENT=Development myscheduling-api
+```
+
+### Kubernetes Structure (PLANNED)
+```
+k8s/
+  base/                    # Base manifests
+    namespace.yaml
+    backend-deployment.yaml
+    backend-service.yaml
+    configmap.yaml
+    secrets.yaml
+    ingress.yaml
+    hpa.yaml
+  overlays/                # Environment-specific overrides
+    dev/
+    test/
+    prod/
+  argo-rollouts/           # Canary deployment config
+    backend-rollout.yaml
+    analysis-template.yaml
+```
+
+### Canary Deployment Strategy
+Using Argo Rollouts:
+1. 5% traffic → 2 min pause → health check
+2. 20% traffic → 5 min pause
+3. 50% traffic → 5 min pause → health check
+4. 100% traffic (full rollout)
+
+Automatic rollback on:
+- Health endpoint failure
+- Error rate > 5%
+
+### Cost Comparison
+
+| Setup | Monthly Cost |
+|-------|--------------|
+| Current (App Service) | ~$25 |
+| Azure Container Apps | ~$50 |
+| AKS (full Kubernetes) | ~$119 |
+
+**Recommendation:** Consider Azure Container Apps as middle ground before full AKS migration.

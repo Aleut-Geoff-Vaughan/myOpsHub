@@ -144,6 +144,13 @@ public class MySchedulingDbContext : DbContext
     // Dropdown Configuration
     public DbSet<TenantDropdownConfiguration> TenantDropdownConfigurations => Set<TenantDropdownConfiguration>();
 
+    // Help System
+    public DbSet<HelpArticle> HelpArticles => Set<HelpArticle>();
+
+    // App Launcher & Feedback
+    public DbSet<AppTile> AppTiles => Set<AppTile>();
+    public DbSet<Feedback> Feedbacks => Set<Feedback>();
+
     // Data Archive Management
     public DbSet<DataArchive> DataArchives => Set<DataArchive>();
     public DbSet<DataArchiveExport> DataArchiveExports => Set<DataArchiveExport>();
@@ -169,6 +176,7 @@ public class MySchedulingDbContext : DbContext
         ConfigureDataArchive(modelBuilder);
         ConfigureAuthentication(modelBuilder);
         ConfigureFacilitiesPortal(modelBuilder);
+        ConfigureAppLauncherAndFeedback(modelBuilder);
 
         // Apply global query filters for soft deletes
         ApplySoftDeleteFilter(modelBuilder);
@@ -2202,6 +2210,69 @@ public class MySchedulingDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(e => e.OfficeId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+    }
+
+    private void ConfigureAppLauncherAndFeedback(ModelBuilder modelBuilder)
+    {
+        // App Tiles
+        modelBuilder.Entity<AppTile>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.Icon).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.BackgroundColor).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.TextColor).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.Url).IsRequired().HasMaxLength(2000);
+            entity.Property(e => e.Category).HasMaxLength(100);
+
+            entity.HasIndex(e => new { e.TenantId, e.SortOrder });
+            entity.HasIndex(e => new { e.UserId, e.SortOrder });
+            entity.HasIndex(e => e.IsBuiltIn);
+
+            entity.HasOne(e => e.Tenant)
+                .WithMany()
+                .HasForeignKey(e => e.TenantId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // Feedback
+        modelBuilder.Entity<Feedback>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Title).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Description).IsRequired().HasMaxLength(4000);
+            entity.Property(e => e.PageUrl).HasMaxLength(500);
+            entity.Property(e => e.StepsToReproduce).HasMaxLength(4000);
+            entity.Property(e => e.ExpectedBehavior).HasMaxLength(2000);
+            entity.Property(e => e.ActualBehavior).HasMaxLength(2000);
+            entity.Property(e => e.BrowserInfo).HasMaxLength(500);
+            entity.Property(e => e.ScreenshotUrl).HasMaxLength(2000);
+            entity.Property(e => e.AdminNotes).HasMaxLength(4000);
+            entity.Property(e => e.ExternalTicketId).HasMaxLength(100);
+            entity.Property(e => e.ExternalTicketUrl).HasMaxLength(500);
+            entity.Property(e => e.RefinedRequirements).HasMaxLength(8000);
+
+            entity.HasIndex(e => new { e.TenantId, e.Status });
+            entity.HasIndex(e => new { e.TenantId, e.Type });
+            entity.HasIndex(e => e.SubmittedByUserId);
+            entity.HasIndex(e => e.CreatedAt);
+
+            entity.HasOne(e => e.SubmittedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.SubmittedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.ResolvedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.ResolvedByUserId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
     }
 

@@ -5,6 +5,7 @@ import { useAuthStore } from '../../stores/authStore';
 import { useInbox } from '../../hooks/useInbox';
 import { AssignmentRequestStatus } from '../../types/api';
 import { SearchModal, useSearchModal } from '../SearchModal';
+import { HelpButton } from '../help';
 
 interface GlobalTopBarProps {
   onMenuClick?: () => void;
@@ -115,6 +116,9 @@ export function GlobalTopBar({ onMenuClick }: GlobalTopBarProps) {
                 </span>
               )}
             </Link>
+
+            {/* Help Button */}
+            <HelpButton />
 
             {/* User Menu */}
             <div className="relative" ref={userMenuRef}>

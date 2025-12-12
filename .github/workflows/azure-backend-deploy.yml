@@ -6,6 +6,11 @@ on:
       - main
     paths:
       - 'backend/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'backend/**'
   workflow_dispatch:
 
 env:
@@ -13,8 +18,39 @@ env:
   DOTNET_VERSION: '8.0.x'
 
 jobs:
-  build-and-deploy:
+  test:
     runs-on: ubuntu-latest
+    name: Run Tests
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Restore dependencies
+        run: dotnet restore backend/MyScheduling.sln
+
+      - name: Build
+        run: dotnet build backend/MyScheduling.sln --configuration Release --no-restore
+
+      - name: Run tests
+        run: dotnet test backend/MyScheduling.sln --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage
+
+      - name: Upload coverage reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage/
+
+  build-and-deploy:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    name: Build and Deploy
 
     steps:
       - uses: actions/checkout@v3

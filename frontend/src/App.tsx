@@ -1,7 +1,9 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'react-hot-toast';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { HelpProvider } from './contexts/HelpContext';
+import { HelpPanel } from './components/help';
 import { LoginPage } from './pages/LoginPage';
 import { WorkspaceSelectorPage } from './pages/WorkspaceSelectorPage';
 import { AdminLayout } from './components/layout/AdminLayout';
@@ -42,6 +44,7 @@ import { AdminResumeTemplatesPage } from './pages/AdminResumeTemplatesPage';
 import { AdminHolidaysPage } from './pages/AdminHolidaysPage';
 import { AdminCareerJobFamiliesPage } from './pages/AdminCareerJobFamiliesPage';
 import { EmailTestPage } from './pages/admin/EmailTestPage';
+import { AdminHelpArticlesPage } from './pages/AdminHelpArticlesPage';
 import { AdminSubcontractorCompaniesPage } from './pages/AdminSubcontractorCompaniesPage';
 import { AdminForecastSchedulesPage } from './pages/AdminForecastSchedulesPage';
 import { AdminProjectRoleAssignmentsPage } from './pages/AdminProjectRoleAssignmentsPage';
@@ -75,6 +78,8 @@ import { ClientSitesPage } from './pages/facilities/ClientSitesPage';
 import { ClearancesPage } from './pages/facilities/ClearancesPage';
 import { ForeignTravelPage } from './pages/facilities/ForeignTravelPage';
 import { ScifAccessPage } from './pages/facilities/ScifAccessPage';
+import AppLauncherPage from './pages/AppLauncherPage';
+import FeedbackPage from './pages/FeedbackPage';
 import { UsageAnalyticsPage } from './pages/facilities/UsageAnalyticsPage';
 import { MyForecastsPage } from './pages/MyForecastsPage';
 import { ForecastProjectsPage } from './pages/ForecastProjectsPage';
@@ -115,13 +120,36 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>;
 }
 
-function App() {
+/**
+ * Catch-all component for 404 routes
+ * Redirects to /work if authenticated, /login if not
+ */
+function NotFoundRedirect() {
   const { isAuthenticated } = useAuthStore();
+  return <Navigate to={isAuthenticated ? "/work" : "/login"} replace />;
+}
 
+/**
+ * Helper component to redirect legacy routes with :id params to new routes
+ * React Router v6 doesn't interpolate :id in Navigate's to prop
+ */
+function LegacyResumeRedirect() {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/work/resumes/${id}`} replace />;
+}
+
+function LegacyPersonDashboardRedirect() {
+  const { id } = useParams<{ id: string }>();
+  return <Navigate to={`/work/team/people/${id}/dashboard`} replace />;
+}
+
+function App() {
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
+          <HelpProvider>
+          <HelpPanel />
           <Toaster
             position="top-right"
             toastOptions={{
@@ -154,6 +182,24 @@ function App() {
 
             {/* Public shared resume view (no auth required) */}
             <Route path="/resume/share/:token" element={<ResumeSharePage />} />
+
+            {/* App Launcher and Feedback (protected, standalone pages) */}
+            <Route
+              path="/apps"
+              element={
+                <ProtectedRoute>
+                  <AppLauncherPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/feedback"
+              element={
+                <ProtectedRoute>
+                  <FeedbackPage />
+                </ProtectedRoute>
+              }
+            />
 
             {/* Admin Portal Routes */}
             <Route
@@ -188,6 +234,7 @@ function App() {
               <Route path="holidays" element={<AdminHolidaysPage />} />
               <Route path="career-families" element={<AdminCareerJobFamiliesPage />} />
               <Route path="email-test" element={<EmailTestPage />} />
+              <Route path="help-articles" element={<AdminHelpArticlesPage />} />
             </Route>
 
             {/* Root redirect to /work */}
@@ -205,7 +252,7 @@ function App() {
             <Route path="/staffing" element={<Navigate to="/work/staffing" replace />} />
             <Route path="/hoteling" element={<Navigate to="/facilities/book" replace />} />
             <Route path="/resumes" element={<Navigate to="/work/resumes" replace />} />
-            <Route path="/resumes/:id" element={<Navigate to="/work/resumes/:id" replace />} />
+            <Route path="/resumes/:id" element={<LegacyResumeRedirect />} />
             <Route path="/doa" element={<Navigate to="/work/doa" replace />} />
             <Route path="/inbox" element={<Navigate to="/work/assignments" replace />} />
             <Route path="/profile" element={<Navigate to="/work" replace />} />
@@ -213,7 +260,7 @@ function App() {
             {/* Manager Portal - Legacy redirects to unified /work routes */}
             <Route path="/manager" element={<Navigate to="/work" replace />} />
             <Route path="/manager/people" element={<Navigate to="/work/team/people" replace />} />
-            <Route path="/manager/people/:id/dashboard" element={<Navigate to="/work/team/people/:id/dashboard" replace />} />
+            <Route path="/manager/people/:id/dashboard" element={<LegacyPersonDashboardRedirect />} />
             <Route path="/manager/staffing" element={<Navigate to="/work/team/staffing" replace />} />
             <Route path="/manager/team-calendar" element={<Navigate to="/work/team/calendar" replace />} />
             <Route path="/manager/team-calendar/admin" element={<Navigate to="/work/team/calendar/admin" replace />} />
@@ -334,8 +381,10 @@ function App() {
               <Route path="analytics" element={<UsageAnalyticsPage />} />
             </Route>
 
-            <Route path="*" element={<Navigate to={isAuthenticated ? "/work" : "/login"} replace />} />
+            {/* 404 Catch-all: redirect to /work if authenticated, /login if not */}
+            <Route path="*" element={<NotFoundRedirect />} />
           </Routes>
+          </HelpProvider>
         </BrowserRouter>
       </QueryClientProvider>
     </ErrorBoundary>

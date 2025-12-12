@@ -271,6 +271,124 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.ToTable("announcement_acknowledgments");
                 });
 
+            modelBuilder.Entity("MyScheduling.Core.Entities.AppTile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("BackgroundColor")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("background_color");
+
+                    b.Property<string>("Category")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("category");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_by_user_id");
+
+                    b.Property<string>("DeletionReason")
+                        .HasColumnType("text")
+                        .HasColumnName("deletion_reason");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Icon")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("icon");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsBuiltIn")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_built_in");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<bool>("OpenInNewTab")
+                        .HasColumnType("boolean")
+                        .HasColumnName("open_in_new_tab");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("TextColor")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("text_color");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.Property<string>("Url")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("url");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_app_tiles");
+
+                    b.HasIndex("IsBuiltIn")
+                        .HasDatabaseName("ix_app_tiles_is_built_in");
+
+                    b.HasIndex("TenantId", "SortOrder")
+                        .HasDatabaseName("ix_app_tiles_tenant_id_sort_order");
+
+                    b.HasIndex("UserId", "SortOrder")
+                        .HasDatabaseName("ix_app_tiles_user_id_sort_order");
+
+                    b.ToTable("app_tiles");
+                });
+
             modelBuilder.Entity("MyScheduling.Core.Entities.Assignment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2968,6 +3086,160 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.ToTable("facility_usage_daily");
                 });
 
+            modelBuilder.Entity("MyScheduling.Core.Entities.Feedback", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ActualBehavior")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("actual_behavior");
+
+                    b.Property<string>("AdminNotes")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("admin_notes");
+
+                    b.Property<string>("AiConversationHistory")
+                        .HasColumnType("text")
+                        .HasColumnName("ai_conversation_history");
+
+                    b.Property<string>("BrowserInfo")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("browser_info");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_by_user_id");
+
+                    b.Property<string>("DeletionReason")
+                        .HasColumnType("text")
+                        .HasColumnName("deletion_reason");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("ExpectedBehavior")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("expected_behavior");
+
+                    b.Property<string>("ExternalTicketId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("external_ticket_id");
+
+                    b.Property<string>("ExternalTicketUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("external_ticket_url");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("PageUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("page_url");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("integer")
+                        .HasColumnName("priority");
+
+                    b.Property<string>("RefinedRequirements")
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)")
+                        .HasColumnName("refined_requirements");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("resolved_at");
+
+                    b.Property<Guid?>("ResolvedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("resolved_by_user_id");
+
+                    b.Property<string>("ScreenshotUrl")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("screenshot_url");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer")
+                        .HasColumnName("status");
+
+                    b.Property<string>("StepsToReproduce")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("steps_to_reproduce");
+
+                    b.Property<Guid>("SubmittedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("submitted_by_user_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer")
+                        .HasColumnName("type");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_feedbacks");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("ix_feedbacks_created_at");
+
+                    b.HasIndex("ResolvedByUserId")
+                        .HasDatabaseName("ix_feedbacks_resolved_by_user_id");
+
+                    b.HasIndex("SubmittedByUserId")
+                        .HasDatabaseName("ix_feedbacks_submitted_by_user_id");
+
+                    b.HasIndex("TenantId", "Status")
+                        .HasDatabaseName("ix_feedbacks_tenant_id_status");
+
+                    b.HasIndex("TenantId", "Type")
+                        .HasDatabaseName("ix_feedbacks_tenant_id_type");
+
+                    b.ToTable("feedbacks");
+                });
+
             modelBuilder.Entity("MyScheduling.Core.Entities.FieldAssignment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -4204,6 +4476,108 @@ namespace MyScheduling.Infrastructure.Migrations
                         .HasDatabaseName("ix_group_members_tenant_id_group_id_user_id");
 
                     b.ToTable("group_members");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.HelpArticle", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Content")
+                        .HasColumnType("text")
+                        .HasColumnName("content");
+
+                    b.Property<string>("ContextKey")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("context_key");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_by_user_id");
+
+                    b.Property<string>("DeletionReason")
+                        .HasColumnType("text")
+                        .HasColumnName("deletion_reason");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
+                    b.Property<string>("IconName")
+                        .HasColumnType("text")
+                        .HasColumnName("icon_name");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("JiraArticleUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("jira_article_url");
+
+                    b.Property<string>("ModuleName")
+                        .HasColumnType("text")
+                        .HasColumnName("module_name");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
+                    b.Property<string>("Tags")
+                        .HasColumnType("text")
+                        .HasColumnName("tags");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("title");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.Property<string>("VideoTitle")
+                        .HasColumnType("text")
+                        .HasColumnName("video_title");
+
+                    b.Property<string>("VideoUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("video_url");
+
+                    b.HasKey("Id")
+                        .HasName("pk_help_articles");
+
+                    b.HasIndex("TenantId")
+                        .HasDatabaseName("ix_help_articles_tenant_id");
+
+                    b.ToTable("help_articles");
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.ImpersonationSession", b =>
@@ -10068,6 +10442,12 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.HasIndex("ProjectId")
                         .HasDatabaseName("ix_wbs_elements_project_id");
 
+                    b.HasIndex("ProjectId", "ApprovalStatus")
+                        .HasDatabaseName("ix_wbs_elements_project_id_approval_status");
+
+                    b.HasIndex("ProjectId", "Type")
+                        .HasDatabaseName("ix_wbs_elements_project_id_type");
+
                     b.HasIndex("TenantId", "Code")
                         .IsUnique()
                         .HasDatabaseName("ix_wbs_elements_tenant_id_code");
@@ -10535,6 +10915,25 @@ namespace MyScheduling.Infrastructure.Migrations
                         .HasConstraintName("fk_announcement_acknowledgments__users_user_id");
 
                     b.Navigation("Announcement");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.AppTile", b =>
+                {
+                    b.HasOne("MyScheduling.Core.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_app_tiles__tenants_tenant_id");
+
+                    b.HasOne("MyScheduling.Core.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_app_tiles__users_user_id");
+
+                    b.Navigation("Tenant");
 
                     b.Navigation("User");
                 });
@@ -11172,6 +11571,35 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.Navigation("Tenant");
                 });
 
+            modelBuilder.Entity("MyScheduling.Core.Entities.Feedback", b =>
+                {
+                    b.HasOne("MyScheduling.Core.Entities.User", "ResolvedByUser")
+                        .WithMany()
+                        .HasForeignKey("ResolvedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_feedbacks__users_resolved_by_user_id");
+
+                    b.HasOne("MyScheduling.Core.Entities.User", "SubmittedByUser")
+                        .WithMany()
+                        .HasForeignKey("SubmittedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_feedbacks__users_submitted_by_user_id");
+
+                    b.HasOne("MyScheduling.Core.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_feedbacks__tenants_tenant_id");
+
+                    b.Navigation("ResolvedByUser");
+
+                    b.Navigation("SubmittedByUser");
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("MyScheduling.Core.Entities.FieldAssignment", b =>
                 {
                     b.HasOne("MyScheduling.Core.Entities.User", "ApprovedBy")
@@ -11521,6 +11949,16 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.Navigation("Tenant");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.HelpArticle", b =>
+                {
+                    b.HasOne("MyScheduling.Core.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .HasConstraintName("fk_help_articles__tenants_tenant_id");
+
+                    b.Navigation("Tenant");
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.ImpersonationSession", b =>

@@ -25,32 +25,36 @@ Focused, current backlog. Historical notes are in `docs/archive/`.
 **Remaining optional work:**
 - [ ] Profile photo endpoint still uses old stubbed approach - could be updated to use `IFileStorageService`
 
-### 2. Automated Testing (HIGH)
-**Status:** Zero automated tests exist
-**Impact:** Manual testing only, risky deployments
-**Existing:** Only `test-authorization.sh` bash script for manual endpoint testing
-
-**What's needed:**
-- Backend: Add xUnit project with tests for auth, authorization, work locations, staffing, resumes
-- Frontend: Add Vitest for component and hook testing
-- E2E: Add Playwright for critical user flows
-
 ---
 
-## Security & Authorization
+## Security & Tech Debt (HIGH PRIORITY)
 
-### 3. Authorization Coverage (COMPLETE)
-~~Add [RequiresPermission] to remaining controllers~~
+### 2. Security Fixes (COMPLETE)
+**Status:** All identified issues resolved
 
-**Status:** All controllers now have full `[RequiresPermission]` coverage:
-- WorkLocationPreferencesController (7 endpoints)
-- WbsController (16 endpoints)
-- FacilitiesController (12 endpoints)
-- UserInvitationsController (4 endpoints)
-- TenantMembershipsController (6 endpoints)
-- ResumeApprovalsController (9 endpoints)
-- HolidaysController (8 endpoints)
-- DelegationOfAuthorityController (9 endpoints)
+| Issue | File | Fix |
+|-------|------|-----|
+| [x] Hardcoded JWT fallback | `Program.cs:36` | Removed fallback, throws if not configured |
+| [x] XSS via `dangerouslySetInnerHTML` | `InviteUserModal.tsx:207` | Added DOMPurify sanitization |
+| [x] XSS in RichTextEditor | `RichTextEditor.tsx:142` | Sanitized HTML content |
+| [x] XSS in ResumeSharePage | `ResumeSharePage.tsx:184` | Sanitized before `innerHTML` |
+| [x] Missing file upload validation | `AzureBlobStorageService.cs` | Added extension whitelist/blocklist + MIME validation |
+
+### 3. Code Cleanup (COMPLETE)
+**Status:** Placeholder files removed
+
+**Deleted files:**
+- [x] `backend/src/MyScheduling.Core/Class1.cs` - Empty placeholder (deleted)
+- [x] `backend/src/MyScheduling.Infrastructure/Class1.cs` - Empty placeholder (deleted)
+- [x] `backend/src/MyScheduling.Api/WeatherForecast.cs` - Template code (deleted)
+- [x] `backend/src/MyScheduling.Api/Controllers/WeatherForecastController.cs` - Template controller (deleted)
+
+**TODO comments to resolve:**
+- [ ] `UsersController.cs:594` - Implement proper password verification
+- [ ] `UsersController.cs:676` - Implement file deletion from storage
+- [ ] `ResumeTemplatesController.cs:317` - Implement template preview
+- [ ] `AdminPage.tsx:667` - Save settings to API
+- [ ] `ResumeDetailPage.tsx:99,117` - Get current user from auth context
 
 ### 4. Auth Hardening (MEDIUM)
 **Status:** Pending evaluation for production readiness
@@ -60,6 +64,140 @@ Focused, current backlog. Historical notes are in `docs/archive/`.
 - [ ] Consider refresh tokens
 - [ ] Evaluate SSO/MFA (Entra ID) before production
 - [ ] Ensure all identity is token-based (no header overrides)
+
+---
+
+## Enhanced Logging System (COMPLETE)
+
+### Backend (Serilog)
+**Status:** Implemented
+
+- [x] Added NuGet packages to `MyScheduling.Api.csproj`:
+  - `Serilog.AspNetCore`, `Serilog.Sinks.Console`, `Serilog.Sinks.File`
+  - `Serilog.Enrichers.Environment`, `Serilog.Enrichers.Thread`
+
+- [x] Created [Middleware/CorrelationIdMiddleware.cs](backend/src/MyScheduling.Api/Middleware/CorrelationIdMiddleware.cs)
+- [x] Created [Middleware/RequestLoggingMiddleware.cs](backend/src/MyScheduling.Api/Middleware/RequestLoggingMiddleware.cs)
+- [x] Created [Services/LoggingConfigurationService.cs](backend/src/MyScheduling.Api/Services/LoggingConfigurationService.cs)
+- [x] Created [Controllers/LoggingController.cs](backend/src/MyScheduling.Api/Controllers/LoggingController.cs) (admin runtime toggle)
+- [x] Updated `Program.cs` with Serilog configuration
+- [x] Updated `appsettings.json` with Serilog section
+
+### Frontend (Logging Service)
+- [x] Created [services/loggingService.ts](frontend/src/services/loggingService.ts) - Toggleable logging with correlation IDs
+- [x] Created [hooks/useLogging.ts](frontend/src/hooks/useLogging.ts) - React integration
+- [x] Updated [lib/api-client.ts](frontend/src/lib/api-client.ts) - Added `X-Correlation-Id` header + request timing logs
+
+### Usage
+- **Backend runtime toggle:** `POST /api/logging/verbose/enable` and `POST /api/logging/verbose/disable`
+- **Frontend console:** `window.__mySchedulingLogger.enableVerbose()` / `disableVerbose()`
+- **Correlation IDs:** Automatically generated and passed between frontend and backend
+
+---
+
+## Help System (COMPLETE)
+
+### Backend
+**Status:** Implemented
+
+- [x] Created [Entities/HelpArticle.cs](backend/src/MyScheduling.Core/Entities/HelpArticle.cs) - ContextKey, Title, JiraUrl, VideoUrl, ModuleName
+- [x] Updated [MySchedulingDbContext.cs](backend/src/MyScheduling.Infrastructure/Data/MySchedulingDbContext.cs) - Added HelpArticle DbSet
+- [ ] Create EF migration for help_articles table (run `dotnet ef migrations add AddHelpArticles`)
+- [x] Created [Controllers/HelpArticlesController.cs](backend/src/MyScheduling.Api/Controllers/HelpArticlesController.cs) - CRUD + search
+- [ ] Add HelpArticle permissions to `SeedRolePermissions.cs` (optional - uses Settings permissions)
+
+### Frontend
+- [x] Created [types/help.ts](frontend/src/types/help.ts)
+- [x] Created [services/helpService.ts](frontend/src/services/helpService.ts)
+- [x] Created [hooks/useHelp.ts](frontend/src/hooks/useHelp.ts)
+- [x] Created [contexts/HelpContext.tsx](frontend/src/contexts/HelpContext.tsx) - Context-sensitive help provider
+- [x] Created [config/helpContextKeys.ts](frontend/src/config/helpContextKeys.ts) - Route-to-context mapping
+- [x] Created [components/help/HelpButton.tsx](frontend/src/components/help/HelpButton.tsx)
+- [x] Created [components/help/HelpPanel.tsx](frontend/src/components/help/HelpPanel.tsx)
+- [x] Created [components/help/HelpArticleCard.tsx](frontend/src/components/help/HelpArticleCard.tsx)
+- [x] Created [pages/AdminHelpArticlesPage.tsx](frontend/src/pages/AdminHelpArticlesPage.tsx) - Admin management UI with CRUD
+- [x] Updated [App.tsx](frontend/src/App.tsx) - Added HelpProvider wrapper and HelpPanel
+- [x] Updated [GlobalTopBar.tsx](frontend/src/components/navigation/GlobalTopBar.tsx) - Added HelpButton to header
+- [x] Updated [config/modules.ts](frontend/src/config/modules.ts) - Added admin nav item
+
+---
+
+## Automated Testing (MOSTLY COMPLETE)
+
+### Backend Test Projects
+**Status:** Implemented - 37 tests passing
+
+- [x] Created [backend/tests/MyScheduling.Core.Tests/](backend/tests/MyScheduling.Core.Tests/) project
+- [x] Created [backend/tests/MyScheduling.Infrastructure.Tests/](backend/tests/MyScheduling.Infrastructure.Tests/) project
+- [x] Created [backend/tests/MyScheduling.Api.Tests/](backend/tests/MyScheduling.Api.Tests/) project
+- [ ] Create `backend/tests/MyScheduling.Integration.Tests/` project (optional)
+
+### Backend Tests (xUnit)
+- [x] AuthController tests - Login, password validation, lockout, JWT (24 tests)
+- [x] WorkingDaysService tests - Business day calculations (13 tests)
+- [ ] RequiresPermissionAttribute tests
+- [ ] Authentication integration tests
+- [ ] Multi-tenant isolation tests
+
+### Frontend Testing Setup (Vitest)
+**Status:** Implemented - 18 tests passing
+
+- [x] Installed: `@testing-library/react`, `vitest`, `jsdom`, `msw`
+- [x] Created [vitest.config.ts](frontend/vitest.config.ts)
+- [x] Created [test/setup.ts](frontend/src/test/setup.ts), [test/mocks/handlers.ts](frontend/src/test/mocks/handlers.ts), [test/utils.tsx](frontend/src/test/utils.tsx)
+- [x] Added test scripts to `package.json`
+
+### Frontend Tests
+- [x] authStore tests (18 tests)
+- [ ] LoginPage tests
+- [ ] Button, Modal component tests
+- [ ] useFiscalYear, useWorkingDays hook tests
+
+### E2E Testing (Playwright)
+- [ ] Setup Playwright
+- [ ] Create `e2e/auth.spec.ts` - Login/logout flows
+- [ ] Create `e2e/projects.spec.ts` - CRUD operations
+
+### CI/CD Integration
+- [x] Updated [.github/workflows/azure-backend-deploy.yml](.github/workflows/azure-backend-deploy.yml) - Added test job
+- [x] Updated [.github/workflows/azure-static-web-apps-proud-ocean-0c7274110.yml](.github/workflows/azure-static-web-apps-proud-ocean-0c7274110.yml) - Added test job
+- [ ] Configure Codecov (optional)
+
+**Current Coverage:** 55 tests total (37 backend + 18 frontend)
+**Coverage Targets:** 30% (Month 1) → 50% (Month 2) → 60% (Month 3) → 70%+ (Month 6)
+
+---
+
+## Kubernetes & Multi-Environment (FUTURE)
+
+### Docker Configuration
+- [ ] Create `backend/Dockerfile` - Multi-stage build
+- [ ] Create `backend/.dockerignore`
+- [ ] Test containerized build locally
+
+### Multi-Environment Databases
+- [ ] Add SQLite support to `Program.cs` for local dev
+- [ ] Create `appsettings.Test.json`
+- [ ] Create `appsettings.Production.json`
+- [ ] Add `Microsoft.EntityFrameworkCore.Sqlite` package
+
+### Azure Resources (Manual)
+- [ ] Create Azure Container Registry (ACR)
+- [ ] Create test PostgreSQL database
+- [ ] Configure Azure Key Vault
+- [ ] Add GitHub secrets: AZURE_CREDENTIALS, ACR_USERNAME, ACR_PASSWORD
+
+### Kubernetes Manifests
+- [ ] Create `k8s/base/` - Deployment, Service, ConfigMap, Secrets, Ingress, HPA
+- [ ] Create `k8s/overlays/dev/`, `test/`, `prod/` - Kustomize overlays
+- [ ] Create `k8s/argo-rollouts/` - Canary deployment config
+
+### Cost Considerations
+| Setup | Monthly Cost |
+|-------|--------------|
+| Current (App Service) | ~$25 |
+| Azure Container Apps | ~$50 |
+| AKS (full) | ~$119 |
 
 ---
 
@@ -94,79 +232,56 @@ Focused, current backlog. Historical notes are in `docs/archive/`.
 - [ ] Direct booking option for staffing managers
 - [ ] Workflow notification emails
 
+### Authorization Coverage (COMPLETE)
+All controllers now have full `[RequiresPermission]` coverage.
+
 ---
 
 ## WBS Improvements
 
-> See [CODE_REVIEW_2025-11-20.md](docs/archive/CODE_REVIEW_2025-11-20.md) and [WBS_FIXES_PRIORITY.md](docs/archive/WBS_FIXES_PRIORITY.md) for full analysis
+> See [CODE_REVIEW_2025-11-20.md](docs/archive/CODE_REVIEW_2025-11-20.md) for full analysis
 
 ### Already Fixed:
-- [x] Pagination integration in WbsPage (frontend handles paginated response correctly)
+- [x] Pagination integration in WbsPage
 - [x] Full [RequiresPermission] coverage on all 16 endpoints
 
-### Still Pending:
+### Still Pending (HIGH):
+- [ ] Transaction support in bulk operations
+- [ ] N+1 query optimization
+- [ ] Move PaginatedResponse to Core layer
+- [ ] Add database indexes for WBS queries
+- [ ] Date range validation
 
-#### HIGH Priority
-| Issue | Impact | File |
-|-------|--------|------|
-| Transaction support in bulk operations | Partial failures leave inconsistent state | WbsController.cs:663-1044 |
-| N+1 query optimization | 50 items = 50 DB calls in bulk ops | WbsController.cs:674-739 |
-| Move PaginatedResponse to Core layer | Cannot reuse for other endpoints | WbsController.cs |
-| Move bulk operation DTOs to Core layer | Code duplication | WbsController.cs |
-| Add database indexes for WBS queries | Slow queries on large datasets | MySchedulingDbContext.cs |
-| Date range validation | Invalid date ranges can be saved | WbsController.cs:200-337 |
-
-#### MEDIUM Priority
-- [ ] Add pagination UI controls (page size selector, showing X of Y)
-- [ ] Add bulk selection UI with checkboxes
-- [ ] Build dedicated WBS Approval Queue page at `/wbs/approvals`
-- [ ] Standardize error response format across all controllers
-
----
-
-## Upcoming Features
-
-### Resume Redesign (PENDING USER INPUT)
-**Design document:** [RESUME_REDESIGN_PROPOSAL.md](docs/RESUME_REDESIGN_PROPOSAL.md)
-
-Proposed changes:
-- Simplified home page with version tiles
-- Expiring certifications section on dashboard
-- Resume file attachments via Azure Blob Storage
-
-**Blocked on:** User answers to design questions in proposal document
+### Still Pending (MEDIUM):
+- [ ] Add pagination UI controls
+- [ ] Add bulk selection UI
+- [ ] Build dedicated WBS Approval Queue page
 
 ---
 
 ## Operational / Quality
 
 ### Observability (MEDIUM)
-- [ ] Add structured logging/metrics/traces
+- [ ] Add structured logging/metrics/traces (see Enhanced Logging section)
 - [ ] Better error handling and user-friendly error messages
 
 ### Performance (LOW)
-- [ ] Review N+1 query hot spots (particularly in bulk operations)
+- [ ] Review N+1 query hot spots
 - [ ] Add DB indexes for frequent filter patterns
 
 ### Notifications (LOW)
 - [ ] Implement invitation email delivery
 - [ ] Workflow notification emails
 
-### Manager Data Hygiene (LOW)
-- [ ] Prevent/clean cycles and invalid references
-- [ ] Add validation in APIs when setting `managerId`
-
 ---
 
 ## Future / Backlog
 
-These are nice-to-have features for later consideration:
-
 - SSO/Entra ID integration
-- Advanced reporting/analytics (staffing/utilization/work-location)
+- Advanced reporting/analytics
 - Hoteling check-in (mobile) and floorplan visualization
-- Admin configuration portal (system settings, integrations, branding)
-- AI/OCR on documents (Azure AI Search + skillset)
+- Admin configuration portal
+- AI/OCR on documents
 
 ---
 
@@ -182,8 +297,10 @@ These are nice-to-have features for later consideration:
 | WBS Management | Mostly Complete | Pagination fixed, bulk ops need refinement |
 | Profile Photos | Stubbed | Could use IFileStorageService |
 | Authorization | Complete | All controllers protected |
-| Automated Tests | None | Manual testing only |
+| Automated Tests | Implemented | 55 tests (37 backend + 18 frontend), CI/CD integrated |
+| Help System | Complete | Backend + frontend + admin page, context-sensitive help panel |
+| Enhanced Logging | Complete | Serilog backend + frontend service with correlation IDs |
 
 ---
 
-*Last updated: 2025-12-09*
+*Last updated: 2025-12-11*

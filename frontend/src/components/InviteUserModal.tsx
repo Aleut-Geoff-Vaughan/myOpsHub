@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
+import DOMPurify from 'dompurify';
 import { AppRole } from '../types/api';
 import { userInvitationsService } from '../services/userInvitationsService';
 import type { CreateInvitationRequest, InvitationResponse, CreateUserDirectRequest, DirectUserCreationResponse } from '../services/userInvitationsService';
@@ -204,7 +205,7 @@ export function InviteUserModal({ isOpen, onClose, tenantId, tenantName }: Invit
             <div className="p-4 border-t border-gray-200">
               <div
                 className="bg-white rounded border"
-                dangerouslySetInnerHTML={{ __html: invitationResult.emailHtmlBody }}
+                dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(invitationResult.emailHtmlBody) }}
               />
             </div>
           </details>

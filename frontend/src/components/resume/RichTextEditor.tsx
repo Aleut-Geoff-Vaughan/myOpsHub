@@ -2,6 +2,7 @@ import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Link from '@tiptap/extension-link';
 import Placeholder from '@tiptap/extension-placeholder';
+import DOMPurify from 'dompurify';
 import { Bold, Italic, List, ListOrdered, Link as LinkIcon, Undo, Redo } from 'lucide-react';
 
 interface RichTextEditorProps {
@@ -134,12 +135,12 @@ export function RichTextEditor({
   );
 }
 
-// Display-only version for showing HTML content
+// Display-only version for showing HTML content (sanitized for XSS protection)
 export function RichTextDisplay({ content, className = '' }: { content: string; className?: string }) {
   return (
     <div
       className={`prose prose-sm max-w-none ${className}`}
-      dangerouslySetInnerHTML={{ __html: content }}
+      dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(content) }}
     />
   );
 }

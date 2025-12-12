@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
+import DOMPurify from 'dompurify';
 import { Lock, AlertCircle, Briefcase, GraduationCap, Award, FolderOpen, FileText, Loader2 } from 'lucide-react';
 
 interface SharedResume {
@@ -181,7 +182,8 @@ export function ResumeSharePage() {
 
   const stripHtml = (html: string) => {
     const div = document.createElement('div');
-    div.innerHTML = html;
+    // Sanitize HTML before setting innerHTML to prevent XSS
+    div.innerHTML = DOMPurify.sanitize(html);
     return div.textContent || div.innerText || '';
   };
 

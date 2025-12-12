@@ -97,7 +97,7 @@ export const workModule: ModuleConfig = {
         { id: 'staffing', name: 'Staffing Plan', path: '/work/staffing', icon: 'users' },
         { id: 'assignments', name: 'Assignments', path: '/work/assignments', icon: 'inbox', badge: 'assignments' },
         { id: 'resumes', name: 'Resumes', path: '/work/resumes', icon: 'document' },
-        { id: 'doa', name: 'DOA Letters', path: '/work/doa', icon: 'certificate' },
+        { id: 'doa', name: 'Delegations', path: '/work/doa', icon: 'certificate' },
       ],
     },
     {
@@ -307,6 +307,7 @@ export const adminNavigation: NavigationSection[] = [
       { id: 'holidays', name: 'Holidays', path: '/admin/holidays', icon: 'calendar' },
       { id: 'team-calendars', name: 'Team Calendars', path: '/admin/team-calendars', icon: 'calendar-days' },
       { id: 'tenant-settings', name: 'Tenant Settings', path: '/admin/tenant-settings', icon: 'adjustments-horizontal' },
+      { id: 'help-articles', name: 'Help Articles', path: '/admin/help-articles', icon: 'question-mark-circle' },
     ],
   },
   {

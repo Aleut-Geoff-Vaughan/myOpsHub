@@ -11,9 +11,39 @@ using MyScheduling.Core.Entities;
 using MyScheduling.Api;
 using Microsoft.Identity.Web;
 using MyScheduling.Api.Services;
+using MyScheduling.Api.Middleware;
+using Serilog;
+using Serilog.Core;
+using Serilog.Events;
 
 // MyScheduling API - Production Ready
+
+// Create a logging level switch for runtime control
+var levelSwitch = new LoggingLevelSwitch(LogEventLevel.Information);
+
+// Configure Serilog before builder creation
+Log.Logger = new LoggerConfiguration()
+    .MinimumLevel.ControlledBy(levelSwitch)
+    .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
+    .MinimumLevel.Override("Microsoft.EntityFrameworkCore", LogEventLevel.Warning)
+    .Enrich.FromLogContext()
+    .Enrich.WithEnvironmentName()
+    .Enrich.WithThreadId()
+    .Enrich.WithProperty("Application", "MyScheduling")
+    .WriteTo.Console(
+        outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [{CorrelationId}] {Message:lj}{NewLine}{Exception}")
+    .WriteTo.File(
+        path: "logs/myscheduling-.log",
+        rollingInterval: RollingInterval.Day,
+        retainedFileCountLimit: 30,
+        outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] [{CorrelationId}] [{UserId}] {Message:lj}{NewLine}{Exception}")
+    .CreateLogger();
+
 var builder = WebApplication.CreateBuilder(args);
+
+// Use Serilog for all logging
+builder.Host.UseSerilog();
 
 // Add services to the container.
 
@@ -32,8 +62,19 @@ builder.Services.AddDbContext<MySchedulingDbContext>(options =>
         .ConfigureWarnings(warnings => warnings.Ignore(RelationalEventId.MultipleCollectionIncludeWarning));
 });
 
-// JWT Authentication
-var jwtKey = builder.Configuration["Jwt:Key"] ?? "MyScheduling-Super-Secret-Key-For-Development-Only-Change-In-Production-2024";
+// JWT Authentication - Key MUST be configured, no fallback for security
+var jwtKey = builder.Configuration["Jwt:Key"];
+if (string.IsNullOrEmpty(jwtKey))
+{
+    throw new InvalidOperationException(
+        "JWT Key is not configured. Set 'Jwt:Key' in appsettings.json or environment variable 'Jwt__Key'. " +
+        "The key must be at least 32 characters for HS256 signing.");
+}
+if (jwtKey.Length < 32)
+{
+    throw new InvalidOperationException(
+        "JWT Key must be at least 32 characters long for secure HS256 signing.");
+}
 var jwtIssuer = builder.Configuration["Jwt:Issuer"] ?? "MyScheduling";
 var jwtAudience = builder.Configuration["Jwt:Audience"] ?? "MyScheduling";
 
@@ -61,6 +102,10 @@ builder.Services.AddAuthentication(options =>
 });
 
 builder.Services.AddHttpContextAccessor();
+
+// Register logging configuration service for runtime control
+builder.Services.AddSingleton(levelSwitch);
+builder.Services.AddSingleton<ILoggingConfigurationService, LoggingConfigurationService>();
 
 // Azure AD SSO Configuration - for validating tokens from frontend MSAL
 var azureAdEnabled = builder.Configuration.GetValue<bool>("AzureAd:Enabled");
@@ -356,6 +401,10 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// Add correlation ID and request logging middleware
+app.UseCorrelationId();
+app.UseRequestLogging();
+
 app.UseIpRateLimiting();
 app.UseResponseCaching();
 app.UseCors();
@@ -391,6 +440,16 @@ app.MapGet("/api/health", async (Microsoft.Extensions.Diagnostics.HealthChecks.H
         : Results.Json(result, statusCode: 503);
 });
 
-app.Run();
-
-// Force rebuild $(date)
+try
+{
+    Log.Information("Starting MyScheduling API");
+    app.Run();
+}
+catch (Exception ex)
+{
+    Log.Fatal(ex, "Application terminated unexpectedly");
+}
+finally
+{
+    Log.CloseAndFlush();
+}

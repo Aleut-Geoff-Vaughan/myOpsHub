@@ -19,6 +19,51 @@ public class AzureBlobStorageService : IFileStorageService
     private readonly string _containerName;
     private readonly ILogger<AzureBlobStorageService> _logger;
 
+    // Allowed file extensions (whitelist approach for security)
+    private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        // Documents
+        ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx", ".txt", ".rtf", ".odt", ".ods", ".odp",
+        // Images
+        ".jpg", ".jpeg", ".png", ".gif", ".bmp", ".webp", ".svg", ".ico",
+        // Data files
+        ".csv", ".json", ".xml",
+        // Archives (limited)
+        ".zip"
+    };
+
+    // MIME type to extension mapping for validation
+    private static readonly Dictionary<string, HashSet<string>> MimeTypeExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        { "application/pdf", new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".pdf" } },
+        { "application/msword", new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".doc" } },
+        { "application/vnd.openxmlformats-officedocument.wordprocessingml.document", new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".docx" } },
+        { "application/vnd.ms-excel", new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".xls" } },
+        { "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".xlsx" } },
+        { "application/vnd.ms-powerpoint", new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".ppt" } },
+        { "application/vnd.openxmlformats-officedocument.presentationml.presentation", new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".pptx" } },
+        { "text/plain", new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".txt" } },
+        { "text/csv", new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".csv" } },
+        { "application/json", new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".json" } },
+        { "application/xml", new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".xml" } },
+        { "text/xml", new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".xml" } },
+        { "image/jpeg", new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".jpg", ".jpeg" } },
+        { "image/png", new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".png" } },
+        { "image/gif", new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".gif" } },
+        { "image/bmp", new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".bmp" } },
+        { "image/webp", new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".webp" } },
+        { "image/svg+xml", new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".svg" } },
+        { "application/zip", new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".zip" } },
+        { "application/x-zip-compressed", new HashSet<string>(StringComparer.OrdinalIgnoreCase) { ".zip" } },
+    };
+
+    // Dangerous extensions that should never be allowed (blocklist as extra safety)
+    private static readonly HashSet<string> BlockedExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".exe", ".dll", ".bat", ".cmd", ".ps1", ".sh", ".vbs", ".js", ".jar", ".msi", ".com", ".scr",
+        ".php", ".asp", ".aspx", ".jsp", ".cgi", ".pl", ".py", ".rb", ".htaccess", ".htpasswd"
+    };
+
     public AzureBlobStorageService(
         MySchedulingDbContext context,
         IConfiguration configuration,
@@ -51,6 +96,9 @@ public class AzureBlobStorageService : IFileStorageService
         Guid uploadedByUserId,
         string? category = null)
     {
+        // Validate file before upload
+        ValidateFile(fileName, contentType);
+
         // Generate unique file ID
         var fileId = Guid.NewGuid();
 
@@ -297,5 +345,55 @@ public class AzureBlobStorageService : IFileStorageService
         var invalidChars = Path.GetInvalidFileNameChars();
         var sanitized = string.Join("_", fileName.Split(invalidChars, StringSplitOptions.RemoveEmptyEntries));
         return sanitized.Length > 200 ? sanitized[..200] : sanitized;
+    }
+
+    /// <summary>
+    /// Validates file extension and MIME type before upload.
+    /// Throws ArgumentException if validation fails.
+    /// </summary>
+    private void ValidateFile(string fileName, string contentType)
+    {
+        if (string.IsNullOrWhiteSpace(fileName))
+        {
+            throw new ArgumentException("File name cannot be empty.", nameof(fileName));
+        }
+
+        var extension = Path.GetExtension(fileName);
+
+        // Check if extension is in blocklist (dangerous files)
+        if (BlockedExtensions.Contains(extension))
+        {
+            _logger.LogWarning("Blocked file upload attempt: {FileName} (blocked extension)", fileName);
+            throw new ArgumentException($"File type '{extension}' is not allowed for security reasons.", nameof(fileName));
+        }
+
+        // Check if extension is in whitelist
+        if (!AllowedExtensions.Contains(extension))
+        {
+            _logger.LogWarning("Rejected file upload: {FileName} (extension not in whitelist)", fileName);
+            throw new ArgumentException($"File type '{extension}' is not supported. Allowed types: PDF, Word, Excel, PowerPoint, images, CSV, JSON, XML, ZIP.", nameof(fileName));
+        }
+
+        // Validate MIME type matches extension (prevent disguised files)
+        if (!string.IsNullOrEmpty(contentType) && MimeTypeExtensions.TryGetValue(contentType, out var expectedExtensions))
+        {
+            if (!expectedExtensions.Contains(extension))
+            {
+                _logger.LogWarning("MIME type mismatch for {FileName}: ContentType={ContentType}, Extension={Extension}",
+                    fileName, contentType, extension);
+                throw new ArgumentException($"File content type '{contentType}' does not match file extension '{extension}'.", nameof(contentType));
+            }
+        }
+
+        // Check for double extensions (e.g., file.pdf.exe)
+        var fileNameWithoutExtension = Path.GetFileNameWithoutExtension(fileName);
+        var innerExtension = Path.GetExtension(fileNameWithoutExtension);
+        if (!string.IsNullOrEmpty(innerExtension) && BlockedExtensions.Contains(innerExtension))
+        {
+            _logger.LogWarning("Blocked double extension file: {FileName}", fileName);
+            throw new ArgumentException("File appears to have a suspicious double extension.", nameof(fileName));
+        }
+
+        _logger.LogDebug("File validation passed: {FileName}, ContentType={ContentType}", fileName, contentType);
     }
 }
