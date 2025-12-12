@@ -34,6 +34,7 @@ import ManagementStaffingPage from './pages/ManagementStaffingPage';
 import StaffingAdminPage from './pages/StaffingAdminPage';
 import AdminGroupsPage from './pages/AdminGroupsPage';
 import { AdminDOATemplatesPage } from './pages/AdminDOATemplatesPage';
+import { AdminDOALettersPage } from './pages/AdminDOALettersPage';
 import { AdminTenantSettingsPage } from './pages/AdminTenantSettingsPage';
 import { AdminOfficesPage } from './pages/AdminOfficesPage';
 import { AdminFacilitiesPage } from './pages/AdminFacilitiesPage';
@@ -224,6 +225,7 @@ function App() {
               <Route path="data/project-assignments" element={<AdminProjectAssignmentsPage />} />
               <Route path="data/assignments" element={<AdminAssignmentsPage />} />
               <Route path="doa-templates" element={<AdminDOATemplatesPage />} />
+              <Route path="doa-letters" element={<AdminDOALettersPage />} />
               <Route path="tenant-settings" element={<AdminTenantSettingsPage />} />
               <Route path="offices" element={<AdminOfficesPage />} />
               <Route path="facilities" element={<AdminFacilitiesPage />} />

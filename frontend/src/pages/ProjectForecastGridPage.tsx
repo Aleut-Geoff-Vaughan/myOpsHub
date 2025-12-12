@@ -954,15 +954,17 @@ function AssignmentRow({
             {isEditing ? (
               <input
                 type="number"
-                value={value}
+                value={value || ''}
                 onChange={(e) => onCellChange(cellKey, e.target.value)}
                 onBlur={() => onCellBlur(assignment.id, m.year, m.month)}
                 onKeyDown={(e) => onKeyDown(e, assignment.id, m.year, m.month)}
+                onFocus={(e) => e.target.select()}
                 aria-label={`Hours for ${assignment.positionTitle} in ${m.label}`}
                 className="w-16 px-1 py-0.5 text-center text-sm border border-emerald-500 rounded focus:ring-2 focus:ring-emerald-500"
                 autoFocus
                 min={0}
                 step={1}
+                placeholder="0"
               />
             ) : (
               <span className={`text-sm ${value > 0 ? 'text-gray-900' : 'text-gray-400'}`}>

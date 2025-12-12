@@ -706,6 +706,60 @@ public class ForecastsController : AuthorizedControllerBase
         return Ok(MapToResponse(updated, false));
     }
 
+    [HttpPost("{id}/review")]
+    [RequiresPermission(Resource = "Forecast", Action = PermissionAction.Approve)]
+    public async Task<ActionResult<ForecastResponse>> Review(Guid id, ReviewForecastDto? dto = null)
+    {
+        var forecast = await _context.Forecasts
+            .Include(f => f.ForecastVersion)
+            .FirstOrDefaultAsync(f => f.Id == id);
+
+        if (forecast == null)
+        {
+            return NotFound();
+        }
+
+        if (!HasAccessToTenant(forecast.TenantId))
+        {
+            return Forbid();
+        }
+
+        if (forecast.Status != ForecastStatus.Submitted)
+        {
+            return BadRequest($"Cannot review forecast with status {forecast.Status}. Must be Submitted.");
+        }
+
+        var oldStatus = forecast.Status;
+
+        forecast.Status = ForecastStatus.Reviewed;
+        forecast.UpdatedAt = DateTime.UtcNow;
+        forecast.UpdatedByUserId = GetCurrentUserId();
+
+        _context.ForecastHistories.Add(new ForecastHistory
+        {
+            Id = Guid.NewGuid(),
+            ForecastId = forecast.Id,
+            ChangedByUserId = GetCurrentUserId(),
+            ChangedAt = DateTime.UtcNow,
+            ChangeType = ForecastChangeType.Reviewed,
+            OldStatus = oldStatus,
+            NewStatus = ForecastStatus.Reviewed,
+            ChangeReason = dto?.Notes
+        });
+
+        await _context.SaveChangesAsync();
+
+        _logger.LogInformation("Forecast {Id} reviewed by {UserId}", id, GetCurrentUserId());
+
+        var updated = await _context.Forecasts
+            .Include(f => f.ProjectRoleAssignment)
+                .ThenInclude(a => a.Project)
+            .Include(f => f.ForecastVersion)
+            .FirstAsync(f => f.Id == id);
+
+        return Ok(MapToResponse(updated, false));
+    }
+
     [HttpPost("{id}/approve")]
     [RequiresPermission(Resource = "Forecast", Action = PermissionAction.Approve)]
     public async Task<ActionResult<ForecastResponse>> Approve(Guid id, ApproveForecastDto? dto = null)
@@ -1261,6 +1315,11 @@ public class UpdateForecastDto
 }
 
 public class SubmitForecastDto
+{
+    public string? Notes { get; set; }
+}
+
+public class ReviewForecastDto
 {
     public string? Notes { get; set; }
 }

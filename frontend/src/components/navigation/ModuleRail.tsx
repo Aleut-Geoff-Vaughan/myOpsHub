@@ -1,9 +1,20 @@
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useModule, useModuleAccess } from '../../hooks/useModule';
 import { moduleColors } from '../../config/modules';
 import type { ModuleId, ModuleColor } from '../../config/modules';
 
 // Icon components for the module rail
 const Icons = {
+  hub: (
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+    </svg>
+  ),
+  feedback: (
+    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.625 12a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H8.25m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0H12m4.125 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm0 0h-.375M21 12c0 4.556-4.03 8.25-9 8.25a9.764 9.764 0 01-2.555-.337A5.972 5.972 0 015.41 20.97a5.969 5.969 0 01-.474-.065 4.48 4.48 0 00.978-2.025c.09-.457-.133-.901-.467-1.226C3.93 16.178 3 14.189 3 12c0-4.556 4.03-8.25 9-8.25s9 3.694 9 8.25z" />
+    </svg>
+  ),
   work: (
     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
@@ -73,8 +84,13 @@ interface ModuleRailProps {
 }
 
 export function ModuleRail({ expanded = false, onExpandedChange }: ModuleRailProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { currentModule, navigateToModule, openAdmin, isAdminOpen } = useModule();
   const { hasForecastAccess, hasAdminAccess } = useModuleAccess();
+
+  const isOnHub = location.pathname === '/';
+  const isOnFeedback = location.pathname === '/feedback';
 
   const handleMouseEnter = () => {
     if (onExpandedChange) {
@@ -112,10 +128,30 @@ export function ModuleRail({ expanded = false, onExpandedChange }: ModuleRailPro
 
       {/* Module navigation */}
       <nav className="flex-1 py-4 space-y-1">
+        {/* App Hub - always at top */}
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          className={`
+            w-full flex items-center gap-3 px-3 py-3 transition-all duration-200
+            ${isOnHub && !isAdminOpen
+              ? 'bg-blue-50 text-blue-600 border-l-4 border-blue-600'
+              : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 border-l-4 border-transparent'
+            }
+            ${expanded ? 'justify-start' : 'justify-center'}
+          `}
+          title={!expanded ? 'App Hub' : undefined}
+        >
+          <span className="flex-shrink-0">{Icons.hub}</span>
+          {expanded && (
+            <span className="text-sm font-medium truncate">App Hub</span>
+          )}
+        </button>
+
         {/* myWork */}
         <ModuleButton
           moduleId="work"
-          isActive={currentModule === 'work' && !isAdminOpen}
+          isActive={currentModule === 'work' && !isAdminOpen && !isOnHub}
           onClick={() => navigateToModule('work')}
           label="myWork"
           icon={Icons.work}
@@ -148,11 +184,32 @@ export function ModuleRail({ expanded = false, onExpandedChange }: ModuleRailPro
         />
       </nav>
 
-      {/* Bottom section - Admin & Profile */}
+      {/* Bottom section - Admin, Feedback */}
       <div className="py-4 border-t border-gray-200 space-y-1">
+        {/* Feedback */}
+        <button
+          type="button"
+          onClick={() => navigate('/feedback')}
+          className={`
+            w-full flex items-center gap-3 px-3 py-3 transition-all duration-200
+            ${isOnFeedback
+              ? 'bg-amber-50 text-amber-600 border-l-4 border-amber-600'
+              : 'text-gray-500 hover:bg-gray-100 hover:text-gray-700 border-l-4 border-transparent'
+            }
+            ${expanded ? 'justify-start' : 'justify-center'}
+          `}
+          title={!expanded ? 'Feedback' : undefined}
+        >
+          <span className="flex-shrink-0">{Icons.feedback}</span>
+          {expanded && (
+            <span className="text-sm font-medium truncate">Feedback</span>
+          )}
+        </button>
+
         {/* Admin - conditional on role */}
         {hasAdminAccess && (
           <button
+            type="button"
             onClick={openAdmin}
             className={`
               w-full flex items-center gap-3 px-3 py-3 transition-all duration-200

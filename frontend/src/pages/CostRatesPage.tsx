@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import {
@@ -31,6 +31,9 @@ export function CostRatesPage() {
     loadedCostRate: 0,
     notes: '',
   });
+  const [employeeSearch, setEmployeeSearch] = useState('');
+  const [showEmployeeDropdown, setShowEmployeeDropdown] = useState(false);
+  const employeeInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch cost rates
   const { data: costRates = [], isLoading: ratesLoading } = useCostRates({
@@ -64,6 +67,21 @@ export function CostRatesPage() {
     );
   });
 
+  // Filter users for employee search in modal
+  const filteredUsers = useMemo(() => {
+    if (!employeeSearch.trim()) return users.slice(0, 10); // Show first 10 by default
+    const search = employeeSearch.toLowerCase();
+    return users.filter(u =>
+      u.displayName?.toLowerCase().includes(search) ||
+      u.email?.toLowerCase().includes(search)
+    ).slice(0, 10);
+  }, [users, employeeSearch]);
+
+  // Get selected user display name
+  const selectedUser = useMemo(() => {
+    return users.find(u => u.id === formData.userId);
+  }, [users, formData.userId]);
+
   // Group rates by user for display
   const ratesByUser = filteredRates.reduce((acc, rate) => {
     const key = rate.userId;
@@ -89,6 +107,7 @@ export function CostRatesPage() {
         loadedCostRate: rate.loadedCostRate,
         notes: rate.notes || '',
       });
+      setEmployeeSearch(rate.userDisplayName || '');
     } else {
       setEditingRate(null);
       setFormData({
@@ -98,13 +117,23 @@ export function CostRatesPage() {
         loadedCostRate: 0,
         notes: '',
       });
+      setEmployeeSearch('');
     }
+    setShowEmployeeDropdown(false);
     setShowModal(true);
   };
 
   const handleCloseModal = () => {
     setShowModal(false);
     setEditingRate(null);
+    setEmployeeSearch('');
+    setShowEmployeeDropdown(false);
+  };
+
+  const handleSelectEmployee = (user: Person) => {
+    setFormData(f => ({ ...f, userId: user.id }));
+    setEmployeeSearch(user.displayName || user.email || '');
+    setShowEmployeeDropdown(false);
   };
 
   const handleSave = async () => {
@@ -476,24 +505,65 @@ export function CostRatesPage() {
                 {editingRate ? 'Edit Cost Rate' : 'Add Cost Rate'}
               </h3>
               <div className="space-y-4">
-                <div>
+                <div className="relative">
                   <label htmlFor="rateEmployee" className="block text-sm font-medium text-gray-700 mb-1">
                     Employee <span className="text-red-500">*</span>
                   </label>
-                  <select
-                    id="rateEmployee"
-                    value={formData.userId}
-                    onChange={(e) => setFormData(f => ({ ...f, userId: e.target.value }))}
-                    disabled={!!editingRate}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 disabled:bg-gray-100"
-                  >
-                    <option value="">Select employee...</option>
-                    {users.map(user => (
-                      <option key={user.id} value={user.id}>
-                        {user.displayName} ({user.email})
-                      </option>
-                    ))}
-                  </select>
+                  {editingRate ? (
+                    <input
+                      id="rateEmployee"
+                      type="text"
+                      value={selectedUser ? `${selectedUser.displayName} (${selectedUser.email})` : ''}
+                      disabled
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 bg-gray-100 text-gray-500"
+                    />
+                  ) : (
+                    <>
+                      <input
+                        ref={employeeInputRef}
+                        id="rateEmployee"
+                        type="text"
+                        value={employeeSearch}
+                        onChange={(e) => {
+                          setEmployeeSearch(e.target.value);
+                          setShowEmployeeDropdown(true);
+                          if (!e.target.value) {
+                            setFormData(f => ({ ...f, userId: '' }));
+                          }
+                        }}
+                        onFocus={() => setShowEmployeeDropdown(true)}
+                        onBlur={() => {
+                          // Delay hiding to allow click on dropdown item
+                          setTimeout(() => setShowEmployeeDropdown(false), 200);
+                        }}
+                        placeholder="Search by name or email..."
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                        autoComplete="off"
+                      />
+                      {showEmployeeDropdown && filteredUsers.length > 0 && (
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                          {filteredUsers.map(user => (
+                            <button
+                              key={user.id}
+                              type="button"
+                              onClick={() => handleSelectEmployee(user)}
+                              className={`w-full text-left px-3 py-2 hover:bg-emerald-50 focus:bg-emerald-50 focus:outline-none ${
+                                formData.userId === user.id ? 'bg-emerald-100' : ''
+                              }`}
+                            >
+                              <div className="text-sm font-medium text-gray-900">{user.displayName}</div>
+                              <div className="text-xs text-gray-500">{user.email}</div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                      {showEmployeeDropdown && employeeSearch && filteredUsers.length === 0 && (
+                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg px-3 py-2 text-sm text-gray-500">
+                          No employees found
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
                 <div>
                   <label htmlFor="rateAmount" className="block text-sm font-medium text-gray-700 mb-1">

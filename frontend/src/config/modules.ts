@@ -134,7 +134,6 @@ export const workModule: ModuleConfig = {
       roles: [AppRole.ResourceManager, AppRole.TenantAdmin, AppRole.SysAdmin],
       items: [
         { id: 'staffing-admin', name: 'Staffing Admin', path: '/work/settings/staffing', icon: 'cog' },
-        { id: 'certifications', name: 'Certifications', path: '/work/settings/certifications', icon: 'badge-check' },
       ],
     },
   ],
