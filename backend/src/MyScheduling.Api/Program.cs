@@ -443,6 +443,26 @@ app.MapGet("/api/health", async (Microsoft.Extensions.Diagnostics.HealthChecks.H
 try
 {
     Log.Information("Starting MyScheduling API");
+
+    // Apply any pending database migrations on startup
+    using (var scope = app.Services.CreateScope())
+    {
+        var dbContext = scope.ServiceProvider.GetRequiredService<MySchedulingDbContext>();
+        Log.Information("Checking for pending database migrations...");
+        var pendingMigrations = dbContext.Database.GetPendingMigrations().ToList();
+        if (pendingMigrations.Any())
+        {
+            Log.Information("Applying {Count} pending migration(s): {Migrations}",
+                pendingMigrations.Count, string.Join(", ", pendingMigrations));
+            dbContext.Database.Migrate();
+            Log.Information("Database migrations applied successfully");
+        }
+        else
+        {
+            Log.Information("No pending database migrations");
+        }
+    }
+
     app.Run();
 }
 catch (Exception ex)

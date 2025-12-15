@@ -1,5 +1,6 @@
 import type { Configuration } from '@azure/msal-browser';
 import { LogLevel, PublicClientApplication } from '@azure/msal-browser';
+import { buildApiUrl } from './api';
 
 // SSO Configuration - can be overridden via environment variables:
 // VITE_AZURE_AD_ENABLED - "true" to enable SSO
@@ -57,7 +58,7 @@ export async function fetchSsoConfig(): Promise<SsoConfig> {
       }
 
       // Fall back to fetching from API
-      const response = await fetch('/api/auth/sso/config');
+      const response = await fetch(buildApiUrl('/auth/sso/config'));
       if (!response.ok) {
         console.warn('[SSO Config] Failed to fetch SSO config, status:', response.status);
         throw new Error('Failed to fetch SSO config');
