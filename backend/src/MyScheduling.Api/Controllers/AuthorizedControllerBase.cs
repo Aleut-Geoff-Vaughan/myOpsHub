@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
+using MyScheduling.Api.Models;
 
 namespace MyScheduling.Api.Controllers;
 
@@ -98,4 +99,68 @@ public abstract class AuthorizedControllerBase : ControllerBase
     {
         return IsSystemAdmin() || GetUserTenantIds().Contains(tenantId);
     }
+
+    #region Error Response Helpers
+
+    /// <summary>
+    /// Gets the correlation ID from the current request.
+    /// </summary>
+    /// <returns>The correlation ID if present, null otherwise</returns>
+    protected string? GetCorrelationId()
+    {
+        return HttpContext.Items.TryGetValue("CorrelationId", out var correlationId)
+            ? correlationId?.ToString()
+            : Request.Headers["X-Correlation-Id"].FirstOrDefault();
+    }
+
+    /// <summary>
+    /// Creates a standardized error response with correlation ID.
+    /// </summary>
+    protected ApiErrorResponse CreateErrorResponse(string message, string? errorCode = null, object? details = null)
+    {
+        return new ApiErrorResponse
+        {
+            Message = message,
+            ErrorCode = errorCode,
+            CorrelationId = GetCorrelationId(),
+            Details = details
+        };
+    }
+
+    /// <summary>
+    /// Returns a 500 Internal Server Error with standardized error response.
+    /// </summary>
+    protected ObjectResult InternalServerError(string message, string? errorCode = null)
+    {
+        return StatusCode(500, CreateErrorResponse(message, errorCode ?? ApiErrorCodes.InternalError));
+    }
+
+    /// <summary>
+    /// Returns a 403 Forbidden with standardized error response and logs the authorization failure.
+    /// </summary>
+    protected ObjectResult ForbiddenWithLog(ILogger logger, string resource, string action, string? reason = null)
+    {
+        var userId = TryGetCurrentUserId();
+        var correlationId = GetCorrelationId();
+
+        logger.LogWarning(
+            "Authorization denied: User {UserId} attempted {Action} on {Resource}. Reason: {Reason}. CorrelationId: {CorrelationId}",
+            userId, action, resource, reason ?? "insufficient permissions", correlationId);
+
+        return StatusCode(403, CreateErrorResponse(
+            reason ?? "You do not have permission to perform this action",
+            ApiErrorCodes.Forbidden));
+    }
+
+    /// <summary>
+    /// Tries to get the current user ID without throwing an exception.
+    /// </summary>
+    /// <returns>The user ID if available, null otherwise</returns>
+    protected Guid? TryGetCurrentUserId()
+    {
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        return Guid.TryParse(userIdClaim, out var userId) ? userId : null;
+    }
+
+    #endregion
 }

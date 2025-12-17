@@ -63,6 +63,20 @@ public class AppTilesController : ControllerBase
             SortOrder = 3,
             IsBuiltIn = true,
             Category = "Internal Apps"
+        },
+        new AppTileDto
+        {
+            Id = Guid.Parse("00000000-0000-0000-0001-000000000004"),
+            Name = "mySalesOps",
+            Description = "Sales pipeline and opportunity management",
+            Icon = "currency-dollar",
+            BackgroundColor = "#ea580c",
+            TextColor = "#ffffff",
+            Url = "/salesops",
+            OpenInNewTab = false,
+            SortOrder = 4,
+            IsBuiltIn = true,
+            Category = "Internal Apps"
         }
     };
 

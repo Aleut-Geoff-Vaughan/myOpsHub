@@ -131,6 +131,15 @@ public class TenantSettingsController : AuthorizedControllerBase
             if (request.ExcludeSaturdays.HasValue) settings.ExcludeSaturdays = request.ExcludeSaturdays.Value;
             if (request.ExcludeSundays.HasValue) settings.ExcludeSundays = request.ExcludeSundays.Value;
 
+            // Update security settings
+            if (request.EmailNotificationsEnabled.HasValue) settings.EmailNotificationsEnabled = request.EmailNotificationsEnabled.Value;
+            if (request.Require2FA.HasValue) settings.Require2FA = request.Require2FA.Value;
+            if (request.AllowSelfRegistration.HasValue) settings.AllowSelfRegistration = request.AllowSelfRegistration.Value;
+            if (request.MaintenanceMode.HasValue) settings.MaintenanceMode = request.MaintenanceMode.Value;
+            if (request.SessionTimeoutMinutes.HasValue) settings.SessionTimeoutMinutes = request.SessionTimeoutMinutes.Value;
+            if (request.PasswordMinLength.HasValue) settings.PasswordMinLength = request.PasswordMinLength.Value;
+            if (request.FailedLoginAttemptsBeforeLock.HasValue) settings.FailedLoginAttemptsBeforeLock = request.FailedLoginAttemptsBeforeLock.Value;
+
             settings.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
@@ -268,4 +277,13 @@ public class UpdateTenantSettingsRequest
     public decimal? StandardHoursPerDay { get; set; }
     public bool? ExcludeSaturdays { get; set; }
     public bool? ExcludeSundays { get; set; }
+
+    // Security Settings
+    public bool? EmailNotificationsEnabled { get; set; }
+    public bool? Require2FA { get; set; }
+    public bool? AllowSelfRegistration { get; set; }
+    public bool? MaintenanceMode { get; set; }
+    public int? SessionTimeoutMinutes { get; set; }
+    public int? PasswordMinLength { get; set; }
+    public int? FailedLoginAttemptsBeforeLock { get; set; }
 }

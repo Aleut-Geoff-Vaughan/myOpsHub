@@ -39,7 +39,11 @@ public class WorkflowNotificationService : IWorkflowNotificationService
         var projectName = request.WbsElement?.Project?.Name ?? "Unknown Project";
         var wbsCode = request.WbsElement?.Code ?? "N/A";
 
-        foreach (var approver in approvers.Where(a => !string.IsNullOrEmpty(a.Email)))
+        var approverList = approvers.Where(a => !string.IsNullOrEmpty(a.Email)).ToList();
+        var successCount = 0;
+        var failedEmails = new List<string>();
+
+        foreach (var approver in approverList)
         {
             try
             {
@@ -66,13 +70,29 @@ public class WorkflowNotificationService : IWorkflowNotificationService
                 );
 
                 await _emailService.SendEmailAsync(approver.Email!, subject, htmlBody);
-                _logger.LogInformation("Sent assignment request notification to approver {ApproverEmail} for request {RequestId}",
+                successCount++;
+                _logger.LogDebug("Sent assignment request notification to approver {ApproverEmail} for request {RequestId}",
                     approver.Email, request.Id);
             }
             catch (Exception ex)
             {
+                failedEmails.Add(approver.Email!);
                 _logger.LogError(ex, "Failed to send assignment request notification to {ApproverEmail}", approver.Email);
             }
+        }
+
+        // Log batch summary
+        if (failedEmails.Count > 0)
+        {
+            _logger.LogWarning(
+                "Assignment request notification batch for {RequestId}: {SuccessCount}/{TotalCount} emails sent. Failed recipients: {FailedEmails}",
+                request.Id, successCount, approverList.Count, string.Join(", ", failedEmails));
+        }
+        else if (approverList.Count > 0)
+        {
+            _logger.LogInformation(
+                "Assignment request notification batch for {RequestId}: {SuccessCount}/{TotalCount} emails sent successfully",
+                request.Id, successCount, approverList.Count);
         }
     }
 

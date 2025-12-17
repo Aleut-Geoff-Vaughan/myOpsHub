@@ -37,7 +37,9 @@ public class MagicLinkService : IMagicLinkService
         // Check rate limit first
         if (await IsRateLimitedAsync(normalizedEmail))
         {
-            _logger.LogWarning("Magic link rate limit exceeded for email: {Email}", normalizedEmail);
+            _logger.LogWarning(
+                "Magic link rate limit exceeded: Email={Email}, IP={IpAddress}, UserAgent={UserAgent}",
+                normalizedEmail, ipAddress ?? "unknown", userAgent ?? "unknown");
             // Return success but no token to prevent enumeration
             return MagicLinkRequestResult.NoUser();
         }
@@ -107,7 +109,8 @@ public class MagicLinkService : IMagicLinkService
 
         if (magicLinkToken == null)
         {
-            _logger.LogWarning("Invalid magic link token attempted");
+            _logger.LogWarning("Invalid magic link token attempted from IP {IpAddress}, UserAgent: {UserAgent}",
+                ipAddress ?? "unknown", userAgent ?? "unknown");
             return MagicLinkValidationResult.Failed(
                 "Invalid or expired link. Please request a new one.",
                 MagicLinkValidationFailureReason.InvalidToken);
@@ -116,7 +119,10 @@ public class MagicLinkService : IMagicLinkService
         // Check if already used
         if (magicLinkToken.UsedAt.HasValue)
         {
-            _logger.LogWarning("Magic link token already used: {TokenId}", magicLinkToken.Id);
+            _logger.LogWarning(
+                "Magic link token reuse attempted: TokenId={TokenId}, UserId={UserId}, OriginallyUsedAt={UsedAt}, OriginalIP={OriginalIp}, AttemptIP={AttemptIp}",
+                magicLinkToken.Id, magicLinkToken.UserId, magicLinkToken.UsedAt,
+                magicLinkToken.UsedFromIp ?? "unknown", ipAddress ?? "unknown");
             return MagicLinkValidationResult.Failed(
                 "This link has already been used. Please request a new one.",
                 MagicLinkValidationFailureReason.AlreadyUsed);
@@ -155,6 +161,16 @@ public class MagicLinkService : IMagicLinkService
             return MagicLinkValidationResult.Failed(
                 "Account is temporarily locked. Please try again later.",
                 MagicLinkValidationFailureReason.UserLockedOut);
+        }
+
+        // Log if token is being used from a different IP than it was requested from
+        if (!string.IsNullOrEmpty(magicLinkToken.RequestedFromIp) &&
+            !string.IsNullOrEmpty(ipAddress) &&
+            magicLinkToken.RequestedFromIp != ipAddress)
+        {
+            _logger.LogWarning(
+                "Magic link used from different IP than requested: TokenId={TokenId}, UserId={UserId}, RequestedIP={RequestedIp}, UsedIP={UsedIp}",
+                magicLinkToken.Id, user.Id, magicLinkToken.RequestedFromIp, ipAddress);
         }
 
         // Mark token as used

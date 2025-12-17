@@ -6,6 +6,7 @@ using MyScheduling.Api.Attributes;
 using MyScheduling.Core.Interfaces;
 using MyScheduling.Api.Models;
 using System.ComponentModel.DataAnnotations;
+using BCrypt.Net;
 
 namespace MyScheduling.Api.Controllers;
 
@@ -115,8 +116,9 @@ public class UsersController : AuthorizedControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating profile for user {UserId}", id);
-            return StatusCode(500, "An error occurred while updating the user");
+            _logger.LogError(ex, "Error updating profile for user {UserId}. CorrelationId: {CorrelationId}",
+                id, GetCorrelationId());
+            return InternalServerError("An error occurred while updating the user");
         }
     }
 
@@ -164,8 +166,9 @@ public class UsersController : AuthorizedControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving users");
-            return StatusCode(500, "An error occurred while retrieving users");
+            _logger.LogError(ex, "Error retrieving users. TenantId: {TenantId}, Search: {Search}, CorrelationId: {CorrelationId}",
+                tenantId, search, GetCorrelationId());
+            return InternalServerError("An error occurred while retrieving users");
         }
     }
 
@@ -192,8 +195,9 @@ public class UsersController : AuthorizedControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving user {UserId}", id);
-            return StatusCode(500, "An error occurred while retrieving the user");
+            _logger.LogError(ex, "Error retrieving user {UserId}. CorrelationId: {CorrelationId}",
+                id, GetCorrelationId());
+            return InternalServerError("An error occurred while retrieving the user");
         }
     }
 
@@ -202,40 +206,48 @@ public class UsersController : AuthorizedControllerBase
     [RequiresPermission(Resource = "User", Action = PermissionAction.Read)]
     public async Task<ActionResult<object>> GetUserLogins(Guid id, [FromQuery] int take = 10)
     {
-        var user = await _context.Users.FindAsync(id);
-        if (user == null)
+        try
         {
-            return NotFound($"User with ID {id} not found");
-        }
-
-        take = Math.Clamp(take, 1, 100);
-
-        // Optimize: Add AsNoTracking for read-only audit query
-        var query = _context.LoginAudits
-            .AsNoTracking()
-            .Where(l => l.UserId == id)
-            .OrderByDescending(l => l.CreatedAt);
-
-        var total = await query.CountAsync();
-        var lastSuccess = await query.Where(l => l.IsSuccess).FirstOrDefaultAsync();
-        var lastFailed = await query.Where(l => !l.IsSuccess).FirstOrDefaultAsync();
-        var items = await query.Take(take).ToListAsync();
-
-        return Ok(new
-        {
-            totalLogins = total,
-            lastSuccessfulAt = lastSuccess?.CreatedAt,
-            lastFailedAt = lastFailed?.CreatedAt,
-            logins = items.Select(l => new
+            var user = await _context.Users.FindAsync(id);
+            if (user == null)
             {
-                l.Id,
-                l.Email,
-                l.IsSuccess,
-                l.IpAddress,
-                l.UserAgent,
-                l.CreatedAt
-            })
-        });
+                return NotFound($"User with ID {id} not found");
+            }
+
+            take = Math.Clamp(take, 1, 100);
+
+            // Optimize: Add AsNoTracking for read-only audit query
+            var query = _context.LoginAudits
+                .AsNoTracking()
+                .Where(l => l.UserId == id)
+                .OrderByDescending(l => l.CreatedAt);
+
+            var total = await query.CountAsync();
+            var lastSuccess = await query.Where(l => l.IsSuccess).FirstOrDefaultAsync();
+            var lastFailed = await query.Where(l => !l.IsSuccess).FirstOrDefaultAsync();
+            var items = await query.Take(take).ToListAsync();
+
+            return Ok(new
+            {
+                totalLogins = total,
+                lastSuccessfulAt = lastSuccess?.CreatedAt,
+                lastFailedAt = lastFailed?.CreatedAt,
+                logins = items.Select(l => new
+                {
+                    l.Id,
+                    l.Email,
+                    l.IsSuccess,
+                    l.IpAddress,
+                    l.UserAgent,
+                    l.CreatedAt
+                })
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving login history for user {UserId}", id);
+            return StatusCode(500, CreateErrorResponse("An error occurred while retrieving login history"));
+        }
     }
 
     // POST: api/users
@@ -331,7 +343,7 @@ public class UsersController : AuthorizedControllerBase
                 TenantId = null, // Users are cross-tenant
                 EntityType = "User",
                 EntityId = user.Id,
-                EntitySnapshot = System.Text.Json.JsonSerializer.Serialize(new { user.Id, user.Email, user.FirstName, user.LastName, user.IsActive }),
+                EntitySnapshot = System.Text.Json.JsonSerializer.Serialize(new { user.Id, user.Email, user.DisplayName, user.IsActive }),
                 ArchivedAt = DateTime.UtcNow,
                 ArchivedByUserId = GetCurrentUserId(),
                 Status = DataArchiveStatus.PermanentlyDeleted,
@@ -344,7 +356,9 @@ public class UsersController : AuthorizedControllerBase
             _context.Users.Remove(user);
             await _context.SaveChangesAsync();
 
-            _logger.LogWarning("User {UserId} HARD DELETED by user {DeletedBy}", id, GetCurrentUserId());
+            _logger.LogWarning(
+                "User HARD DELETED: {UserId} (Email: {Email}, DisplayName: {DisplayName}, IsActive: {IsActive}, CreatedAt: {CreatedAt}) by user {DeletedBy}. Archive ID: {ArchiveId}",
+                id, user.Email, user.DisplayName, user.IsActive, user.CreatedAt, GetCurrentUserId(), archive.Id);
 
             return NoContent();
         }
@@ -624,28 +638,86 @@ public class UsersController : AuthorizedControllerBase
             var user = await _context.Users.FindAsync(userId);
             if (user == null)
             {
-                return NotFound("User not found");
+                return NotFound(new { message = "User not found" });
             }
 
-            // TODO: Implement proper password verification and hashing
-            // For now, this is a placeholder endpoint that returns success
-            // In a production system, you would:
-            // 1. Verify the current password
-            // 2. Hash the new password with a proper algorithm (bcrypt, Argon2, etc.)
-            // 3. Store the hashed password
+            // Verify new password matches confirmation
+            if (request.NewPassword != request.ConfirmPassword)
+            {
+                return BadRequest(new { message = "New password and confirmation do not match" });
+            }
 
+            // Verify current password
+            if (string.IsNullOrEmpty(user.PasswordHash) ||
+                !BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
+            {
+                _logger.LogWarning("Failed password change attempt for user {UserId}: incorrect current password", userId);
+                return BadRequest(new { message = "Current password is incorrect" });
+            }
+
+            // Validate new password requirements
+            var validationError = ValidatePassword(request.NewPassword);
+            if (validationError != null)
+            {
+                return BadRequest(new { message = validationError });
+            }
+
+            // Hash and save new password
+            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword, workFactor: 12);
+            user.PasswordChangedAt = DateTime.UtcNow;
             user.UpdatedAt = DateTime.UtcNow;
+
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Password change requested for user {UserId}", userId);
+            _logger.LogInformation("Password changed successfully for user {UserId}", userId);
 
-            return NoContent();
+            return Ok(new { message = "Password changed successfully" });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error changing password");
-            return StatusCode(500, "An error occurred while changing the password");
+            return StatusCode(500, new { message = "An error occurred while changing the password" });
         }
+    }
+
+    private string? ValidatePassword(string password)
+    {
+        if (string.IsNullOrWhiteSpace(password))
+        {
+            return "Password is required";
+        }
+
+        if (password.Length < 8)
+        {
+            return "Password must be at least 8 characters long";
+        }
+
+        if (password.Length > 128)
+        {
+            return "Password must not exceed 128 characters";
+        }
+
+        if (!password.Any(char.IsUpper))
+        {
+            return "Password must contain at least one uppercase letter";
+        }
+
+        if (!password.Any(char.IsLower))
+        {
+            return "Password must contain at least one lowercase letter";
+        }
+
+        if (!password.Any(char.IsDigit))
+        {
+            return "Password must contain at least one number";
+        }
+
+        if (!password.Any(ch => !char.IsLetterOrDigit(ch)))
+        {
+            return "Password must contain at least one special character";
+        }
+
+        return null;
     }
 
     // POST: api/users/me/profile-photo
@@ -709,7 +781,29 @@ public class UsersController : AuthorizedControllerBase
                 return NotFound("User not found");
             }
 
-            // TODO: Delete actual file from storage
+            // Try to delete the actual file from storage if it exists
+            if (!string.IsNullOrEmpty(user.ProfilePhotoUrl))
+            {
+                try
+                {
+                    // ProfilePhotoUrl is like /uploads/profile-photos/filename.jpg
+                    // Convert to physical path
+                    var relativePath = user.ProfilePhotoUrl.TrimStart('/');
+                    var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", relativePath);
+
+                    if (System.IO.File.Exists(filePath))
+                    {
+                        System.IO.File.Delete(filePath);
+                        _logger.LogInformation("Deleted profile photo file: {FilePath}", filePath);
+                    }
+                }
+                catch (Exception fileEx)
+                {
+                    // Log but don't fail the request - the file might not exist
+                    _logger.LogWarning(fileEx, "Failed to delete profile photo file for user {UserId}", userId);
+                }
+            }
+
             user.ProfilePhotoUrl = null;
             user.UpdatedAt = DateTime.UtcNow;
 

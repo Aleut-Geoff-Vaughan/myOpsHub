@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { Card, CardHeader, CardBody, Button, Table, StatusBadge, Input, Modal, FormGroup, Select } from '../components/ui';
 import { useTenants, useUsers } from '../hooks/useTenants';
@@ -11,6 +11,7 @@ import { useAuthStore } from '../stores/authStore';
 import type { Tenant as ApiTenant } from '../types/api';
 import { TenantStatus } from '../types/api';
 import { tenantsService } from '../services/tenantsService';
+import { tenantSettingsService } from '../services/tenantSettingsService';
 
 type AdminView = 'dashboard' | 'tenants' | 'users' | 'settings';
 type AdminScope = 'system' | 'tenant';
@@ -63,6 +64,48 @@ export function AdminPage({ viewOverride }: AdminPageProps = {}) {
 
   const { data: tenants = [] } = useTenants();
   const { data: users = [] } = useUsers();
+
+  // Fetch tenant settings when in tenant scope
+  const { data: tenantSettings, isLoading: isLoadingSettings } = useQuery({
+    queryKey: ['tenantSettings'],
+    queryFn: () => tenantSettingsService.getSettings(),
+    enabled: adminScope === 'tenant' && selectedView === 'settings',
+  });
+
+  // Update local settings when tenant settings load
+  useEffect(() => {
+    if (tenantSettings) {
+      setSettings({
+        emailNotifications: tenantSettings.emailNotificationsEnabled ?? true,
+        require2FA: tenantSettings.require2FA ?? false,
+        allowSelfRegistration: tenantSettings.allowSelfRegistration ?? false,
+        maintenanceMode: tenantSettings.maintenanceMode ?? false,
+        sessionTimeout: tenantSettings.sessionTimeoutMinutes ?? 30,
+        passwordMinLength: tenantSettings.passwordMinLength ?? 8,
+        failedLoginAttempts: tenantSettings.failedLoginAttemptsBeforeLock ?? 5,
+      });
+    }
+  }, [tenantSettings]);
+
+  // Mutation to save settings
+  const saveSettingsMutation = useMutation({
+    mutationFn: () => tenantSettingsService.updateSettings({
+      emailNotificationsEnabled: settings.emailNotifications,
+      require2FA: settings.require2FA,
+      allowSelfRegistration: settings.allowSelfRegistration,
+      maintenanceMode: settings.maintenanceMode,
+      sessionTimeoutMinutes: settings.sessionTimeout,
+      passwordMinLength: settings.passwordMinLength,
+      failedLoginAttemptsBeforeLock: settings.failedLoginAttempts,
+    }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tenantSettings'] });
+      toast.success('Settings saved successfully!');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to save settings');
+    },
+  });
 
   const createTenantMutation = useMutation({
     mutationFn: (data: Omit<ApiTenant, 'id' | 'createdAt' | 'updatedAt'>) =>
@@ -677,12 +720,10 @@ export function AdminPage({ viewOverride }: AdminPageProps = {}) {
               <div className="mt-6 pt-6 border-t">
                 <Button
                   variant="primary"
-                  onClick={() => {
-                    // TODO: Implement save settings to API
-                    toast.success('Settings saved successfully!');
-                  }}
+                  onClick={() => saveSettingsMutation.mutate()}
+                  disabled={saveSettingsMutation.isPending || isLoadingSettings}
                 >
-                  Save Security Settings
+                  {saveSettingsMutation.isPending ? 'Saving...' : 'Save Security Settings'}
                 </Button>
               </div>
             </CardBody>

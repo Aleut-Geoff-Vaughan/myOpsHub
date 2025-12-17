@@ -23,6 +23,7 @@ public enum AppRole
     OverrideApprover,
     ResumeViewer,  // Can view and search all employee resumes within tenant
     FinanceLead,   // Can manage employee cost rates and view financial forecasts
+    BusinessDeveloper, // Can access mySalesOps module for opportunity management
 
     // System-Level Roles (assigned via User.IsSystemAdmin or future system-level permissions)
     SystemAdmin,

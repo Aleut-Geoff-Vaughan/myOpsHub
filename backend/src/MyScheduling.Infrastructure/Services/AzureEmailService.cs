@@ -109,6 +109,9 @@ Security Notice:
 
     public async Task<EmailResult> SendEmailAsync(string toEmail, string subject, string htmlBody, string? plainTextBody = null)
     {
+        const int maxRetries = 3;
+        var startTime = DateTime.UtcNow;
+
         try
         {
             if (_emailClient == null)
@@ -143,34 +146,77 @@ Security Notice:
 
             _logger.LogInformation("Sending email via Azure Communication Services to {ToEmail}. Subject: {Subject}", toEmail, subject);
 
-            // Send email and wait for result
-            EmailSendOperation emailSendOperation = await _emailClient.SendAsync(
-                WaitUntil.Completed,
-                emailMessage);
-
-            var result = emailSendOperation.Value;
-
-            if (result.Status == EmailSendStatus.Succeeded)
+            // Retry logic for transient failures
+            RequestFailedException? lastException = null;
+            for (int attempt = 1; attempt <= maxRetries; attempt++)
             {
-                _logger.LogInformation("Email sent successfully to {ToEmail}. MessageId: {MessageId}", toEmail, emailSendOperation.Id);
-                return EmailResult.Succeeded(emailSendOperation.Id);
+                try
+                {
+                    // Send email and wait for result
+                    EmailSendOperation emailSendOperation = await _emailClient.SendAsync(
+                        WaitUntil.Completed,
+                        emailMessage);
+
+                    var result = emailSendOperation.Value;
+                    var duration = (DateTime.UtcNow - startTime).TotalMilliseconds;
+
+                    if (result.Status == EmailSendStatus.Succeeded)
+                    {
+                        _logger.LogInformation(
+                            "Email sent successfully to {ToEmail}. MessageId: {MessageId}, Duration: {Duration}ms, Attempts: {Attempts}",
+                            toEmail, emailSendOperation.Id, duration, attempt);
+                        return EmailResult.Succeeded(emailSendOperation.Id);
+                    }
+                    else
+                    {
+                        _logger.LogWarning(
+                            "Email send returned status {Status} for {ToEmail}. Duration: {Duration}ms",
+                            result.Status, toEmail, duration);
+                        return EmailResult.Failed($"Email send status: {result.Status}");
+                    }
+                }
+                catch (RequestFailedException ex) when (IsTransientError(ex) && attempt < maxRetries)
+                {
+                    lastException = ex;
+                    var delay = TimeSpan.FromSeconds(Math.Pow(2, attempt)); // Exponential backoff: 2s, 4s, 8s
+                    _logger.LogWarning(
+                        "Azure Email transient failure on attempt {Attempt}/{MaxRetries} for {ToEmail}. Status: {Status}, ErrorCode: {ErrorCode}. Retrying in {Delay}s",
+                        attempt, maxRetries, toEmail, ex.Status, ex.ErrorCode, delay.TotalSeconds);
+                    await Task.Delay(delay);
+                }
             }
-            else
-            {
-                _logger.LogWarning("Email send returned status {Status} for {ToEmail}", result.Status, toEmail);
-                return EmailResult.Failed($"Email send status: {result.Status}");
-            }
+
+            // All retries exhausted
+            var totalDuration = (DateTime.UtcNow - startTime).TotalMilliseconds;
+            _logger.LogError(lastException,
+                "Azure Email request failed after {MaxRetries} attempts for {ToEmail}. Total Duration: {Duration}ms, Final Status: {Status}, ErrorCode: {ErrorCode}",
+                maxRetries, toEmail, totalDuration, lastException?.Status, lastException?.ErrorCode);
+            return EmailResult.Failed($"Azure Email error after {maxRetries} attempts: {lastException?.Message}");
         }
         catch (RequestFailedException ex)
         {
-            _logger.LogError(ex, "Azure Email request failed for {ToEmail}. Status: {Status}, ErrorCode: {ErrorCode}",
-                toEmail, ex.Status, ex.ErrorCode);
+            var duration = (DateTime.UtcNow - startTime).TotalMilliseconds;
+            _logger.LogError(ex,
+                "Azure Email request failed for {ToEmail}. Status: {Status}, ErrorCode: {ErrorCode}, Duration: {Duration}ms",
+                toEmail, ex.Status, ex.ErrorCode, duration);
             return EmailResult.Failed($"Azure Email error: {ex.Message}");
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to send email to {ToEmail}. Subject: {Subject}", toEmail, subject);
+            var duration = (DateTime.UtcNow - startTime).TotalMilliseconds;
+            _logger.LogError(ex,
+                "Failed to send email to {ToEmail}. Subject: {Subject}, Duration: {Duration}ms, ExceptionType: {ExceptionType}",
+                toEmail, subject, duration, ex.GetType().Name);
             return EmailResult.Failed($"Failed to send email: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Determines if an Azure request failure is transient and eligible for retry.
+    /// </summary>
+    private static bool IsTransientError(RequestFailedException ex)
+    {
+        // Retry on server errors (5xx) and some client errors
+        return ex.Status >= 500 || ex.Status == 429; // 429 = Too Many Requests
     }
 }

@@ -40,17 +40,26 @@ public class RequestLoggingMiddleware
         var stopwatch = Stopwatch.StartNew();
 
         // Extract user info from JWT claims if available
-        var userId = context.User?.FindFirst("UserId")?.Value;
-        var userEmail = context.User?.FindFirst("Email")?.Value ??
-                       context.User?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
+        // Use NameIdentifier for user ID (standard claim type used by our JWT)
+        var userId = context.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        var userEmail = context.User?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value;
+        // Check X-Tenant-Id header first (frontend workspace selection), then fall back to JWT claim
         var tenantId = context.Request.Headers["X-Tenant-Id"].FirstOrDefault() ??
                       context.User?.FindFirst("TenantId")?.Value;
 
-        // Push user context to Serilog
+        // Build query string for logging (redact sensitive params)
+        var queryString = context.Request.QueryString.HasValue
+            ? RedactSensitiveQueryParams(context.Request.QueryString.Value)
+            : "";
+        var fullPath = string.IsNullOrEmpty(queryString) ? path : $"{path}{queryString}";
+
+        // Push user context to Serilog - these properties will appear in ALL logs during this request
         using (LogContext.PushProperty("UserId", userId ?? "anonymous"))
         using (LogContext.PushProperty("UserEmail", userEmail ?? "anonymous"))
         using (LogContext.PushProperty("TenantId", tenantId ?? "none"))
         using (LogContext.PushProperty("ClientIp", GetClientIp(context)))
+        using (LogContext.PushProperty("RequestPath", path))
+        using (LogContext.PushProperty("RequestMethod", context.Request.Method))
         {
             try
             {
@@ -67,7 +76,7 @@ public class RequestLoggingMiddleware
                 _logger.Log(level,
                     "HTTP {Method} {Path} responded {StatusCode} in {ElapsedMs}ms",
                     context.Request.Method,
-                    path,
+                    fullPath,
                     context.Response.StatusCode,
                     stopwatch.ElapsedMilliseconds);
             }
@@ -78,7 +87,7 @@ public class RequestLoggingMiddleware
                 _logger.LogError(ex,
                     "HTTP {Method} {Path} failed after {ElapsedMs}ms",
                     context.Request.Method,
-                    path,
+                    fullPath,
                     stopwatch.ElapsedMilliseconds);
 
                 throw;
@@ -105,6 +114,49 @@ public class RequestLoggingMiddleware
 
         // Fall back to connection remote IP
         return context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
+    }
+
+    /// <summary>
+    /// Redacts sensitive query parameters from the query string for safe logging.
+    /// </summary>
+    private static string RedactSensitiveQueryParams(string? queryString)
+    {
+        if (string.IsNullOrEmpty(queryString))
+            return "";
+
+        // List of sensitive parameter names to redact
+        var sensitiveParams = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "token", "password", "secret", "key", "apikey", "api_key",
+            "authorization", "auth", "credential", "credentials"
+        };
+
+        // Parse and rebuild query string with redacted values
+        var parts = queryString.TrimStart('?').Split('&');
+        var redactedParts = new List<string>();
+
+        foreach (var part in parts)
+        {
+            var separatorIndex = part.IndexOf('=');
+            if (separatorIndex > 0)
+            {
+                var paramName = part.Substring(0, separatorIndex);
+                if (sensitiveParams.Contains(paramName))
+                {
+                    redactedParts.Add($"{paramName}=[REDACTED]");
+                }
+                else
+                {
+                    redactedParts.Add(part);
+                }
+            }
+            else
+            {
+                redactedParts.Add(part);
+            }
+        }
+
+        return "?" + string.Join("&", redactedParts);
     }
 }
 

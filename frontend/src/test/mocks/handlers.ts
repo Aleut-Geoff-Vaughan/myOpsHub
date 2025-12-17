@@ -82,6 +82,24 @@ export const handlers = [
 
   // Health check
   http.get('/health', () => {
-    return HttpResponse.json({ status: 'Healthy' });
+    return HttpResponse.json({
+      status: 'Healthy',
+      environment: 'Test',
+      checks: [
+        { name: 'database', status: 'Healthy' },
+        { name: 'api', status: 'Healthy' },
+      ],
+    });
+  }),
+
+  // SSO config
+  http.get('/api/auth/sso/config', () => {
+    return HttpResponse.json({
+      enabled: false,
+      clientId: '',
+      tenantId: '',
+      authority: '',
+      redirectUri: '',
+    });
   }),
 ];

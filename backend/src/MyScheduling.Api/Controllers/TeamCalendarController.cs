@@ -564,6 +564,56 @@ public class TeamCalendarController : AuthorizedControllerBase
     }
 
     /// <summary>
+    /// Update a member's membership type
+    /// </summary>
+    [HttpPatch("{id}/members/{memberId}")]
+    [RequiresPermission(Resource = "TeamCalendar", Action = PermissionAction.Update)]
+    public async Task<ActionResult<TeamCalendarMemberResponse>> UpdateMember(
+        Guid id,
+        Guid memberId,
+        [FromBody] UpdateTeamCalendarMemberRequest request)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var member = await _context.TeamCalendarMembers
+                .Include(m => m.User)
+                    .ThenInclude(u => u!.Manager)
+                .FirstOrDefaultAsync(m => m.Id == memberId && m.TeamCalendarId == id && m.IsActive);
+
+            if (member == null)
+            {
+                return NotFound(new { error = "Member not found in this calendar" });
+            }
+
+            member.MembershipType = request.MembershipType;
+            member.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Member {MemberId} in team calendar {CalendarId} updated to {MembershipType} by user {UserId}",
+                memberId, id, request.MembershipType, userId);
+
+            return Ok(new TeamCalendarMemberResponse
+            {
+                Id = member.Id,
+                TeamCalendarId = member.TeamCalendarId,
+                UserId = member.UserId,
+                User = ToUserSummary(member.User, member.User?.Manager),
+                MembershipType = member.MembershipType,
+                AddedDate = member.AddedDate,
+                AddedByUserId = member.AddedByUserId,
+                IsActive = member.IsActive
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating member {MemberId} in team calendar {Id}", memberId, id);
+            return StatusCode(500, new { error = "An error occurred while updating the member" });
+        }
+    }
+
+    /// <summary>
     /// Remove a member from a team calendar
     /// </summary>
     [HttpDelete("{id}/members/{memberId}")]

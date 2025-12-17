@@ -832,6 +832,171 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.ToTable("authorization_audit_logs");
                 });
 
+            modelBuilder.Entity("MyScheduling.Core.Entities.BiddingEntity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Address")
+                        .HasColumnType("text")
+                        .HasColumnName("address");
+
+                    b.Property<string>("CageCode")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("cage_code");
+
+                    b.Property<string>("City")
+                        .HasColumnType("text")
+                        .HasColumnName("city");
+
+                    b.Property<string>("Country")
+                        .HasColumnType("text")
+                        .HasColumnName("country");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_by_user_id");
+
+                    b.Property<string>("DeletionReason")
+                        .HasColumnType("text")
+                        .HasColumnName("deletion_reason");
+
+                    b.Property<string>("DunsNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("duns_number");
+
+                    b.Property<bool>("Is8a")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is8a");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<bool>("IsEDWOSB")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_edwosb");
+
+                    b.Property<bool>("IsHUBZone")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_hubzone");
+
+                    b.Property<bool>("IsSDB")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_sdb");
+
+                    b.Property<bool>("IsSDVOSB")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_sdvosb");
+
+                    b.Property<bool>("IsSmallBusiness")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_small_business");
+
+                    b.Property<bool>("IsVOSB")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_vosb");
+
+                    b.Property<bool>("IsWOSB")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_wosb");
+
+                    b.Property<string>("LegalName")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("legal_name");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text")
+                        .HasColumnName("notes");
+
+                    b.Property<string>("PostalCode")
+                        .HasColumnType("text")
+                        .HasColumnName("postal_code");
+
+                    b.Property<DateTime?>("SbaEntryDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("sba_entry_date");
+
+                    b.Property<DateTime?>("SbaExpirationDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("sba_expiration_date");
+
+                    b.Property<DateTime?>("SbaGraduationDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("sba_graduation_date");
+
+                    b.Property<string>("ShortName")
+                        .HasColumnType("text")
+                        .HasColumnName("short_name");
+
+                    b.Property<string>("State")
+                        .HasColumnType("text")
+                        .HasColumnName("state");
+
+                    b.Property<string>("TaxId")
+                        .HasColumnType("text")
+                        .HasColumnName("tax_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("UeiNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("uei_number");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_bidding_entities");
+
+                    b.HasIndex("TenantId", "Is8a")
+                        .HasDatabaseName("ix_bidding_entities_tenant_id_is8a");
+
+                    b.HasIndex("TenantId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("ix_bidding_entities_tenant_id_name");
+
+                    b.HasIndex("TenantId", "SbaExpirationDate")
+                        .HasDatabaseName("ix_bidding_entities_tenant_id_sba_expiration_date");
+
+                    b.ToTable("bidding_entities");
+                });
+
             modelBuilder.Entity("MyScheduling.Core.Entities.Booking", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1645,6 +1810,129 @@ namespace MyScheduling.Infrastructure.Migrations
                         .HasDatabaseName("ix_company_holidays_tenant_id_holiday_date_type");
 
                     b.ToTable("company_holidays");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.ContractVehicle", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime?>("AwardDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("award_date");
+
+                    b.Property<decimal?>("AwardedValue")
+                        .HasColumnType("numeric")
+                        .HasColumnName("awarded_value");
+
+                    b.Property<Guid?>("BiddingEntityId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bidding_entity_id");
+
+                    b.Property<decimal?>("CeilingValue")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("ceiling_value");
+
+                    b.Property<string>("ContractNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("contract_number");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_by_user_id");
+
+                    b.Property<string>("DeletionReason")
+                        .HasColumnType("text")
+                        .HasColumnName("deletion_reason");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("EligibilityNotes")
+                        .HasColumnType("text")
+                        .HasColumnName("eligibility_notes");
+
+                    b.Property<DateTime?>("EndDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("end_date");
+
+                    b.Property<DateTime?>("ExpirationDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expiration_date");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("IssuingAgency")
+                        .HasColumnType("text")
+                        .HasColumnName("issuing_agency");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("name");
+
+                    b.Property<decimal?>("RemainingValue")
+                        .HasColumnType("numeric")
+                        .HasColumnName("remaining_value");
+
+                    b.Property<DateTime?>("StartDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("start_date");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.Property<string>("VehicleType")
+                        .HasColumnType("text")
+                        .HasColumnName("vehicle_type");
+
+                    b.HasKey("Id")
+                        .HasName("pk_contract_vehicles");
+
+                    b.HasIndex("BiddingEntityId")
+                        .HasDatabaseName("ix_contract_vehicles_bidding_entity_id");
+
+                    b.HasIndex("TenantId", "ExpirationDate")
+                        .HasDatabaseName("ix_contract_vehicles_tenant_id_expiration_date");
+
+                    b.HasIndex("TenantId", "Name")
+                        .HasDatabaseName("ix_contract_vehicles_tenant_id_name");
+
+                    b.ToTable("contract_vehicles");
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.CostRateImportBatch", b =>
@@ -5543,6 +5831,77 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.ToTable("login_audits");
                 });
 
+            modelBuilder.Entity("MyScheduling.Core.Entities.LossReason", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_by_user_id");
+
+                    b.Property<string>("DeletionReason")
+                        .HasColumnType("text")
+                        .HasColumnName("deletion_reason");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_loss_reasons");
+
+                    b.HasIndex("TenantId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("ix_loss_reasons_tenant_id_name");
+
+                    b.ToTable("loss_reasons");
+                });
+
             modelBuilder.Entity("MyScheduling.Core.Entities.MagicLinkToken", b =>
                 {
                     b.Property<Guid>("Id")
@@ -6387,6 +6746,410 @@ namespace MyScheduling.Infrastructure.Migrations
                         .HasDatabaseName("ix_office_travel_guides_tenant_id_office_id");
 
                     b.ToTable("office_travel_guides");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.OpportunityCapability", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal?>("AllocatedAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("allocated_amount");
+
+                    b.Property<string>("Capability")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("capability");
+
+                    b.Property<string>("CapabilityBusinessLine")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("capability_business_line");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_by_user_id");
+
+                    b.Property<string>("DeletionReason")
+                        .HasColumnType("text")
+                        .HasColumnName("deletion_reason");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<Guid>("OpportunityId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("opportunity_id");
+
+                    b.Property<string>("ParentCapability")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("parent_capability");
+
+                    b.Property<decimal?>("Percentage")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("percentage");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.Property<decimal?>("WeightedAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("weighted_amount");
+
+                    b.HasKey("Id")
+                        .HasName("pk_opportunity_capabilities");
+
+                    b.HasIndex("OpportunityId")
+                        .HasDatabaseName("ix_opportunity_capabilities_opportunity_id");
+
+                    b.HasIndex("TenantId", "OpportunityId")
+                        .HasDatabaseName("ix_opportunity_capabilities_tenant_id_opportunity_id");
+
+                    b.ToTable("opportunity_capabilities");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.OpportunityContactRole", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ContactId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("contact_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_by_user_id");
+
+                    b.Property<string>("DeletionReason")
+                        .HasColumnType("text")
+                        .HasColumnName("deletion_reason");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_primary");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text")
+                        .HasColumnName("notes");
+
+                    b.Property<Guid>("OpportunityId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("opportunity_id");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("role");
+
+                    b.Property<Guid?>("SalesContactId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sales_contact_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_opportunity_contact_roles");
+
+                    b.HasIndex("ContactId")
+                        .HasDatabaseName("ix_opportunity_contact_roles_contact_id");
+
+                    b.HasIndex("OpportunityId")
+                        .HasDatabaseName("ix_opportunity_contact_roles_opportunity_id");
+
+                    b.HasIndex("SalesContactId")
+                        .HasDatabaseName("ix_opportunity_contact_roles_sales_contact_id");
+
+                    b.HasIndex("TenantId", "OpportunityId", "ContactId")
+                        .HasDatabaseName("ix_opportunity_contact_roles_tenant_id_opportunity_id_contact_~");
+
+                    b.ToTable("opportunity_contact_roles");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.OpportunityFieldHistory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("ChangedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("changed_at");
+
+                    b.Property<Guid>("ChangedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("changed_by_user_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_by_user_id");
+
+                    b.Property<string>("DeletionReason")
+                        .HasColumnType("text")
+                        .HasColumnName("deletion_reason");
+
+                    b.Property<string>("FieldName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("field_name");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("NewValue")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("new_value");
+
+                    b.Property<string>("OldValue")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("old_value");
+
+                    b.Property<Guid>("OpportunityId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("opportunity_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_opportunity_field_histories");
+
+                    b.HasIndex("ChangedByUserId")
+                        .HasDatabaseName("ix_opportunity_field_histories_changed_by_user_id");
+
+                    b.HasIndex("OpportunityId", "ChangedAt")
+                        .HasDatabaseName("ix_opportunity_field_histories_opportunity_id_changed_at");
+
+                    b.ToTable("opportunity_field_histories");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.OpportunityNote", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("content");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_by_user_id");
+
+                    b.Property<string>("DeletionReason")
+                        .HasColumnType("text")
+                        .HasColumnName("deletion_reason");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("NoteType")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("note_type");
+
+                    b.Property<Guid>("OpportunityId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("opportunity_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_opportunity_notes");
+
+                    b.HasIndex("OpportunityId")
+                        .HasDatabaseName("ix_opportunity_notes_opportunity_id");
+
+                    b.HasIndex("TenantId", "OpportunityId")
+                        .HasDatabaseName("ix_opportunity_notes_tenant_id_opportunity_id");
+
+                    b.ToTable("opportunity_notes");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.OpportunityTeamMember", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_by_user_id");
+
+                    b.Property<string>("DeletionReason")
+                        .HasColumnType("text")
+                        .HasColumnName("deletion_reason");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_primary");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text")
+                        .HasColumnName("notes");
+
+                    b.Property<Guid>("OpportunityId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("opportunity_id");
+
+                    b.Property<string>("Role")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("role");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_opportunity_team_members");
+
+                    b.HasIndex("OpportunityId")
+                        .HasDatabaseName("ix_opportunity_team_members_opportunity_id");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_opportunity_team_members_user_id");
+
+                    b.HasIndex("TenantId", "OpportunityId", "UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_opportunity_team_members_tenant_id_opportunity_id_user_id");
+
+                    b.ToTable("opportunity_team_members");
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.Permission", b =>
@@ -7378,6 +8141,78 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.ToTable("project_role_assignments");
                 });
 
+            modelBuilder.Entity("MyScheduling.Core.Entities.RefreshToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedByIp")
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)")
+                        .HasColumnName("created_by_ip");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<Guid?>("ReplacedByTokenId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("replaced_by_token_id");
+
+                    b.Property<DateTime?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<string>("RevokedByIp")
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)")
+                        .HasColumnName("revoked_by_ip");
+
+                    b.Property<string>("RevokedReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("revoked_reason");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("token_hash");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("user_agent");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_refresh_tokens");
+
+                    b.HasIndex("ExpiresAt")
+                        .HasDatabaseName("ix_refresh_tokens_expires_at");
+
+                    b.HasIndex("ReplacedByTokenId")
+                        .HasDatabaseName("ix_refresh_tokens_replaced_by_token_id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_refresh_tokens_token_hash");
+
+                    b.HasIndex("UserId", "ExpiresAt")
+                        .HasDatabaseName("ix_refresh_tokens_user_id_expires_at");
+
+                    b.ToTable("refresh_tokens");
+                });
+
             modelBuilder.Entity("MyScheduling.Core.Entities.ResumeApproval", b =>
                 {
                     b.Property<Guid>("Id")
@@ -8234,6 +9069,1332 @@ namespace MyScheduling.Infrastructure.Migrations
                         .HasDatabaseName("ix_role_permission_templates_role_resource");
 
                     b.ToTable("role_permission_templates");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.SalesAccount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AccountType")
+                        .HasColumnType("text")
+                        .HasColumnName("account_type");
+
+                    b.Property<string>("Acronym")
+                        .HasColumnType("text")
+                        .HasColumnName("acronym");
+
+                    b.Property<string>("Address")
+                        .HasColumnType("text")
+                        .HasColumnName("address");
+
+                    b.Property<string>("City")
+                        .HasColumnType("text")
+                        .HasColumnName("city");
+
+                    b.Property<string>("Country")
+                        .HasColumnType("text")
+                        .HasColumnName("country");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_by_user_id");
+
+                    b.Property<string>("DeletionReason")
+                        .HasColumnType("text")
+                        .HasColumnName("deletion_reason");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("FederalDepartment")
+                        .HasColumnType("text")
+                        .HasColumnName("federal_department");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text")
+                        .HasColumnName("notes");
+
+                    b.Property<Guid?>("ParentAccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("parent_account_id");
+
+                    b.Property<string>("Phone")
+                        .HasColumnType("text")
+                        .HasColumnName("phone");
+
+                    b.Property<string>("Portfolio")
+                        .HasColumnType("text")
+                        .HasColumnName("portfolio");
+
+                    b.Property<string>("PostalCode")
+                        .HasColumnType("text")
+                        .HasColumnName("postal_code");
+
+                    b.Property<string>("State")
+                        .HasColumnType("text")
+                        .HasColumnName("state");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.Property<string>("Website")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("website");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sales_accounts");
+
+                    b.HasIndex("ParentAccountId")
+                        .HasDatabaseName("ix_sales_accounts_parent_account_id");
+
+                    b.HasIndex("TenantId", "AccountType")
+                        .HasDatabaseName("ix_sales_accounts_tenant_id_account_type");
+
+                    b.HasIndex("TenantId", "Name")
+                        .HasDatabaseName("ix_sales_accounts_tenant_id_name");
+
+                    b.ToTable("sales_accounts");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.SalesContact", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("AccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("account_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_by_user_id");
+
+                    b.Property<string>("DeletionReason")
+                        .HasColumnType("text")
+                        .HasColumnName("deletion_reason");
+
+                    b.Property<string>("Department")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("department");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("email");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("first_name");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("last_name");
+
+                    b.Property<string>("LinkedInUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("linked_in_url");
+
+                    b.Property<string>("MailingAddress")
+                        .HasColumnType("text")
+                        .HasColumnName("mailing_address");
+
+                    b.Property<string>("MailingCity")
+                        .HasColumnType("text")
+                        .HasColumnName("mailing_city");
+
+                    b.Property<string>("MailingPostalCode")
+                        .HasColumnType("text")
+                        .HasColumnName("mailing_postal_code");
+
+                    b.Property<string>("MailingState")
+                        .HasColumnType("text")
+                        .HasColumnName("mailing_state");
+
+                    b.Property<string>("MobilePhone")
+                        .HasColumnType("text")
+                        .HasColumnName("mobile_phone");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text")
+                        .HasColumnName("notes");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("phone");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sales_contacts");
+
+                    b.HasIndex("AccountId")
+                        .HasDatabaseName("ix_sales_contacts_account_id");
+
+                    b.HasIndex("TenantId", "AccountId")
+                        .HasDatabaseName("ix_sales_contacts_tenant_id_account_id");
+
+                    b.HasIndex("TenantId", "Email")
+                        .HasDatabaseName("ix_sales_contacts_tenant_id_email");
+
+                    b.ToTable("sales_contacts");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.SalesCustomFieldDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<string>("DefaultValue")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("default_value");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_by_user_id");
+
+                    b.Property<string>("DeletionReason")
+                        .HasColumnType("text")
+                        .HasColumnName("deletion_reason");
+
+                    b.Property<string>("DisplayLabel")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("display_label");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("entity_type");
+
+                    b.Property<string>("FieldName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("field_name");
+
+                    b.Property<int>("FieldType")
+                        .HasColumnType("integer")
+                        .HasColumnName("field_type");
+
+                    b.Property<string>("HelpText")
+                        .HasColumnType("text")
+                        .HasColumnName("help_text");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<bool>("IsRequired")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_required");
+
+                    b.Property<bool>("IsSearchable")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_searchable");
+
+                    b.Property<bool>("IsVisibleInList")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_visible_in_list");
+
+                    b.Property<string>("LookupEntityType")
+                        .HasColumnType("text")
+                        .HasColumnName("lookup_entity_type");
+
+                    b.Property<string>("PicklistOptions")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("picklist_options");
+
+                    b.Property<string>("Section")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("section");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sales_custom_field_definitions");
+
+                    b.HasIndex("TenantId", "EntityType", "FieldName")
+                        .IsUnique()
+                        .HasDatabaseName("ix_sales_custom_field_definitions_tenant_id_entity_type_field_~");
+
+                    b.HasIndex("TenantId", "EntityType", "SortOrder")
+                        .HasDatabaseName("ix_sales_custom_field_definitions_tenant_id_entity_type_sort_o~");
+
+                    b.ToTable("sales_custom_field_definitions");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.SalesCustomFieldValue", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool?>("BoolValue")
+                        .HasColumnType("boolean")
+                        .HasColumnName("bool_value");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTime?>("DateValue")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("date_value");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_by_user_id");
+
+                    b.Property<string>("DeletionReason")
+                        .HasColumnType("text")
+                        .HasColumnName("deletion_reason");
+
+                    b.Property<Guid>("EntityId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("entity_id");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("entity_type");
+
+                    b.Property<Guid>("FieldDefinitionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("field_definition_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<Guid?>("LookupValue")
+                        .HasColumnType("uuid")
+                        .HasColumnName("lookup_value");
+
+                    b.Property<decimal?>("NumberValue")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)")
+                        .HasColumnName("number_value");
+
+                    b.Property<string>("PicklistValue")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("picklist_value");
+
+                    b.Property<Guid?>("SalesCustomFieldDefinitionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sales_custom_field_definition_id");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<string>("TextValue")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("text_value");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sales_custom_field_values");
+
+                    b.HasIndex("SalesCustomFieldDefinitionId")
+                        .HasDatabaseName("ix_sales_custom_field_values_sales_custom_field_definition_id");
+
+                    b.HasIndex("FieldDefinitionId", "EntityId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_sales_custom_field_values_field_definition_id_entity_id");
+
+                    b.HasIndex("TenantId", "EntityType", "EntityId")
+                        .HasDatabaseName("ix_sales_custom_field_values_tenant_id_entity_type_entity_id");
+
+                    b.ToTable("sales_custom_field_values");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.SalesForecastGroup", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .HasColumnType("text")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_by_user_id");
+
+                    b.Property<string>("DeletionReason")
+                        .HasColumnType("text")
+                        .HasColumnName("deletion_reason");
+
+                    b.Property<string>("GroupType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("group_type");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid?>("ParentGroupId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("parent_group_id");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sales_forecast_groups");
+
+                    b.HasIndex("ParentGroupId")
+                        .HasDatabaseName("ix_sales_forecast_groups_parent_group_id");
+
+                    b.HasIndex("TenantId", "GroupType")
+                        .HasDatabaseName("ix_sales_forecast_groups_tenant_id_group_type");
+
+                    b.HasIndex("TenantId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("ix_sales_forecast_groups_tenant_id_name");
+
+                    b.ToTable("sales_forecast_groups");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.SalesForecastTarget", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal?>("ActualValue")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("actual_value");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_by_user_id");
+
+                    b.Property<string>("DeletionReason")
+                        .HasColumnType("text")
+                        .HasColumnName("deletion_reason");
+
+                    b.Property<int?>("FiscalMonth")
+                        .HasColumnType("integer")
+                        .HasColumnName("fiscal_month");
+
+                    b.Property<int?>("FiscalQuarter")
+                        .HasColumnType("integer")
+                        .HasColumnName("fiscal_quarter");
+
+                    b.Property<int>("FiscalYear")
+                        .HasColumnType("integer")
+                        .HasColumnName("fiscal_year");
+
+                    b.Property<Guid?>("ForecastGroupId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("forecast_group_id");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text")
+                        .HasColumnName("notes");
+
+                    b.Property<decimal>("TargetValue")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("target_value");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sales_forecast_targets");
+
+                    b.HasIndex("ForecastGroupId")
+                        .HasDatabaseName("ix_sales_forecast_targets_forecast_group_id");
+
+                    b.HasIndex("TenantId", "ForecastGroupId", "FiscalYear", "FiscalQuarter")
+                        .HasDatabaseName("ix_sales_forecast_targets_tenant_id_forecast_group_id_fiscal_y~");
+
+                    b.ToTable("sales_forecast_targets");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.SalesOpportunity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("AccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("account_id");
+
+                    b.Property<string>("AcquisitionType")
+                        .HasColumnType("text")
+                        .HasColumnName("acquisition_type");
+
+                    b.Property<DateTime?>("ActualProposalSubmissionDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("actual_proposal_submission_date");
+
+                    b.Property<DateTime?>("ActualRfiSubmissionDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("actual_rfi_submission_date");
+
+                    b.Property<DateTime?>("ActualRfpReleaseDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("actual_rfp_release_date");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<string>("BAndPCode")
+                        .HasColumnType("text")
+                        .HasColumnName("band_pcode");
+
+                    b.Property<int>("BidDecision")
+                        .HasColumnType("integer")
+                        .HasColumnName("bid_decision");
+
+                    b.Property<Guid?>("BiddingEntityId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bidding_entity_id");
+
+                    b.Property<string>("Capability")
+                        .HasColumnType("text")
+                        .HasColumnName("capability");
+
+                    b.Property<string>("CapabilityBusinessLine")
+                        .HasColumnType("text")
+                        .HasColumnName("capability_business_line");
+
+                    b.Property<DateTime>("CloseDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("close_date");
+
+                    b.Property<string>("CloseFiscalQuarter")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("close_fiscal_quarter");
+
+                    b.Property<string>("CloseFiscalYear")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("close_fiscal_year");
+
+                    b.Property<string>("ContractType")
+                        .HasColumnType("text")
+                        .HasColumnName("contract_type");
+
+                    b.Property<Guid?>("ContractVehicleId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("contract_vehicle_id");
+
+                    b.Property<string>("CostpointProjectCode")
+                        .HasColumnType("text")
+                        .HasColumnName("costpoint_project_code");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<string>("CustomerFeedback")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("customer_feedback");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_by_user_id");
+
+                    b.Property<string>("DeletionReason")
+                        .HasColumnType("text")
+                        .HasColumnName("deletion_reason");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("description");
+
+                    b.Property<int?>("DurationMonths")
+                        .HasColumnType("integer")
+                        .HasColumnName("duration_months");
+
+                    b.Property<string>("GovWinId")
+                        .HasColumnType("text")
+                        .HasColumnName("gov_win_id");
+
+                    b.Property<int>("GrowthType")
+                        .HasColumnType("integer")
+                        .HasColumnName("growth_type");
+
+                    b.Property<bool>("IncludedInForecast")
+                        .HasColumnType("boolean")
+                        .HasColumnName("included_in_forecast");
+
+                    b.Property<string>("Incumbent")
+                        .HasColumnType("text")
+                        .HasColumnName("incumbent");
+
+                    b.Property<DateTime?>("IncumbentAwardDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("incumbent_award_date");
+
+                    b.Property<string>("IncumbentContractNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("incumbent_contract_number");
+
+                    b.Property<DateTime?>("IncumbentExpireDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("incumbent_expire_date");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<bool>("IsDirectAward")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_direct_award");
+
+                    b.Property<bool>("IsFrontDoor")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_front_door");
+
+                    b.Property<string>("LeadSource")
+                        .HasColumnType("text")
+                        .HasColumnName("lead_source");
+
+                    b.Property<Guid?>("LossReasonId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("loss_reason_id");
+
+                    b.Property<Guid?>("MasterContractId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("master_contract_id");
+
+                    b.Property<string>("MasterContractTitle")
+                        .HasColumnType("text")
+                        .HasColumnName("master_contract_title");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("NextStep")
+                        .HasColumnType("text")
+                        .HasColumnName("next_step");
+
+                    b.Property<string>("OpportunityLink")
+                        .HasColumnType("text")
+                        .HasColumnName("opportunity_link");
+
+                    b.Property<string>("OpportunityNumber")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("opportunity_number");
+
+                    b.Property<string>("OpportunityStatus")
+                        .HasColumnType("text")
+                        .HasColumnName("opportunity_status");
+
+                    b.Property<string>("OpportunityTerms")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("opportunity_terms");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("owner_id");
+
+                    b.Property<string>("PlaceOfPerformance")
+                        .HasColumnType("text")
+                        .HasColumnName("place_of_performance");
+
+                    b.Property<DateTime?>("PlannedProposalSubmissionDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("planned_proposal_submission_date");
+
+                    b.Property<DateTime?>("PlannedRfiSubmissionDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("planned_rfi_submission_date");
+
+                    b.Property<DateTime?>("PlannedRfpReleaseDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("planned_rfp_release_date");
+
+                    b.Property<string>("Portfolio")
+                        .HasColumnType("text")
+                        .HasColumnName("portfolio");
+
+                    b.Property<string>("PrimaryBusinessLine")
+                        .HasColumnType("text")
+                        .HasColumnName("primary_business_line");
+
+                    b.Property<Guid?>("PrimaryContactId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("primary_contact_id");
+
+                    b.Property<string>("PrimaryNaicsCode")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("primary_naics_code");
+
+                    b.Property<string>("Priority")
+                        .HasColumnType("text")
+                        .HasColumnName("priority");
+
+                    b.Property<int?>("ProbabilityGoPercent")
+                        .HasColumnType("integer")
+                        .HasColumnName("probability_go_percent");
+
+                    b.Property<int>("ProbabilityPercent")
+                        .HasColumnType("integer")
+                        .HasColumnName("probability_percent");
+
+                    b.Property<DateTime?>("ProjectFinishDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("project_finish_date");
+
+                    b.Property<DateTime?>("ProjectStartDate")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("project_start_date");
+
+                    b.Property<string>("ProposalId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("proposal_id");
+
+                    b.Property<string>("ResponseFolder")
+                        .HasColumnType("text")
+                        .HasColumnName("response_folder");
+
+                    b.Property<int?>("Result")
+                        .HasColumnType("integer")
+                        .HasColumnName("result");
+
+                    b.Property<string>("RevenueStream")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("revenue_stream");
+
+                    b.Property<int>("RfiStatus")
+                        .HasColumnType("integer")
+                        .HasColumnName("rfi_status");
+
+                    b.Property<string>("SolicitationNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("solicitation_number");
+
+                    b.Property<string>("SolutionDetails")
+                        .HasColumnType("text")
+                        .HasColumnName("solution_details");
+
+                    b.Property<Guid>("StageId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("stage_id");
+
+                    b.Property<decimal?>("TargetGrossMarginAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("target_gross_margin_amount");
+
+                    b.Property<decimal?>("TargetGrossMarginPercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("target_gross_margin_percent");
+
+                    b.Property<decimal?>("TargetOperatingIncomeAmount")
+                        .HasColumnType("numeric")
+                        .HasColumnName("target_operating_income_amount");
+
+                    b.Property<decimal?>("TargetOperatingIncomePercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("target_operating_income_percent");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<decimal>("TotalContractValue")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("total_contract_value");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer")
+                        .HasColumnName("type");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.Property<string>("WinningCompetitor")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("winning_competitor");
+
+                    b.Property<decimal?>("WinningPriceTcv")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)")
+                        .HasColumnName("winning_price_tcv");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sales_opportunities");
+
+                    b.HasIndex("AccountId")
+                        .HasDatabaseName("ix_sales_opportunities_account_id");
+
+                    b.HasIndex("BiddingEntityId")
+                        .HasDatabaseName("ix_sales_opportunities_bidding_entity_id");
+
+                    b.HasIndex("ContractVehicleId")
+                        .HasDatabaseName("ix_sales_opportunities_contract_vehicle_id");
+
+                    b.HasIndex("LossReasonId")
+                        .HasDatabaseName("ix_sales_opportunities_loss_reason_id");
+
+                    b.HasIndex("OwnerId")
+                        .HasDatabaseName("ix_sales_opportunities_owner_id");
+
+                    b.HasIndex("PrimaryContactId")
+                        .HasDatabaseName("ix_sales_opportunities_primary_contact_id");
+
+                    b.HasIndex("StageId")
+                        .HasDatabaseName("ix_sales_opportunities_stage_id");
+
+                    b.HasIndex("TenantId", "AccountId")
+                        .HasDatabaseName("ix_sales_opportunities_tenant_id_account_id");
+
+                    b.HasIndex("TenantId", "CloseDate")
+                        .HasDatabaseName("ix_sales_opportunities_tenant_id_close_date");
+
+                    b.HasIndex("TenantId", "OpportunityNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_sales_opportunities_tenant_id_opportunity_number");
+
+                    b.HasIndex("TenantId", "OwnerId")
+                        .HasDatabaseName("ix_sales_opportunities_tenant_id_owner_id");
+
+                    b.HasIndex("TenantId", "Result")
+                        .HasDatabaseName("ix_sales_opportunities_tenant_id_result");
+
+                    b.HasIndex("TenantId", "StageId")
+                        .HasDatabaseName("ix_sales_opportunities_tenant_id_stage_id");
+
+                    b.ToTable("sales_opportunities");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.SalesPicklistDefinition", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("AllowMultiple")
+                        .HasColumnType("boolean")
+                        .HasColumnName("allow_multiple");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_by_user_id");
+
+                    b.Property<string>("DeletionReason")
+                        .HasColumnType("text")
+                        .HasColumnName("deletion_reason");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("DisplayLabel")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("display_label");
+
+                    b.Property<string>("EntityType")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("entity_type");
+
+                    b.Property<string>("FieldName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("field_name");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<bool>("IsSystemPicklist")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_system_picklist");
+
+                    b.Property<string>("PicklistName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("picklist_name");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sales_picklist_definitions");
+
+                    b.HasIndex("TenantId", "PicklistName")
+                        .IsUnique()
+                        .HasDatabaseName("ix_sales_picklist_definitions_tenant_id_picklist_name");
+
+                    b.HasIndex("TenantId", "SortOrder")
+                        .HasDatabaseName("ix_sales_picklist_definitions_tenant_id_sort_order");
+
+                    b.ToTable("sales_picklist_definitions");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.SalesPicklistValue", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Color")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("color");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_by_user_id");
+
+                    b.Property<string>("DeletionReason")
+                        .HasColumnType("text")
+                        .HasColumnName("deletion_reason");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsDefault")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_default");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("label");
+
+                    b.Property<Guid>("PicklistDefinitionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("picklist_definition_id");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("value");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sales_picklist_values");
+
+                    b.HasIndex("PicklistDefinitionId", "SortOrder")
+                        .HasDatabaseName("ix_sales_picklist_values_picklist_definition_id_sort_order");
+
+                    b.HasIndex("TenantId", "PicklistDefinitionId", "Value")
+                        .IsUnique()
+                        .HasDatabaseName("ix_sales_picklist_values_tenant_id_picklist_definition_id_value");
+
+                    b.ToTable("sales_picklist_values");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.SalesStage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .HasColumnType("text")
+                        .HasColumnName("code");
+
+                    b.Property<string>("Color")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("color");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<int>("DefaultProbability")
+                        .HasColumnType("integer")
+                        .HasColumnName("default_probability");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<Guid?>("DeletedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deleted_by_user_id");
+
+                    b.Property<string>("DeletionReason")
+                        .HasColumnType("text")
+                        .HasColumnName("deletion_reason");
+
+                    b.Property<string>("Description")
+                        .HasColumnType("text")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsClosedStage")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_closed_stage");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_deleted");
+
+                    b.Property<bool>("IsLostStage")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_lost_stage");
+
+                    b.Property<bool>("IsWonStage")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_won_stage");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sales_stages");
+
+                    b.HasIndex("TenantId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("ix_sales_stages_tenant_id_name");
+
+                    b.HasIndex("TenantId", "SortOrder")
+                        .HasDatabaseName("ix_sales_stages_tenant_id_sort_order");
+
+                    b.ToTable("sales_stages");
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.ScifAccessLog", b =>
@@ -9660,6 +11821,10 @@ namespace MyScheduling.Infrastructure.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<bool>("AllowSelfRegistration")
+                        .HasColumnType("boolean")
+                        .HasColumnName("allow_self_registration");
+
                     b.Property<int>("CertificationExpiryEmailDays")
                         .HasColumnType("integer")
                         .HasColumnName("certification_expiry_email_days");
@@ -9728,6 +11893,10 @@ namespace MyScheduling.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("deletion_reason");
 
+                    b.Property<bool>("EmailNotificationsEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("email_notifications_enabled");
+
                     b.Property<bool>("EnableCertificationExpiryEmails")
                         .HasColumnType("boolean")
                         .HasColumnName("enable_certification_expiry_emails");
@@ -9743,6 +11912,10 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.Property<bool>("ExcludeSundays")
                         .HasColumnType("boolean")
                         .HasColumnName("exclude_sundays");
+
+                    b.Property<int>("FailedLoginAttemptsBeforeLock")
+                        .HasColumnType("integer")
+                        .HasColumnName("failed_login_attempts_before_lock");
 
                     b.Property<string>("FiscalYearPrefix")
                         .IsRequired()
@@ -9781,6 +11954,10 @@ namespace MyScheduling.Infrastructure.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("logo_width");
 
+                    b.Property<bool>("MaintenanceMode")
+                        .HasColumnType("boolean")
+                        .HasColumnName("maintenance_mode");
+
                     b.Property<bool>("NotificationBannerEnabled")
                         .HasColumnType("boolean")
                         .HasColumnName("notification_banner_enabled");
@@ -9797,9 +11974,17 @@ namespace MyScheduling.Infrastructure.Migrations
                         .HasColumnType("text")
                         .HasColumnName("notification_banner_type");
 
+                    b.Property<int>("PasswordMinLength")
+                        .HasColumnType("integer")
+                        .HasColumnName("password_min_length");
+
                     b.Property<string>("PrimaryColor")
                         .HasColumnType("text")
                         .HasColumnName("primary_color");
+
+                    b.Property<bool>("Require2FA")
+                        .HasColumnType("boolean")
+                        .HasColumnName("require2_fa");
 
                     b.Property<bool>("RequireBudgetApproval")
                         .HasColumnType("boolean")
@@ -9808,6 +11993,10 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.Property<string>("SecondaryColor")
                         .HasColumnType("text")
                         .HasColumnName("secondary_color");
+
+                    b.Property<int>("SessionTimeoutMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("session_timeout_minutes");
 
                     b.Property<bool>("ShowEnvironmentBanner")
                         .HasColumnType("boolean")
@@ -11113,6 +13302,18 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("MyScheduling.Core.Entities.BiddingEntity", b =>
+                {
+                    b.HasOne("MyScheduling.Core.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_bidding_entities__tenants_tenant_id");
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("MyScheduling.Core.Entities.Booking", b =>
                 {
                     b.HasOne("MyScheduling.Core.Entities.User", "BookedBy")
@@ -11260,6 +13461,25 @@ namespace MyScheduling.Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_company_holidays__tenants_tenant_id");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.ContractVehicle", b =>
+                {
+                    b.HasOne("MyScheduling.Core.Entities.BiddingEntity", "BiddingEntity")
+                        .WithMany()
+                        .HasForeignKey("BiddingEntityId")
+                        .HasConstraintName("fk_contract_vehicles_bidding_entities_bidding_entity_id");
+
+                    b.HasOne("MyScheduling.Core.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_contract_vehicles__tenants_tenant_id");
+
+                    b.Navigation("BiddingEntity");
 
                     b.Navigation("Tenant");
                 });
@@ -12175,6 +14395,18 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("MyScheduling.Core.Entities.LossReason", b =>
+                {
+                    b.HasOne("MyScheduling.Core.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_loss_reasons__tenants_tenant_id");
+
+                    b.Navigation("Tenant");
+                });
+
             modelBuilder.Entity("MyScheduling.Core.Entities.MagicLinkToken", b =>
                 {
                     b.HasOne("MyScheduling.Core.Entities.User", "User")
@@ -12367,6 +14599,134 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.Navigation("Office");
 
                     b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.OpportunityCapability", b =>
+                {
+                    b.HasOne("MyScheduling.Core.Entities.SalesOpportunity", "Opportunity")
+                        .WithMany("Capabilities")
+                        .HasForeignKey("OpportunityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_opportunity_capabilities__sales_opportunities_opportunity_id");
+
+                    b.HasOne("MyScheduling.Core.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_opportunity_capabilities__tenants_tenant_id");
+
+                    b.Navigation("Opportunity");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.OpportunityContactRole", b =>
+                {
+                    b.HasOne("MyScheduling.Core.Entities.SalesContact", "Contact")
+                        .WithMany()
+                        .HasForeignKey("ContactId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_opportunity_contact_roles__sales_contacts_contact_id");
+
+                    b.HasOne("MyScheduling.Core.Entities.SalesOpportunity", "Opportunity")
+                        .WithMany("ContactRoles")
+                        .HasForeignKey("OpportunityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_opportunity_contact_roles__sales_opportunities_opportunity_id");
+
+                    b.HasOne("MyScheduling.Core.Entities.SalesContact", null)
+                        .WithMany("OpportunityRoles")
+                        .HasForeignKey("SalesContactId")
+                        .HasConstraintName("fk_opportunity_contact_roles__sales_contacts_sales_contact_id");
+
+                    b.HasOne("MyScheduling.Core.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_opportunity_contact_roles__tenants_tenant_id");
+
+                    b.Navigation("Contact");
+
+                    b.Navigation("Opportunity");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.OpportunityFieldHistory", b =>
+                {
+                    b.HasOne("MyScheduling.Core.Entities.User", "ChangedByUser")
+                        .WithMany()
+                        .HasForeignKey("ChangedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_opportunity_field_histories__users_changed_by_user_id");
+
+                    b.HasOne("MyScheduling.Core.Entities.SalesOpportunity", "Opportunity")
+                        .WithMany("FieldHistory")
+                        .HasForeignKey("OpportunityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_opportunity_field_histories__sales_opportunities_opportunity_~");
+
+                    b.Navigation("ChangedByUser");
+
+                    b.Navigation("Opportunity");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.OpportunityNote", b =>
+                {
+                    b.HasOne("MyScheduling.Core.Entities.SalesOpportunity", "Opportunity")
+                        .WithMany("Notes")
+                        .HasForeignKey("OpportunityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_opportunity_notes__sales_opportunities_opportunity_id");
+
+                    b.HasOne("MyScheduling.Core.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_opportunity_notes__tenants_tenant_id");
+
+                    b.Navigation("Opportunity");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.OpportunityTeamMember", b =>
+                {
+                    b.HasOne("MyScheduling.Core.Entities.SalesOpportunity", "Opportunity")
+                        .WithMany("TeamMembers")
+                        .HasForeignKey("OpportunityId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_opportunity_team_members__sales_opportunities_opportunity_id");
+
+                    b.HasOne("MyScheduling.Core.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_opportunity_team_members__tenants_tenant_id");
+
+                    b.HasOne("MyScheduling.Core.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_opportunity_team_members__users_user_id");
+
+                    b.Navigation("Opportunity");
+
+                    b.Navigation("Tenant");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.Permission", b =>
@@ -12663,6 +15023,26 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.Navigation("WbsElement");
                 });
 
+            modelBuilder.Entity("MyScheduling.Core.Entities.RefreshToken", b =>
+                {
+                    b.HasOne("MyScheduling.Core.Entities.RefreshToken", "ReplacedByToken")
+                        .WithMany()
+                        .HasForeignKey("ReplacedByTokenId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_refresh_tokens_refresh_tokens_replaced_by_token_id");
+
+                    b.HasOne("MyScheduling.Core.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_refresh_tokens__users_user_id");
+
+                    b.Navigation("ReplacedByToken");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("MyScheduling.Core.Entities.ResumeApproval", b =>
                 {
                     b.HasOne("MyScheduling.Core.Entities.User", "RequestedBy")
@@ -12896,6 +15276,238 @@ namespace MyScheduling.Infrastructure.Migrations
                         .WithMany()
                         .HasForeignKey("TenantId")
                         .HasConstraintName("fk_role_permission_templates__tenants_tenant_id");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.SalesAccount", b =>
+                {
+                    b.HasOne("MyScheduling.Core.Entities.SalesAccount", "ParentAccount")
+                        .WithMany("ChildAccounts")
+                        .HasForeignKey("ParentAccountId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_sales_accounts_sales_accounts_parent_account_id");
+
+                    b.HasOne("MyScheduling.Core.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_sales_accounts__tenants_tenant_id");
+
+                    b.Navigation("ParentAccount");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.SalesContact", b =>
+                {
+                    b.HasOne("MyScheduling.Core.Entities.SalesAccount", "Account")
+                        .WithMany("Contacts")
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_sales_contacts_sales_accounts_account_id");
+
+                    b.HasOne("MyScheduling.Core.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_sales_contacts__tenants_tenant_id");
+
+                    b.Navigation("Account");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.SalesCustomFieldDefinition", b =>
+                {
+                    b.HasOne("MyScheduling.Core.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_sales_custom_field_definitions__tenants_tenant_id");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.SalesCustomFieldValue", b =>
+                {
+                    b.HasOne("MyScheduling.Core.Entities.SalesCustomFieldDefinition", "FieldDefinition")
+                        .WithMany()
+                        .HasForeignKey("FieldDefinitionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_sales_custom_field_values_sales_custom_field_definitions_fi~");
+
+                    b.HasOne("MyScheduling.Core.Entities.SalesCustomFieldDefinition", null)
+                        .WithMany("Values")
+                        .HasForeignKey("SalesCustomFieldDefinitionId")
+                        .HasConstraintName("fk_sales_custom_field_values_sales_custom_field_definitions_sa~");
+
+                    b.HasOne("MyScheduling.Core.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_sales_custom_field_values__tenants_tenant_id");
+
+                    b.Navigation("FieldDefinition");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.SalesForecastGroup", b =>
+                {
+                    b.HasOne("MyScheduling.Core.Entities.SalesForecastGroup", "ParentGroup")
+                        .WithMany("ChildGroups")
+                        .HasForeignKey("ParentGroupId")
+                        .HasConstraintName("fk_sales_forecast_groups_sales_forecast_groups_parent_group_id");
+
+                    b.HasOne("MyScheduling.Core.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_sales_forecast_groups__tenants_tenant_id");
+
+                    b.Navigation("ParentGroup");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.SalesForecastTarget", b =>
+                {
+                    b.HasOne("MyScheduling.Core.Entities.SalesForecastGroup", "ForecastGroup")
+                        .WithMany("Targets")
+                        .HasForeignKey("ForecastGroupId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_sales_forecast_targets_sales_forecast_groups_forecast_group~");
+
+                    b.HasOne("MyScheduling.Core.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_sales_forecast_targets__tenants_tenant_id");
+
+                    b.Navigation("ForecastGroup");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.SalesOpportunity", b =>
+                {
+                    b.HasOne("MyScheduling.Core.Entities.SalesAccount", "Account")
+                        .WithMany("Opportunities")
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_sales_opportunities_sales_accounts_account_id");
+
+                    b.HasOne("MyScheduling.Core.Entities.BiddingEntity", "BiddingEntity")
+                        .WithMany("Opportunities")
+                        .HasForeignKey("BiddingEntityId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_sales_opportunities_bidding_entities_bidding_entity_id");
+
+                    b.HasOne("MyScheduling.Core.Entities.ContractVehicle", "ContractVehicle")
+                        .WithMany("Opportunities")
+                        .HasForeignKey("ContractVehicleId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_sales_opportunities_contract_vehicles_contract_vehicle_id");
+
+                    b.HasOne("MyScheduling.Core.Entities.LossReason", "LossReason")
+                        .WithMany("Opportunities")
+                        .HasForeignKey("LossReasonId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_sales_opportunities_loss_reasons_loss_reason_id");
+
+                    b.HasOne("MyScheduling.Core.Entities.User", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_sales_opportunities__users_owner_id");
+
+                    b.HasOne("MyScheduling.Core.Entities.SalesContact", "PrimaryContact")
+                        .WithMany()
+                        .HasForeignKey("PrimaryContactId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_sales_opportunities_sales_contacts_primary_contact_id");
+
+                    b.HasOne("MyScheduling.Core.Entities.SalesStage", "Stage")
+                        .WithMany("Opportunities")
+                        .HasForeignKey("StageId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_sales_opportunities__sales_stages_stage_id");
+
+                    b.HasOne("MyScheduling.Core.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_sales_opportunities__tenants_tenant_id");
+
+                    b.Navigation("Account");
+
+                    b.Navigation("BiddingEntity");
+
+                    b.Navigation("ContractVehicle");
+
+                    b.Navigation("LossReason");
+
+                    b.Navigation("Owner");
+
+                    b.Navigation("PrimaryContact");
+
+                    b.Navigation("Stage");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.SalesPicklistDefinition", b =>
+                {
+                    b.HasOne("MyScheduling.Core.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_sales_picklist_definitions__tenants_tenant_id");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.SalesPicklistValue", b =>
+                {
+                    b.HasOne("MyScheduling.Core.Entities.SalesPicklistDefinition", "PicklistDefinition")
+                        .WithMany("Values")
+                        .HasForeignKey("PicklistDefinitionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_sales_picklist_values_sales_picklist_definitions_picklist_d~");
+
+                    b.HasOne("MyScheduling.Core.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_sales_picklist_values__tenants_tenant_id");
+
+                    b.Navigation("PicklistDefinition");
+
+                    b.Navigation("Tenant");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.SalesStage", b =>
+                {
+                    b.HasOne("MyScheduling.Core.Entities.Tenant", "Tenant")
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_sales_stages__tenants_tenant_id");
 
                     b.Navigation("Tenant");
                 });
@@ -13481,6 +16093,11 @@ namespace MyScheduling.Infrastructure.Migrations
                     b.Navigation("History");
                 });
 
+            modelBuilder.Entity("MyScheduling.Core.Entities.BiddingEntity", b =>
+                {
+                    b.Navigation("Opportunities");
+                });
+
             modelBuilder.Entity("MyScheduling.Core.Entities.Booking", b =>
                 {
                     b.Navigation("CheckInEvents");
@@ -13498,6 +16115,11 @@ namespace MyScheduling.Infrastructure.Migrations
             modelBuilder.Entity("MyScheduling.Core.Entities.Certification", b =>
                 {
                     b.Navigation("PersonCertifications");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.ContractVehicle", b =>
+                {
+                    b.Navigation("Opportunities");
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.CostRateImportBatch", b =>
@@ -13558,6 +16180,11 @@ namespace MyScheduling.Infrastructure.Migrations
             modelBuilder.Entity("MyScheduling.Core.Entities.LeaseAmendment", b =>
                 {
                     b.Navigation("Attachments");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.LossReason", b =>
+                {
+                    b.Navigation("Opportunities");
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.Office", b =>
@@ -13625,6 +16252,55 @@ namespace MyScheduling.Infrastructure.Migrations
             modelBuilder.Entity("MyScheduling.Core.Entities.ResumeVersion", b =>
                 {
                     b.Navigation("GeneratedDocuments");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.SalesAccount", b =>
+                {
+                    b.Navigation("ChildAccounts");
+
+                    b.Navigation("Contacts");
+
+                    b.Navigation("Opportunities");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.SalesContact", b =>
+                {
+                    b.Navigation("OpportunityRoles");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.SalesCustomFieldDefinition", b =>
+                {
+                    b.Navigation("Values");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.SalesForecastGroup", b =>
+                {
+                    b.Navigation("ChildGroups");
+
+                    b.Navigation("Targets");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.SalesOpportunity", b =>
+                {
+                    b.Navigation("Capabilities");
+
+                    b.Navigation("ContactRoles");
+
+                    b.Navigation("FieldHistory");
+
+                    b.Navigation("Notes");
+
+                    b.Navigation("TeamMembers");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.SalesPicklistDefinition", b =>
+                {
+                    b.Navigation("Values");
+                });
+
+            modelBuilder.Entity("MyScheduling.Core.Entities.SalesStage", b =>
+                {
+                    b.Navigation("Opportunities");
                 });
 
             modelBuilder.Entity("MyScheduling.Core.Entities.Skill", b =>

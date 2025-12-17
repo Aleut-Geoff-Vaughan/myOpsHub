@@ -57,6 +57,15 @@ public class TenantSettings : BaseEntity
     public int CertificationExpiryEmailDays { get; set; } = 30; // Send email within this many days
     public bool EnableCertificationExpiryEmails { get; set; } = true; // Whether to send email notifications
 
+    // Security Settings
+    public bool EmailNotificationsEnabled { get; set; } = true;
+    public bool Require2FA { get; set; } = false;
+    public bool AllowSelfRegistration { get; set; } = false;
+    public bool MaintenanceMode { get; set; } = false;
+    public int SessionTimeoutMinutes { get; set; } = 30;
+    public int PasswordMinLength { get; set; } = 8;
+    public int FailedLoginAttemptsBeforeLock { get; set; } = 5;
+
     // Navigation properties
     public virtual Tenant Tenant { get; set; } = null!;
 }

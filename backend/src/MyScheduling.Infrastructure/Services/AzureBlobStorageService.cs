@@ -111,55 +111,70 @@ public class AzureBlobStorageService : IFileStorageService
         var categoryPath = string.IsNullOrEmpty(category) ? "files" : category.ToLowerInvariant();
         var storagePath = $"{tenantId}/{entityId}/{categoryPath}/{fileId}_{SanitizeFileName(fileName)}";
 
-        // Get or create container
-        var containerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
-        await containerClient.CreateIfNotExistsAsync(PublicAccessType.None);
-
-        // Upload blob
-        var blobClient = containerClient.GetBlobClient(storagePath);
-        var blobHttpHeaders = new BlobHttpHeaders { ContentType = contentType };
-
-        await blobClient.UploadAsync(fileStream, new BlobUploadOptions
+        try
         {
-            HttpHeaders = blobHttpHeaders,
-            Metadata = new Dictionary<string, string>
+            // Get or create container
+            var containerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
+            await containerClient.CreateIfNotExistsAsync(PublicAccessType.None);
+
+            // Upload blob
+            var blobClient = containerClient.GetBlobClient(storagePath);
+            var blobHttpHeaders = new BlobHttpHeaders { ContentType = contentType };
+
+            await blobClient.UploadAsync(fileStream, new BlobUploadOptions
             {
-                { "TenantId", tenantId.ToString() },
-                { "EntityType", entityType },
-                { "EntityId", entityId.ToString() },
-                { "UploadedBy", uploadedByUserId.ToString() },
-                { "OriginalFileName", fileName }
-            }
-        });
+                HttpHeaders = blobHttpHeaders,
+                Metadata = new Dictionary<string, string>
+                {
+                    { "TenantId", tenantId.ToString() },
+                    { "EntityType", entityType },
+                    { "EntityId", entityId.ToString() },
+                    { "UploadedBy", uploadedByUserId.ToString() },
+                    { "OriginalFileName", fileName }
+                }
+            });
 
-        // Create StoredFile entity
-        var storedFile = new StoredFile
+            // Create StoredFile entity
+            var storedFile = new StoredFile
+            {
+                Id = fileId,
+                TenantId = tenantId,
+                FileName = $"{fileId}_{SanitizeFileName(fileName)}",
+                OriginalFileName = fileName,
+                ContentType = contentType,
+                FileSizeBytes = fileStream.Length,
+                FileHash = hash,
+                StorageProvider = FileStorageProvider.AzureBlob,
+                StorageProviderId = blobClient.Uri.ToString(),
+                StoragePath = storagePath,
+                EntityType = entityType,
+                EntityId = entityId,
+                Category = category,
+                AccessLevel = FileAccessLevel.Private,
+                Version = 1,
+                CreatedAt = DateTime.UtcNow,
+                CreatedByUserId = uploadedByUserId
+            };
+
+            _context.StoredFiles.Add(storedFile);
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("File uploaded: {FileName} to {StoragePath} by user {UserId}", fileName, storagePath, uploadedByUserId);
+
+            return storedFile;
+        }
+        catch (Azure.RequestFailedException ex)
         {
-            Id = fileId,
-            TenantId = tenantId,
-            FileName = $"{fileId}_{SanitizeFileName(fileName)}",
-            OriginalFileName = fileName,
-            ContentType = contentType,
-            FileSizeBytes = fileStream.Length,
-            FileHash = hash,
-            StorageProvider = FileStorageProvider.AzureBlob,
-            StorageProviderId = blobClient.Uri.ToString(),
-            StoragePath = storagePath,
-            EntityType = entityType,
-            EntityId = entityId,
-            Category = category,
-            AccessLevel = FileAccessLevel.Private,
-            Version = 1,
-            CreatedAt = DateTime.UtcNow,
-            CreatedByUserId = uploadedByUserId
-        };
-
-        _context.StoredFiles.Add(storedFile);
-        await _context.SaveChangesAsync();
-
-        _logger.LogInformation("File uploaded: {FileName} to {StoragePath}", fileName, storagePath);
-
-        return storedFile;
+            _logger.LogError(ex,
+                "Azure Blob upload failed for {FileName}. Status: {Status}, ErrorCode: {ErrorCode}, TenantId: {TenantId}, UserId: {UserId}",
+                fileName, ex.Status, ex.ErrorCode, tenantId, uploadedByUserId);
+            throw new InvalidOperationException($"Failed to upload file to Azure Blob Storage: {ex.Message}", ex);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error uploading file {FileName} for tenant {TenantId}", fileName, tenantId);
+            throw;
+        }
     }
 
     public async Task<Stream> DownloadFileAsync(Guid fileId, Guid userId)
@@ -168,15 +183,25 @@ public class AzureBlobStorageService : IFileStorageService
             .FirstOrDefaultAsync(f => f.Id == fileId && !f.IsDeleted)
             ?? throw new FileNotFoundException($"File not found: {fileId}");
 
-        var containerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
-        var blobClient = containerClient.GetBlobClient(storedFile.StoragePath);
+        try
+        {
+            var containerClient = _blobServiceClient.GetBlobContainerClient(_containerName);
+            var blobClient = containerClient.GetBlobClient(storedFile.StoragePath);
 
-        var download = await blobClient.DownloadStreamingAsync();
+            var download = await blobClient.DownloadStreamingAsync();
 
-        // Log access
-        await LogAccessAsync(fileId, userId, FileAccessType.Download);
+            // Log access
+            await LogAccessAsync(fileId, userId, FileAccessType.Download);
 
-        return download.Value.Content;
+            return download.Value.Content;
+        }
+        catch (Azure.RequestFailedException ex)
+        {
+            _logger.LogError(ex,
+                "Azure Blob download failed for file {FileId}. Status: {Status}, ErrorCode: {ErrorCode}, StoragePath: {StoragePath}",
+                fileId, ex.Status, ex.ErrorCode, storedFile.StoragePath);
+            throw new InvalidOperationException($"Failed to download file from Azure Blob Storage: {ex.Message}", ex);
+        }
     }
 
     public async Task<bool> DeleteFileAsync(Guid fileId, Guid userId)

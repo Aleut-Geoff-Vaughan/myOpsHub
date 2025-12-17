@@ -1,4 +1,5 @@
-import { api } from '../lib/api-client';
+import { api, ApiError } from '../lib/api-client';
+import { logger } from './loggingService';
 import type {
   ResumeProfile,
   ResumeSection,
@@ -12,6 +13,27 @@ import type {
   ResumeTemplateType,
 } from '../types/api';
 
+const RESUME_COMPONENT = 'resumeService';
+
+// Helper to log resume service errors with context
+function logResumeError(operation: string, error: unknown, context?: Record<string, unknown>): void {
+  const errorDetails: Record<string, unknown> = {
+    operation,
+    ...context,
+  };
+
+  if (error instanceof ApiError) {
+    errorDetails.status = error.status;
+    errorDetails.statusText = error.statusText;
+    errorDetails.data = error.data;
+  } else if (error instanceof Error) {
+    errorDetails.errorMessage = error.message;
+    errorDetails.errorName = error.name;
+  }
+
+  logger.error(`Resume ${operation} failed`, errorDetails, RESUME_COMPONENT);
+}
+
 // ==================== RESUME CRUD ====================
 
 export const getResumes = async (
@@ -24,13 +46,23 @@ export const getResumes = async (
   if (status !== undefined) params.append('status', status.toString());
   if (search) params.append('search', search);
 
-  return api.get<ResumeProfile[]>(
-    `/resumes${params.toString() ? `?${params}` : ''}`
-  );
+  try {
+    return await api.get<ResumeProfile[]>(
+      `/resumes${params.toString() ? `?${params}` : ''}`
+    );
+  } catch (error) {
+    logResumeError('getResumes', error, { tenantId, status, search });
+    throw error;
+  }
 };
 
 export const getResume = async (id: string): Promise<ResumeProfile> => {
-  return api.get<ResumeProfile>(`/resumes/${id}`);
+  try {
+    return await api.get<ResumeProfile>(`/resumes/${id}`);
+  } catch (error) {
+    logResumeError('getResume', error, { resumeId: id });
+    throw error;
+  }
 };
 
 // Get the current user's resume
@@ -38,12 +70,11 @@ export const getMyResume = async (): Promise<ResumeProfile | null> => {
   try {
     return await api.get<ResumeProfile>('/resumes/my');
   } catch (error: unknown) {
-    if (error && typeof error === 'object' && 'response' in error) {
-      const axiosError = error as { response?: { status?: number } };
-      if (axiosError?.response?.status === 404) {
-        return null; // User doesn't have a resume yet
-      }
+    // Handle 404 gracefully - user doesn't have a resume yet
+    if (error instanceof ApiError && error.status === 404) {
+      return null;
     }
+    logResumeError('getMyResume', error);
     throw error;
   }
 };
@@ -66,7 +97,14 @@ export const createResume = async (data: {
   userId: string;
   templateConfig?: string;
 }): Promise<ResumeProfile> => {
-  return api.post<ResumeProfile>(`/resumes`, data);
+  try {
+    const result = await api.post<ResumeProfile>(`/resumes`, data);
+    logger.info('Resume created', { resumeId: result.id, userId: data.userId }, RESUME_COMPONENT);
+    return result;
+  } catch (error) {
+    logResumeError('createResume', error, { userId: data.userId });
+    throw error;
+  }
 };
 
 export const updateResume = async (
@@ -78,11 +116,23 @@ export const updateResume = async (
     linkedInProfileUrl?: string;
   }
 ): Promise<void> => {
-  return api.put<void>(`/resumes/${id}`, data);
+  try {
+    await api.put<void>(`/resumes/${id}`, data);
+    logger.debug('Resume updated', { resumeId: id, changes: Object.keys(data) }, RESUME_COMPONENT);
+  } catch (error) {
+    logResumeError('updateResume', error, { resumeId: id });
+    throw error;
+  }
 };
 
 export const deleteResume = async (id: string): Promise<void> => {
-  return api.delete<void>(`/resumes/${id}`);
+  try {
+    await api.delete<void>(`/resumes/${id}`);
+    logger.info('Resume deleted', { resumeId: id }, RESUME_COMPONENT);
+  } catch (error) {
+    logResumeError('deleteResume', error, { resumeId: id });
+    throw error;
+  }
 };
 
 // ==================== SECTIONS & ENTRIES ====================
@@ -197,10 +247,21 @@ export const requestApproval = async (data: {
   requestedByUserId: string;
   requestNotes?: string;
 }): Promise<ResumeApproval> => {
-  return api.post<ResumeApproval>(
-    `/resume-approvals`,
-    data
-  );
+  try {
+    const result = await api.post<ResumeApproval>(
+      `/resume-approvals`,
+      data
+    );
+    logger.info('Resume approval requested', {
+      approvalId: result.id,
+      resumeProfileId: data.resumeProfileId,
+      requestedByUserId: data.requestedByUserId,
+    }, RESUME_COMPONENT);
+    return result;
+  } catch (error) {
+    logResumeError('requestApproval', error, { resumeProfileId: data.resumeProfileId });
+    throw error;
+  }
 };
 
 export const approveResume = async (
@@ -210,7 +271,13 @@ export const approveResume = async (
     reviewNotes?: string;
   }
 ): Promise<void> => {
-  return api.put<void>(`/resume-approvals/${id}/approve`, data);
+  try {
+    await api.put<void>(`/resume-approvals/${id}/approve`, data);
+    logger.info('Resume approved', { approvalId: id, reviewedByUserId: data.reviewedByUserId }, RESUME_COMPONENT);
+  } catch (error) {
+    logResumeError('approveResume', error, { approvalId: id });
+    throw error;
+  }
 };
 
 export const rejectResume = async (
@@ -220,7 +287,13 @@ export const rejectResume = async (
     reviewNotes: string;
   }
 ): Promise<void> => {
-  return api.put<void>(`/resume-approvals/${id}/reject`, data);
+  try {
+    await api.put<void>(`/resume-approvals/${id}/reject`, data);
+    logger.info('Resume rejected', { approvalId: id, reviewedByUserId: data.reviewedByUserId }, RESUME_COMPONENT);
+  } catch (error) {
+    logResumeError('rejectResume', error, { approvalId: id });
+    throw error;
+  }
 };
 
 export const requestChanges = async (

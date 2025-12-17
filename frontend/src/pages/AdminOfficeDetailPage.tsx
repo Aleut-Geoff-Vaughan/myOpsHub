@@ -551,6 +551,7 @@ export function AdminOfficeDetailPage() {
           }}
           space={editingSpace}
           offices={allOffices}
+          defaultOfficeId={officeId}
         />
       )}
 

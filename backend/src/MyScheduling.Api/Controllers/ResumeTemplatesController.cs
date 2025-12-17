@@ -4,6 +4,7 @@ using MyScheduling.Core.Entities;
 using MyScheduling.Core.Enums;
 using MyScheduling.Infrastructure.Data;
 using MyScheduling.Api.Attributes;
+using System.Text.RegularExpressions;
 
 namespace MyScheduling.Api.Controllers;
 
@@ -314,17 +315,77 @@ public class ResumeTemplatesController : AuthorizedControllerBase
                 return NotFound($"Template with ID {id} not found");
             }
 
-            // TODO: Implement actual template preview generation
-            // This would use the template content and sample data to generate a preview
-            var preview = $"Preview of template '{template.Name}' with sample data";
+            // Generate preview by replacing placeholders with sample data
+            var preview = RenderTemplate(template.TemplateContent, request.SampleData);
 
-            return Ok(new { preview = preview });
+            // Also return metadata about the template for context
+            var placeholders = ExtractPlaceholders(template.TemplateContent);
+
+            return Ok(new
+            {
+                templateName = template.Name,
+                templateType = template.Type.ToString(),
+                preview = preview,
+                placeholders = placeholders,
+                hasUnreplacedPlaceholders = placeholders.Any(p =>
+                    request.SampleData == null ||
+                    !request.SampleData.ContainsKey(p))
+            });
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error previewing template {TemplateId}", id);
             return StatusCode(500, "An error occurred while previewing the template");
         }
+    }
+
+    /// <summary>
+    /// Renders a template by replacing {{placeholder}} tokens with values from the data dictionary
+    /// </summary>
+    private static string RenderTemplate(string templateContent, Dictionary<string, object>? data)
+    {
+        if (string.IsNullOrEmpty(templateContent))
+        {
+            return string.Empty;
+        }
+
+        if (data == null || data.Count == 0)
+        {
+            return templateContent;
+        }
+
+        // Pattern matches {{placeholderName}} with optional whitespace inside braces
+        var result = Regex.Replace(templateContent, @"\{\{\s*(\w+)\s*\}\}", match =>
+        {
+            var key = match.Groups[1].Value;
+            if (data.TryGetValue(key, out var value))
+            {
+                return value?.ToString() ?? string.Empty;
+            }
+            // Leave unmatched placeholders as-is for visibility
+            return match.Value;
+        });
+
+        return result;
+    }
+
+    /// <summary>
+    /// Extracts all placeholder names from a template (e.g., {{Name}} returns "Name")
+    /// </summary>
+    private static List<string> ExtractPlaceholders(string templateContent)
+    {
+        if (string.IsNullOrEmpty(templateContent))
+        {
+            return new List<string>();
+        }
+
+        var matches = Regex.Matches(templateContent, @"\{\{\s*(\w+)\s*\}\}");
+        return matches
+            .Cast<Match>()
+            .Select(m => m.Groups[1].Value)
+            .Distinct()
+            .OrderBy(p => p)
+            .ToList();
     }
 
     // POST: api/resume-templates/{id}/duplicate

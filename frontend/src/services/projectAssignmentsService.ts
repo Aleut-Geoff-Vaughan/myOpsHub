@@ -9,6 +9,15 @@ export interface GetProjectAssignmentsParams {
   status?: ProjectAssignmentStatus;
 }
 
+export interface UpdateProjectAssignmentRequest {
+  id: string;
+  userId: string;
+  projectId: string;
+  startDate: string;
+  endDate?: string;
+  notes?: string;
+}
+
 export const projectAssignmentsService = {
   async getAll(params?: GetProjectAssignmentsParams): Promise<ProjectAssignment[]> {
     const searchParams = new URLSearchParams();
@@ -30,8 +39,8 @@ export const projectAssignmentsService = {
     return api.post<ProjectAssignment>('/projectassignments', projectAssignment);
   },
 
-  async update(id: string, projectAssignment: ProjectAssignment): Promise<void> {
-    return api.put<void>(`/projectassignments/${id}`, projectAssignment);
+  async update(id: string, request: UpdateProjectAssignmentRequest): Promise<void> {
+    return api.put<void>(`/projectassignments/${id}`, request);
   },
 
   async delete(id: string, reason?: string): Promise<void> {

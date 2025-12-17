@@ -55,6 +55,12 @@ public class AuthControllerTests : IDisposable
             _magicLinkServiceMock.Object,
             _emailServiceMock.Object
         );
+
+        // Set the controller's HttpContext for direct HttpContext property access
+        _controller.ControllerContext = new Microsoft.AspNetCore.Mvc.ControllerContext
+        {
+            HttpContext = httpContext
+        };
     }
 
     public void Dispose()
@@ -72,28 +78,31 @@ public class AuthControllerTests : IDisposable
         };
         _context.Tenants.Add(tenant);
 
+        var userId = Guid.NewGuid();
         var user = new User
         {
-            Id = Guid.NewGuid(),
+            Id = userId,
             Email = email,
             DisplayName = "Test User",
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(password, workFactor: 4), // Lower work factor for tests
             IsActive = isActive,
-            FailedLoginAttempts = 0,
-            TenantMemberships = new List<TenantMembership>
-            {
-                new TenantMembership
-                {
-                    Id = Guid.NewGuid(),
-                    TenantId = _tenantId,
-                    Tenant = tenant,
-                    IsActive = true,
-                    Roles = new List<AppRole> { AppRole.Employee }
-                }
-            }
+            FailedLoginAttempts = 0
         };
         _context.Users.Add(user);
         await _context.SaveChangesAsync();
+
+        // Add tenant membership separately to ensure proper FK relationship
+        var membership = new TenantMembership
+        {
+            Id = Guid.NewGuid(),
+            UserId = userId,
+            TenantId = _tenantId,
+            IsActive = true,
+            Roles = new List<AppRole> { AppRole.Employee }
+        };
+        _context.TenantMemberships.Add(membership);
+        await _context.SaveChangesAsync();
+
         return user;
     }
 
@@ -114,8 +123,10 @@ public class AuthControllerTests : IDisposable
         var result = await _controller.Login(request);
 
         // Assert
-        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        var response = okResult.Value.Should().BeOfType<LoginResponse>().Subject;
+        var objectResult = result.Result as ObjectResult;
+        objectResult.Should().NotBeNull();
+        objectResult!.StatusCode.Should().Be(200);
+        var response = objectResult.Value.Should().BeOfType<LoginResponse>().Subject;
 
         response.Token.Should().NotBeNullOrEmpty();
         response.UserId.Should().Be(user.Id);
@@ -310,7 +321,9 @@ public class AuthControllerTests : IDisposable
         var result = await _controller.Login(request);
 
         // Assert
-        result.Result.Should().BeOfType<OkObjectResult>();
+        var objectResult = result.Result as ObjectResult;
+        objectResult.Should().NotBeNull();
+        objectResult!.StatusCode.Should().Be(200);
     }
 
     [Fact]
@@ -330,7 +343,9 @@ public class AuthControllerTests : IDisposable
         var result = await _controller.Login(request);
 
         // Assert
-        result.Result.Should().BeOfType<OkObjectResult>();
+        var objectResult = result.Result as ObjectResult;
+        objectResult.Should().NotBeNull();
+        objectResult!.StatusCode.Should().Be(200);
     }
 
     [Fact]
@@ -350,8 +365,10 @@ public class AuthControllerTests : IDisposable
         var result = await _controller.Login(request);
 
         // Assert
-        var okResult = result.Result.Should().BeOfType<OkObjectResult>().Subject;
-        var response = okResult.Value.Should().BeOfType<LoginResponse>().Subject;
+        var objectResult = result.Result as ObjectResult;
+        objectResult.Should().NotBeNull();
+        objectResult!.StatusCode.Should().Be(200);
+        var response = objectResult.Value.Should().BeOfType<LoginResponse>().Subject;
 
         response.TenantAccess.Should().NotBeEmpty();
         response.TenantAccess[0].TenantId.Should().Be(_tenantId);

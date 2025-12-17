@@ -100,7 +100,7 @@ function UnifiedLayoutInner() {
           <GlobalTopBar onMenuClick={() => setMobileSidebarOpen(true)} />
 
           {/* Page Content */}
-          <main className="flex-1 overflow-auto">
+          <main className="flex-1 overflow-auto p-6">
             <Outlet />
           </main>
         </div>

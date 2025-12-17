@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
 import { Card, CardHeader, Button, Modal, Input, Select, FormGroup, StatusBadge } from '../components/ui';
 import { DataTable, type DataTableColumn } from '../components/DataTable';
-import { projectAssignmentsService } from '../services/projectAssignmentsService';
+import { projectAssignmentsService, type UpdateProjectAssignmentRequest } from '../services/projectAssignmentsService';
 import { projectsService } from '../services/projectsService';
 import { useUsers } from '../hooks/useTenants';
 import { useAuthStore } from '../stores/authStore';
@@ -56,8 +56,8 @@ export function AdminProjectAssignmentsPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, assignment }: { id: string; assignment: ProjectAssignment }) =>
-      projectAssignmentsService.update(id, assignment),
+    mutationFn: ({ id, request }: { id: string; request: UpdateProjectAssignmentRequest }) =>
+      projectAssignmentsService.update(id, request),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-project-assignments'] });
       queryClient.invalidateQueries({ queryKey: ['projectAssignments'] });
@@ -277,13 +277,18 @@ export function AdminProjectAssignmentsPage() {
     if (!validate()) return;
 
     if (editingAssignment) {
+      // Send only the fields the backend expects
+      const updateRequest: UpdateProjectAssignmentRequest = {
+        id: editingAssignment.id,
+        userId: formData.userId || editingAssignment.userId,
+        projectId: formData.projectId || editingAssignment.projectId,
+        startDate: formData.startDate || editingAssignment.startDate,
+        endDate: formData.endDate,
+        notes: formData.notes,
+      };
       updateMutation.mutate({
         id: editingAssignment.id,
-        assignment: {
-          ...editingAssignment,
-          ...formData,
-          tenantId: currentWorkspace?.tenantId || '',
-        } as ProjectAssignment,
+        request: updateRequest,
       });
     } else {
       createMutation.mutate({

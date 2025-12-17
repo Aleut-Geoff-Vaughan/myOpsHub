@@ -80,6 +80,14 @@ public class BulkAddMembersRequest
 }
 
 /// <summary>
+/// Request to update an existing team calendar member
+/// </summary>
+public class UpdateTeamCalendarMemberRequest
+{
+    public MembershipType MembershipType { get; set; }
+}
+
+/// <summary>
 /// Response containing team calendar data with work location preferences
 /// </summary>
 public class TeamCalendarViewResponse

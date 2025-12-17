@@ -16,6 +16,9 @@ export enum AppRole {
   OverrideApprover = 'OverrideApprover',
   Support = 'Support',
   Auditor = 'Auditor',
+  ResumeViewer = 'ResumeViewer',
+  FinanceLead = 'FinanceLead',
+  BusinessDeveloper = 'BusinessDeveloper',
 }
 
 export interface User {

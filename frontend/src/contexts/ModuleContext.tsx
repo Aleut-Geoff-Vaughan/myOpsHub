@@ -174,12 +174,18 @@ export function useModuleAccess() {
 
   const hasFacilitiesAccess = true; // All users have access to myFacilities
 
+  // mySalesOps requires BusinessDeveloper role or admin
+  const hasSalesOpsAccess = hasRole(AppRole.BusinessDeveloper) ||
+    hasRole(AppRole.TenantAdmin) ||
+    hasRole(AppRole.SysAdmin);
+
   const hasAdminAccess = hasRole(AppRole.TenantAdmin) || hasRole(AppRole.SysAdmin);
 
   return {
     hasWorkAccess,
     hasForecastAccess,
     hasFacilitiesAccess,
+    hasSalesOpsAccess,
     hasAdminAccess,
   };
 }

@@ -425,7 +425,7 @@ export function ResumeProfilePage() {
             resume={resume}
             user={resume.user || null}
             isOwner={isOwner}
-            onEdit={() => navigate(`/resumes/${resume.id}/edit`)}
+            onEdit={() => navigate(`/profile`)}
             onExport={handleExport}
             onShare={handleShare}
             onRequestApproval={

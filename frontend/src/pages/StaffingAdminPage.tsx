@@ -23,6 +23,11 @@ export default function StaffingAdminPage() {
           (a) =>
             a.id.toLowerCase().includes(term) ||
             a.userId.toLowerCase().includes(term) ||
+            (a.user?.displayName ?? '').toLowerCase().includes(term) ||
+            (a.user?.email ?? '').toLowerCase().includes(term) ||
+            (a.wbsElement?.code ?? '').toLowerCase().includes(term) ||
+            (a.wbsElement?.description ?? '').toLowerCase().includes(term) ||
+            (a.projectRole?.name ?? '').toLowerCase().includes(term) ||
             (a.projectRoleId ?? '').toLowerCase().includes(term) ||
             (a.wbsElementId ?? '').toLowerCase().includes(term)
         )
@@ -45,11 +50,13 @@ export default function StaffingAdminPage() {
   }, [assignments, search, pageSize, statusFilter, startAfter, endBefore]);
 
   const exportCsv = () => {
-    const headers = ['Id', 'UserId', 'ProjectRoleId', 'Allocation', 'StartDate', 'EndDate', 'Status'];
+    const headers = ['Id', 'User', 'UserEmail', 'WBS', 'Role', 'Allocation', 'StartDate', 'EndDate', 'Status'];
     const rows = filtered.map((a) => [
       a.id,
-      a.userId,
-      a.projectRoleId ?? '',
+      a.user?.displayName ?? a.userId,
+      a.user?.email ?? '',
+      a.wbsElement?.code ?? a.wbsElementId,
+      a.projectRole?.name ?? (a.projectRoleId ?? ''),
       a.allocation,
       a.startDate,
       a.endDate,
@@ -141,9 +148,9 @@ export default function StaffingAdminPage() {
             <Table
               data={filtered}
               columns={[
-                { key: 'userId', header: 'User', render: (a: Assignment) => a.userId.substring(0, 8) },
-                { key: 'wbsElementId', header: 'WBS', render: (a: Assignment) => a.wbsElementId.substring(0, 8) },
-                { key: 'projectRoleId', header: 'Role', render: (a: Assignment) => a.projectRoleId?.substring(0, 8) ?? '—' },
+                { key: 'userId', header: 'User', render: (a: Assignment) => a.user?.displayName || a.userId.substring(0, 8) },
+                { key: 'wbsElementId', header: 'WBS', render: (a: Assignment) => a.wbsElement?.code || a.wbsElementId.substring(0, 8) },
+                { key: 'projectRoleId', header: 'Role', render: (a: Assignment) => a.projectRole?.name || (a.projectRoleId ? a.projectRoleId.substring(0, 8) : '—') },
                 { key: 'allocation', header: 'Allocation', render: (a: Assignment) => `${a.allocation}%` },
                 {
                   key: 'dates',

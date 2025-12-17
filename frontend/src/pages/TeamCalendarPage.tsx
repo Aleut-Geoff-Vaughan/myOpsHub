@@ -1,12 +1,14 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import { Card, CardHeader, CardBody } from '../components/ui';
 import { TeamCalendarView } from '../components/TeamCalendarView';
+import { PtoQuickView } from '../components/PtoQuickView';
 import { ViewSelector } from '../components/ViewSelector';
-import { getMondayOfWeek } from '../utils/dateUtils';
+import { getMondayOfWeek, getWeekdays } from '../utils/dateUtils';
 import { teamCalendarService } from '../services/teamCalendarService';
 import toast from 'react-hot-toast';
-import type { TeamCalendarViewResponse, ManagerViewResponse, TeamCalendarSummary, CreateTeamCalendarRequest, TeamCalendarType } from '../types/teamCalendar';
+import type { TeamCalendarViewResponse, ManagerViewResponse, TeamCalendarSummary, CreateTeamCalendarRequest, TeamCalendarType, TeamMemberSchedule } from '../types/teamCalendar';
+import { WorkLocationType } from '../types/api';
 
 export function TeamCalendarPage() {
   const { user, currentWorkspace } = useAuthStore();
@@ -18,6 +20,7 @@ export function TeamCalendarPage() {
   const [calendarData, setCalendarData] = useState<TeamCalendarViewResponse | ManagerViewResponse | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showOnlyPtoHoliday, setShowOnlyPtoHoliday] = useState(false);
 
   // Create calendar modal state
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -71,19 +74,25 @@ export function TeamCalendarPage() {
           endDate.setTime(lastFriday.getTime());
         }
 
+        // When PTO filter is enabled, fetch 3 months ahead to capture extended PTO ranges
+        const fetchEndDate = new Date(endDate);
+        if (showOnlyPtoHoliday) {
+          fetchEndDate.setMonth(fetchEndDate.getMonth() + 3);
+        }
+
         if (viewMode === 'manager') {
           // Fetch manager view
           const response = await teamCalendarService.getManagerView({
             userId: user.id,
             startDate,
-            endDate: endDate.toISOString().split('T')[0],
+            endDate: fetchEndDate.toISOString().split('T')[0],
           });
           setCalendarData(response);
         } else if (selectedCalendar) {
           // Fetch team calendar view
           const response = await teamCalendarService.getCalendarView(selectedCalendar, {
             startDate,
-            endDate: endDate.toISOString().split('T')[0],
+            endDate: fetchEndDate.toISOString().split('T')[0],
           });
           setCalendarData(response);
         }
@@ -97,7 +106,7 @@ export function TeamCalendarPage() {
     };
 
     fetchCalendarData();
-  }, [user?.id, viewMode, selectedCalendar, referenceDate, selectedView]);
+  }, [user?.id, viewMode, selectedCalendar, referenceDate, selectedView, showOnlyPtoHoliday]);
 
   const handlePreviousPeriod = () => {
     const newDate = new Date(referenceDate);
@@ -128,6 +137,51 @@ export function TeamCalendarPage() {
     if (selectedView === 'month') return 2; // We'll handle month differently
     return 2;
   };
+
+  // Calculate view end date based on selected view
+  const getViewEndDate = (): Date => {
+    const monday = getMondayOfWeek(referenceDate);
+    const endDate = new Date(monday);
+    if (selectedView === 'current-week') {
+      endDate.setDate(endDate.getDate() + 4); // Friday
+    } else if (selectedView === 'two-weeks') {
+      endDate.setDate(endDate.getDate() + 11); // Second Friday
+    } else {
+      // Month view - get last Friday of month
+      const lastDay = new Date(referenceDate.getFullYear(), referenceDate.getMonth() + 1, 0);
+      const lastFriday = new Date(lastDay);
+      lastFriday.setDate(lastDay.getDate() - ((lastDay.getDay() + 2) % 7));
+      endDate.setTime(lastFriday.getTime());
+    }
+    return endDate;
+  };
+
+  // Filter member schedules to only show people with PTO or Holiday in the visible date range
+  const filteredMemberSchedules = useMemo((): TeamMemberSchedule[] => {
+    if (!calendarData) return [];
+
+    const memberSchedules: TeamMemberSchedule[] =
+      'directReports' in calendarData ? calendarData.directReports : calendarData.memberSchedules;
+
+    if (!showOnlyPtoHoliday) return memberSchedules;
+
+    // Get the visible date range
+    const monday = getMondayOfWeek(referenceDate);
+    const weeksToShow = getWeeksToShow();
+    const visibleDays = getWeekdays(monday, weeksToShow);
+    const visibleDates = new Set(visibleDays.map(d => d.toISOString().split('T')[0]));
+
+    // Filter to only members with PTO or Holiday in the visible range
+    return memberSchedules.filter(member => {
+      return member.preferences.some(pref => {
+        const isPtoOrHoliday =
+          pref.locationType === WorkLocationType.PTO ||
+          pref.locationType === WorkLocationType.Holiday;
+        const isInVisibleRange = visibleDates.has(pref.workDate);
+        return isPtoOrHoliday && isInVisibleRange;
+      });
+    });
+  }, [calendarData, showOnlyPtoHoliday, referenceDate, selectedView]);
 
   const getTitle = () => {
     if (viewMode === 'manager' && calendarData && 'manager' in calendarData) {
@@ -283,12 +337,28 @@ export function TeamCalendarPage() {
               Previous
             </button>
 
-            <button
-              onClick={handleToday}
-              className="px-4 py-2 text-sm font-semibold text-blue-600 bg-white border-2 border-blue-600 rounded-md hover:bg-blue-50 transition"
-            >
-              Today
-            </button>
+            <div className="flex items-center gap-4">
+              <button
+                type="button"
+                onClick={handleToday}
+                className="px-4 py-2 text-sm font-semibold text-blue-600 bg-white border-2 border-blue-600 rounded-md hover:bg-blue-50 transition"
+              >
+                Today
+              </button>
+
+              {/* PTO/Holiday Filter Toggle */}
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showOnlyPtoHoliday}
+                  onChange={(e) => setShowOnlyPtoHoliday(e.target.checked)}
+                  className="w-4 h-4 text-yellow-600 border-gray-300 rounded focus:ring-yellow-500"
+                />
+                <span className="text-sm font-medium text-gray-700 flex items-center gap-1">
+                  <span>🌴</span> PTO/Holiday Only
+                </span>
+              </label>
+            </div>
 
             <button
               onClick={handleNextPeriod}
@@ -329,15 +399,41 @@ export function TeamCalendarPage() {
 
           {/* Calendar View */}
           {!isLoading && !error && calendarData && (
-            <TeamCalendarView
-              memberSchedules={
-                'directReports' in calendarData
-                  ? calendarData.directReports
-                  : calendarData.memberSchedules
-              }
-              startDate={getMondayOfWeek(referenceDate)}
-              weeksToShow={getWeeksToShow()}
-            />
+            <>
+              {showOnlyPtoHoliday && filteredMemberSchedules.length === 0 ? (
+                <div className="text-center py-12 text-gray-500">
+                  <span className="text-4xl mb-4 block">🌴</span>
+                  <p className="text-lg font-medium">No PTO or Holiday scheduled</p>
+                  <p className="text-sm mt-2">No team members have PTO or Holiday in the visible date range</p>
+                </div>
+              ) : (
+                <>
+                  {/* PTO Quick View Table - shown when PTO filter is enabled */}
+                  {showOnlyPtoHoliday && (
+                    <PtoQuickView
+                      memberSchedules={filteredMemberSchedules}
+                      startDate={getMondayOfWeek(referenceDate)}
+                      endDate={getViewEndDate()}
+                      managerName={
+                        viewMode === 'manager' && calendarData && 'manager' in calendarData
+                          ? calendarData.manager.displayName
+                          : undefined
+                      }
+                      teamName={
+                        viewMode === 'team' && calendarData && 'calendar' in calendarData
+                          ? calendarData.calendar.name
+                          : undefined
+                      }
+                    />
+                  )}
+                  <TeamCalendarView
+                    memberSchedules={filteredMemberSchedules}
+                    startDate={getMondayOfWeek(referenceDate)}
+                    weeksToShow={getWeeksToShow()}
+                  />
+                </>
+              )}
+            </>
           )}
 
           {/* Empty State (manager mode with no direct reports) */}

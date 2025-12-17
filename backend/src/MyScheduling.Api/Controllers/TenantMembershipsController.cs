@@ -43,8 +43,9 @@ public class TenantMembershipsController : AuthorizedControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving tenant membership {Id}", id);
-            return StatusCode(500, "An error occurred while retrieving the tenant membership");
+            _logger.LogError(ex, "Error retrieving tenant membership {Id}. CorrelationId: {CorrelationId}",
+                id, GetCorrelationId());
+            return InternalServerError("An error occurred while retrieving the tenant membership");
         }
     }
 
@@ -109,8 +110,20 @@ public class TenantMembershipsController : AuthorizedControllerBase
                 .Reference(tm => tm.User)
                 .LoadAsync();
 
-            _logger.LogInformation("Created tenant membership {MembershipId} for user {UserId} in tenant {TenantId}",
-                membership.Id, request.UserId, request.TenantId);
+            // Audit log: membership created
+            _logger.LogInformation(
+                "AUDIT: Tenant membership created. " +
+                "MembershipId={MembershipId}, TargetUserId={TargetUserId}, TargetUserEmail={TargetUserEmail}, " +
+                "TenantId={TenantId}, TenantName={TenantName}, Roles={Roles}, " +
+                "PerformedBy={PerformedByUserId}, CorrelationId={CorrelationId}",
+                membership.Id,
+                membership.User.Id,
+                membership.User.Email,
+                membership.Tenant.Id,
+                membership.Tenant.Name,
+                string.Join(", ", request.Roles),
+                TryGetCurrentUserId(),
+                GetCorrelationId());
 
             return CreatedAtAction(
                 nameof(GetTenantMembership),
@@ -119,8 +132,9 @@ public class TenantMembershipsController : AuthorizedControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error creating tenant membership");
-            return StatusCode(500, "An error occurred while creating the tenant membership");
+            _logger.LogError(ex, "Error creating tenant membership. UserId: {UserId}, TenantId: {TenantId}, CorrelationId: {CorrelationId}",
+                request.UserId, request.TenantId, GetCorrelationId());
+            return InternalServerError("An error occurred while creating the tenant membership");
         }
     }
 
@@ -150,20 +164,39 @@ public class TenantMembershipsController : AuthorizedControllerBase
                 return BadRequest("At least one role must be assigned");
             }
 
+            // Capture previous roles for audit log
+            var previousRoles = new List<AppRole>(membership.Roles);
+
             // Update roles
             membership.Roles = request.Roles;
             membership.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Updated roles for tenant membership {MembershipId}", id);
+            // Audit log: roles changed
+            _logger.LogInformation(
+                "AUDIT: Tenant membership roles updated. " +
+                "MembershipId={MembershipId}, TargetUserId={TargetUserId}, TargetUserEmail={TargetUserEmail}, " +
+                "TenantId={TenantId}, TenantName={TenantName}, " +
+                "PreviousRoles={PreviousRoles}, NewRoles={NewRoles}, " +
+                "PerformedBy={PerformedByUserId}, CorrelationId={CorrelationId}",
+                id,
+                membership.User.Id,
+                membership.User.Email,
+                membership.Tenant.Id,
+                membership.Tenant.Name,
+                string.Join(", ", previousRoles),
+                string.Join(", ", request.Roles),
+                TryGetCurrentUserId(),
+                GetCorrelationId());
 
             return Ok(membership);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating roles for tenant membership {Id}", id);
-            return StatusCode(500, "An error occurred while updating the roles");
+            _logger.LogError(ex, "Error updating roles for tenant membership {Id}. CorrelationId: {CorrelationId}",
+                id, GetCorrelationId());
+            return InternalServerError("An error occurred while updating the roles");
         }
     }
 
@@ -187,20 +220,38 @@ public class TenantMembershipsController : AuthorizedControllerBase
                 return NotFound($"Tenant membership with ID {id} not found");
             }
 
+            // Capture previous status for audit log
+            var previousStatus = membership.IsActive;
+
             membership.IsActive = request.IsActive;
             membership.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Updated status for tenant membership {MembershipId} to {Status}",
-                id, request.IsActive ? "Active" : "Inactive");
+            // Audit log: status changed
+            _logger.LogInformation(
+                "AUDIT: Tenant membership status changed. " +
+                "MembershipId={MembershipId}, TargetUserId={TargetUserId}, TargetUserEmail={TargetUserEmail}, " +
+                "TenantId={TenantId}, TenantName={TenantName}, " +
+                "PreviousStatus={PreviousStatus}, NewStatus={NewStatus}, " +
+                "PerformedBy={PerformedByUserId}, CorrelationId={CorrelationId}",
+                id,
+                membership.User.Id,
+                membership.User.Email,
+                membership.Tenant.Id,
+                membership.Tenant.Name,
+                previousStatus ? "Active" : "Inactive",
+                request.IsActive ? "Active" : "Inactive",
+                TryGetCurrentUserId(),
+                GetCorrelationId());
 
             return Ok(membership);
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error updating status for tenant membership {Id}", id);
-            return StatusCode(500, "An error occurred while updating the status");
+            _logger.LogError(ex, "Error updating status for tenant membership {Id}. CorrelationId: {CorrelationId}",
+                id, GetCorrelationId());
+            return InternalServerError("An error occurred while updating the status");
         }
     }
 
@@ -212,24 +263,58 @@ public class TenantMembershipsController : AuthorizedControllerBase
     {
         try
         {
-            var membership = await _context.TenantMemberships.FindAsync(id);
+            // Load full membership details for audit log before deletion
+            var membership = await _context.TenantMemberships
+                .Include(tm => tm.Tenant)
+                .Include(tm => tm.User)
+                .FirstOrDefaultAsync(tm => tm.Id == id);
 
             if (membership == null)
             {
                 return NotFound($"Tenant membership with ID {id} not found");
             }
 
+            // Capture details for audit log before deletion
+            var deletedMembershipSnapshot = new
+            {
+                MembershipId = membership.Id,
+                TargetUserId = membership.User.Id,
+                TargetUserEmail = membership.User.Email,
+                TenantId = membership.Tenant.Id,
+                TenantName = membership.Tenant.Name,
+                Roles = string.Join(", ", membership.Roles),
+                WasActive = membership.IsActive,
+                JoinedAt = membership.JoinedAt
+            };
+
             _context.TenantMemberships.Remove(membership);
             await _context.SaveChangesAsync();
 
-            _logger.LogInformation("Deleted tenant membership {MembershipId}", id);
+            // Audit log: membership deleted (WARNING level because this is destructive)
+            _logger.LogWarning(
+                "AUDIT: Tenant membership DELETED. " +
+                "MembershipId={MembershipId}, TargetUserId={TargetUserId}, TargetUserEmail={TargetUserEmail}, " +
+                "TenantId={TenantId}, TenantName={TenantName}, " +
+                "DeletedRoles={DeletedRoles}, WasActive={WasActive}, OriginalJoinedAt={JoinedAt}, " +
+                "PerformedBy={PerformedByUserId}, CorrelationId={CorrelationId}",
+                deletedMembershipSnapshot.MembershipId,
+                deletedMembershipSnapshot.TargetUserId,
+                deletedMembershipSnapshot.TargetUserEmail,
+                deletedMembershipSnapshot.TenantId,
+                deletedMembershipSnapshot.TenantName,
+                deletedMembershipSnapshot.Roles,
+                deletedMembershipSnapshot.WasActive,
+                deletedMembershipSnapshot.JoinedAt,
+                TryGetCurrentUserId(),
+                GetCorrelationId());
 
             return NoContent();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error deleting tenant membership {Id}", id);
-            return StatusCode(500, "An error occurred while deleting the tenant membership");
+            _logger.LogError(ex, "Error deleting tenant membership {Id}. CorrelationId: {CorrelationId}",
+                id, GetCorrelationId());
+            return InternalServerError("An error occurred while deleting the tenant membership");
         }
     }
 
@@ -253,6 +338,8 @@ public class TenantMembershipsController : AuthorizedControllerBase
                 new RoleInfo(AppRole.TenantAdmin, "Tenant Admin", "Full administrative access within the tenant", "tenant"),
                 new RoleInfo(AppRole.Executive, "Executive", "View all data, approve overrides, access executive reports", "tenant"),
                 new RoleInfo(AppRole.OverrideApprover, "Override Approver", "Approve assignment and booking overrides", "tenant"),
+                new RoleInfo(AppRole.ResumeViewer, "Resume Viewer", "View and search all employee resumes within tenant", "tenant"),
+                new RoleInfo(AppRole.FinanceLead, "Finance Lead", "Manage employee cost rates, financial forecasts, and myForecast administration", "tenant"),
 
                 // System-Level Roles (for reference, but cannot be assigned via this endpoint)
                 new RoleInfo(AppRole.SystemAdmin, "System Admin", "Full system access, can manage all tenants and users", "system"),
@@ -264,8 +351,9 @@ public class TenantMembershipsController : AuthorizedControllerBase
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error retrieving available roles");
-            return StatusCode(500, "An error occurred while retrieving roles");
+            _logger.LogError(ex, "Error retrieving available roles. CorrelationId: {CorrelationId}",
+                GetCorrelationId());
+            return InternalServerError("An error occurred while retrieving roles");
         }
     }
 }

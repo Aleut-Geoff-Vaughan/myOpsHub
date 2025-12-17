@@ -1,4 +1,26 @@
-import { api } from '../lib/api-client';
+import { api, ApiError } from '../lib/api-client';
+import { logger } from './loggingService';
+
+const AUTH_COMPONENT = 'authService';
+
+// Helper to log auth errors with context
+function logAuthError(operation: string, error: unknown, context?: Record<string, unknown>): void {
+  const errorDetails: Record<string, unknown> = {
+    operation,
+    ...context,
+  };
+
+  if (error instanceof ApiError) {
+    errorDetails.status = error.status;
+    errorDetails.statusText = error.statusText;
+    errorDetails.data = error.data;
+  } else if (error instanceof Error) {
+    errorDetails.errorMessage = error.message;
+    errorDetails.errorName = error.name;
+  }
+
+  logger.error(`Auth ${operation} failed`, errorDetails, AUTH_COMPONENT);
+}
 
 export interface LoginRequest {
   email: string;
@@ -76,44 +98,130 @@ export interface CanImpersonateResponse {
 export const authService = {
   // Standard Auth
   async login(credentials: LoginRequest): Promise<LoginResponse> {
-    return api.post<LoginResponse>('/auth/login', credentials);
+    logger.debug(`Login attempt for ${credentials.email}`, { email: credentials.email }, AUTH_COMPONENT);
+    try {
+      const response = await api.post<LoginResponse>('/auth/login', credentials);
+      logger.info(`Login successful for ${credentials.email}`, {
+        userId: response.userId,
+        tenantCount: response.tenantAccess.length,
+        isSystemAdmin: response.isSystemAdmin,
+      }, AUTH_COMPONENT);
+      return response;
+    } catch (error) {
+      logAuthError('login', error, { email: credentials.email });
+      throw error;
+    }
   },
 
   async logout(): Promise<void> {
-    return api.post<void>('/auth/logout', {});
+    logger.debug('Logout initiated', undefined, AUTH_COMPONENT);
+    try {
+      await api.post<void>('/auth/logout', {});
+      logger.info('Logout successful', undefined, AUTH_COMPONENT);
+    } catch (error) {
+      logAuthError('logout', error);
+      throw error;
+    }
   },
 
   async setPassword(userId: string, password: string): Promise<void> {
-    return api.post<void>('/auth/set-password', { userId, password });
+    logger.debug(`Set password for user ${userId}`, { userId }, AUTH_COMPONENT);
+    try {
+      await api.post<void>('/auth/set-password', { userId, password });
+      logger.info(`Password set for user ${userId}`, { userId }, AUTH_COMPONENT);
+    } catch (error) {
+      logAuthError('setPassword', error, { userId });
+      throw error;
+    }
   },
 
   // Magic Link
   async requestMagicLink(email: string): Promise<MagicLinkRequestResponse> {
-    return api.post<MagicLinkRequestResponse>('/auth/magic-link/request', { email });
+    logger.debug(`Magic link request for ${email}`, { email }, AUTH_COMPONENT);
+    try {
+      const response = await api.post<MagicLinkRequestResponse>('/auth/magic-link/request', { email });
+      logger.info(`Magic link requested for ${email}`, { email }, AUTH_COMPONENT);
+      return response;
+    } catch (error) {
+      logAuthError('requestMagicLink', error, { email });
+      throw error;
+    }
   },
 
   async verifyMagicLink(token: string): Promise<MagicLinkVerifyResponse> {
-    return api.post<MagicLinkVerifyResponse>('/auth/magic-link/verify', { token });
+    // Don't log the token for security reasons
+    logger.debug('Magic link verification attempt', undefined, AUTH_COMPONENT);
+    try {
+      const response = await api.post<MagicLinkVerifyResponse>('/auth/magic-link/verify', { token });
+      logger.info(`Magic link verified for ${response.email}`, {
+        userId: response.userId,
+        tenantCount: response.tenantAccess.length,
+      }, AUTH_COMPONENT);
+      return response;
+    } catch (error) {
+      logAuthError('verifyMagicLink', error);
+      throw error;
+    }
   },
 
   // Impersonation
   async startImpersonation(targetUserId: string, reason: string): Promise<ImpersonationStartResponse> {
-    return api.post<ImpersonationStartResponse>('/admin/impersonation/start', { targetUserId, reason });
+    logger.warn(`Impersonation start requested for user ${targetUserId}`, {
+      targetUserId,
+      reason,
+    }, AUTH_COMPONENT);
+    try {
+      const response = await api.post<ImpersonationStartResponse>('/admin/impersonation/start', { targetUserId, reason });
+      logger.warn(`Impersonation started: ${response.impersonatedUser.email}`, {
+        sessionId: response.sessionId,
+        impersonatedUserId: response.impersonatedUser.userId,
+        impersonatedEmail: response.impersonatedUser.email,
+      }, AUTH_COMPONENT);
+      return response;
+    } catch (error) {
+      logAuthError('startImpersonation', error, { targetUserId, reason });
+      throw error;
+    }
   },
 
   async endImpersonation(): Promise<ImpersonationEndResponse> {
-    return api.post<ImpersonationEndResponse>('/admin/impersonation/end', {});
+    logger.debug('Ending impersonation session', undefined, AUTH_COMPONENT);
+    try {
+      const response = await api.post<ImpersonationEndResponse>('/admin/impersonation/end', {});
+      logger.warn(`Impersonation ended, returned to ${response.user.email}`, {
+        userId: response.user.userId,
+      }, AUTH_COMPONENT);
+      return response;
+    } catch (error) {
+      logAuthError('endImpersonation', error);
+      throw error;
+    }
   },
 
   async canImpersonate(targetUserId: string): Promise<CanImpersonateResponse> {
-    return api.get<CanImpersonateResponse>(`/admin/impersonation/can-impersonate/${targetUserId}`);
+    try {
+      return await api.get<CanImpersonateResponse>(`/admin/impersonation/can-impersonate/${targetUserId}`);
+    } catch (error) {
+      logAuthError('canImpersonate', error, { targetUserId });
+      throw error;
+    }
   },
 
   async getActiveImpersonationSession(): Promise<ImpersonationSessionInfo> {
-    return api.get<ImpersonationSessionInfo>('/admin/impersonation/active');
+    try {
+      return await api.get<ImpersonationSessionInfo>('/admin/impersonation/active');
+    } catch (error) {
+      logAuthError('getActiveImpersonationSession', error);
+      throw error;
+    }
   },
 
   async getImpersonationSessions(count: number = 50): Promise<ImpersonationSessionInfo[]> {
-    return api.get<ImpersonationSessionInfo[]>(`/admin/impersonation/sessions?count=${count}`);
+    try {
+      return await api.get<ImpersonationSessionInfo[]>(`/admin/impersonation/sessions?count=${count}`);
+    } catch (error) {
+      logAuthError('getImpersonationSessions', error, { count });
+      throw error;
+    }
   },
 };

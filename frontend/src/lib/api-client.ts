@@ -125,7 +125,14 @@ export async function apiRequest<T>(
         throw new ApiError(401, 'Unauthorized - Please login again', null);
       }
 
-      const errorData = await response.json().catch(() => null);
+      const errorData = await response.json().catch((parseError) => {
+        logger.warn(`Failed to parse error response JSON: ${method} ${endpoint}`, {
+          status: response.status,
+          correlationId,
+          parseError: parseError instanceof Error ? parseError.message : 'Unknown parse error',
+        }, 'api-client');
+        return null;
+      });
       logger.warn(`API Error: ${method} ${endpoint} - ${response.status}`, {
         status: response.status,
         duration,

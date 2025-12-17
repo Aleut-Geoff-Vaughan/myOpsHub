@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using MyScheduling.Api.Models;
 using MyScheduling.Core.Entities;
 using MyScheduling.Core.Enums;
 using MyScheduling.Core.Interfaces;
@@ -188,7 +189,8 @@ public class FilesController : AuthorizedControllerBase
 
             if (file.EntityType == "UserAttachment" && file.EntityId != userId && !IsSystemAdmin())
             {
-                return Forbid();
+                return ForbiddenWithLog(_logger, $"File:{id}", "Read",
+                    $"User {userId} attempted to access file owned by {file.EntityId}");
             }
 
             return Ok(new FileItemResponse
@@ -241,7 +243,8 @@ public class FilesController : AuthorizedControllerBase
 
             if (file.EntityType == "UserAttachment" && file.EntityId != userId && !IsSystemAdmin())
             {
-                return Forbid();
+                return ForbiddenWithLog(_logger, $"File:{id}", "Download",
+                    $"User {userId} attempted to download file owned by {file.EntityId}");
             }
 
             // For local storage, stream the file directly
@@ -261,14 +264,16 @@ public class FilesController : AuthorizedControllerBase
                 ExpiresAt = DateTime.UtcNow.Add(expiresIn)
             });
         }
-        catch (FileNotFoundException)
+        catch (FileNotFoundException ex)
         {
-            return NotFound(new { message = "File not found" });
+            _logger.LogWarning("File not found during download: FileId={FileId}, UserId={UserId}, Message={Message}",
+                id, GetCurrentUserId(), ex.Message);
+            return NotFound(CreateErrorResponse("File not found", ApiErrorCodes.NotFound));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error downloading file {FileId}", id);
-            return StatusCode(500, new { message = "An error occurred while downloading the file" });
+            return InternalServerError("An error occurred while downloading the file");
         }
     }
 
@@ -304,7 +309,8 @@ public class FilesController : AuthorizedControllerBase
 
             if (file.EntityType == "UserAttachment" && file.EntityId != userId && !IsSystemAdmin())
             {
-                return Forbid();
+                return ForbiddenWithLog(_logger, $"File:{id}", "Delete",
+                    $"User {userId} attempted to delete file owned by {file.EntityId}");
             }
 
             await _fileStorageService.DeleteFileAsync(id, userId);

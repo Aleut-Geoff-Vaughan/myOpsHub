@@ -84,6 +84,32 @@ import AppLauncherPage from './pages/AppLauncherPage';
 import FeedbackPage from './pages/FeedbackPage';
 import { UsageAnalyticsPage } from './pages/facilities/UsageAnalyticsPage';
 import { MyForecastsPage } from './pages/MyForecastsPage';
+import {
+  SalesOpsDashboardPage,
+  SalesOpsOpportunitiesPage,
+  SalesOpsOpportunityDetailPage,
+  SalesOpsOpportunityFormPage,
+  SalesOpsPipelinePage,
+  SalesOpsAccountsPage,
+  SalesOpsAccountDetailPage,
+  SalesOpsAccountFormPage,
+  SalesOpsContactsPage,
+  SalesOpsContactDetailPage,
+  SalesOpsContactFormPage,
+  SalesOpsVehiclesPage,
+  SalesOpsVehicleDetailPage,
+  SalesOpsVehicleFormPage,
+  SalesOpsCalendarPage,
+  SalesOpsForecastPage,
+  SalesOpsReportsPage,
+  SalesOpsSettingsPage,
+  SalesOpsStagesPage,
+  SalesOpsPicklistsPage,
+  SalesOpsEntitiesPage,
+  SalesOpsEntityDetailPage,
+  SalesOpsEntityFormPage,
+  SalesOpsCustomFieldsPage,
+} from './pages/salesops';
 import { ForecastProjectsPage } from './pages/ForecastProjectsPage';
 import { ProjectForecastGridPage } from './pages/ProjectForecastGridPage';
 import { BudgetManagementPage } from './pages/BudgetManagementPage';
@@ -387,6 +413,51 @@ function App() {
               <Route path="admin/offices/:officeId" element={<AdminOfficeDetailPage />} />
               <Route path="admin/spaces/:spaceId" element={<AdminSpaceDetailPage />} />
               <Route path="analytics" element={<UsageAnalyticsPage />} />
+            </Route>
+
+            {/* NEW: Unified mySalesOps Routes (new navigation system) */}
+            <Route
+              path="/salesops"
+              element={
+                <ProtectedRoute>
+                  <UnifiedLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<SalesOpsDashboardPage />} />
+              {/* Pipeline section */}
+              <Route path="pipeline" element={<SalesOpsPipelinePage />} />
+              <Route path="opportunities" element={<SalesOpsOpportunitiesPage />} />
+              <Route path="opportunities/new" element={<SalesOpsOpportunityFormPage />} />
+              <Route path="opportunities/:id" element={<SalesOpsOpportunityDetailPage />} />
+              <Route path="opportunities/:id/edit" element={<SalesOpsOpportunityFormPage />} />
+              <Route path="calendar" element={<SalesOpsCalendarPage />} />
+              {/* Accounts section */}
+              <Route path="accounts" element={<SalesOpsAccountsPage />} />
+              <Route path="accounts/new" element={<SalesOpsAccountFormPage />} />
+              <Route path="accounts/:id" element={<SalesOpsAccountDetailPage />} />
+              <Route path="accounts/:id/edit" element={<SalesOpsAccountFormPage />} />
+              <Route path="contacts" element={<SalesOpsContactsPage />} />
+              <Route path="contacts/new" element={<SalesOpsContactFormPage />} />
+              <Route path="contacts/:id" element={<SalesOpsContactDetailPage />} />
+              <Route path="contacts/:id/edit" element={<SalesOpsContactFormPage />} />
+              {/* Contracts section */}
+              <Route path="vehicles" element={<SalesOpsVehiclesPage />} />
+              <Route path="vehicles/new" element={<SalesOpsVehicleFormPage />} />
+              <Route path="vehicles/:id" element={<SalesOpsVehicleDetailPage />} />
+              <Route path="vehicles/:id/edit" element={<SalesOpsVehicleFormPage />} />
+              {/* Forecasting section */}
+              <Route path="forecast" element={<SalesOpsForecastPage />} />
+              <Route path="reports" element={<SalesOpsReportsPage />} />
+              {/* Administration section */}
+              <Route path="settings" element={<SalesOpsSettingsPage />} />
+              <Route path="settings/stages" element={<SalesOpsStagesPage />} />
+              <Route path="settings/picklists" element={<SalesOpsPicklistsPage />} />
+              <Route path="entities" element={<SalesOpsEntitiesPage />} />
+              <Route path="entities/new" element={<SalesOpsEntityFormPage />} />
+              <Route path="entities/:id" element={<SalesOpsEntityDetailPage />} />
+              <Route path="entities/:id/edit" element={<SalesOpsEntityFormPage />} />
+              <Route path="fields" element={<SalesOpsCustomFieldsPage />} />
             </Route>
 
             {/* 404 Catch-all: redirect to /work if authenticated, /login if not */}

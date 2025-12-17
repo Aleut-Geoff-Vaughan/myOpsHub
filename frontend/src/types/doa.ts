@@ -150,6 +150,14 @@ export interface TenantSettings {
   standardHoursPerDay?: number;
   excludeSaturdays?: boolean;
   excludeSundays?: boolean;
+  // Security Settings
+  emailNotificationsEnabled?: boolean;
+  require2FA?: boolean;
+  allowSelfRegistration?: boolean;
+  maintenanceMode?: boolean;
+  sessionTimeoutMinutes?: number;
+  passwordMinLength?: number;
+  failedLoginAttemptsBeforeLock?: number;
   createdAt: string;
   updatedAt?: string;
 }
@@ -191,4 +199,12 @@ export interface UpdateTenantSettingsRequest {
   standardHoursPerDay?: number;
   excludeSaturdays?: boolean;
   excludeSundays?: boolean;
+  // Security Settings
+  emailNotificationsEnabled?: boolean;
+  require2FA?: boolean;
+  allowSelfRegistration?: boolean;
+  maintenanceMode?: boolean;
+  sessionTimeoutMinutes?: number;
+  passwordMinLength?: number;
+  failedLoginAttemptsBeforeLock?: number;
 }

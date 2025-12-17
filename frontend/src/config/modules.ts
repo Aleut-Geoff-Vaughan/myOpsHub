@@ -32,6 +32,13 @@ export const moduleColors: Record<string, ModuleColor> = {
     text: '#115e59',       // teal-800
     name: 'teal',
   },
+  salesops: {
+    primary: '#ea580c',    // orange-600
+    light: '#fff7ed',      // orange-50
+    hover: '#c2410c',      // orange-700
+    text: '#9a3412',       // orange-800
+    name: 'orange',
+  },
   admin: {
     primary: '#7c3aed',    // violet-600
     light: '#f5f3ff',      // violet-50
@@ -41,7 +48,7 @@ export const moduleColors: Record<string, ModuleColor> = {
   },
 };
 
-export type ModuleId = 'work' | 'forecast' | 'facilities';
+export type ModuleId = 'work' | 'forecast' | 'facilities' | 'salesops';
 
 // Navigation item definition
 export interface NavigationItem {
@@ -272,6 +279,68 @@ export const facilitiesModule: ModuleConfig = {
   ],
 };
 
+// mySalesOps Module Configuration
+export const salesopsModule: ModuleConfig = {
+  id: 'salesops',
+  name: 'mySalesOps',
+  shortName: 'Sales',
+  icon: 'currency-dollar',
+  basePath: '/salesops',
+  color: moduleColors.salesops,
+  sections: [
+    {
+      id: 'dashboard',
+      name: '',
+      items: [
+        { id: 'dashboard', name: 'Dashboard', path: '/salesops', icon: 'dashboard' },
+      ],
+    },
+    {
+      id: 'pipeline',
+      name: 'Pipeline',
+      items: [
+        { id: 'board', name: 'Pipeline Board', path: '/salesops/pipeline', icon: 'view-columns' },
+        { id: 'list', name: 'All Opportunities', path: '/salesops/opportunities', icon: 'rectangle-stack' },
+        { id: 'calendar', name: 'Calendar', path: '/salesops/calendar', icon: 'calendar' },
+      ],
+    },
+    {
+      id: 'accounts',
+      name: 'Accounts',
+      items: [
+        { id: 'accounts', name: 'Accounts', path: '/salesops/accounts', icon: 'building-library' },
+        { id: 'contacts', name: 'Contacts', path: '/salesops/contacts', icon: 'users' },
+      ],
+    },
+    {
+      id: 'contracts',
+      name: 'Contracts',
+      items: [
+        { id: 'vehicles', name: 'Contract Vehicles', path: '/salesops/vehicles', icon: 'document-text' },
+      ],
+    },
+    {
+      id: 'forecast',
+      name: 'Forecasting',
+      roles: [AppRole.BusinessDeveloper, AppRole.TenantAdmin, AppRole.SysAdmin],
+      items: [
+        { id: 'forecast', name: 'Sales Forecast', path: '/salesops/forecast', icon: 'presentation-chart-line' },
+        { id: 'reports', name: 'Reports', path: '/salesops/reports', icon: 'chart-bar' },
+      ],
+    },
+    {
+      id: 'admin',
+      name: 'Administration',
+      roles: [AppRole.TenantAdmin, AppRole.SysAdmin],
+      items: [
+        { id: 'settings', name: 'Sales Settings', path: '/salesops/settings', icon: 'cog' },
+        { id: 'entities', name: 'Bidding Entities', path: '/salesops/entities', icon: 'building-office-2' },
+        { id: 'fields', name: 'Custom Fields', path: '/salesops/fields', icon: 'adjustments' },
+      ],
+    },
+  ],
+};
+
 // Admin navigation configuration (for overlay)
 export const adminNavigation: NavigationSection[] = [
   {
@@ -326,6 +395,7 @@ export const modules: Record<ModuleId, ModuleConfig> = {
   work: workModule,
   forecast: forecastModule,
   facilities: facilitiesModule,
+  salesops: salesopsModule,
 };
 
 // Helper to get module from path
@@ -338,6 +408,9 @@ export function getModuleFromPath(pathname: string): ModuleId | null {
   }
   if (pathname.startsWith('/facilities')) {
     return 'facilities';
+  }
+  if (pathname.startsWith('/salesops')) {
+    return 'salesops';
   }
   return null;
 }

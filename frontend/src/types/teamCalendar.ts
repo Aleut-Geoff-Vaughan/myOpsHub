@@ -77,6 +77,10 @@ export interface BulkAddMembersRequest {
   membershipType: MembershipType;
 }
 
+export interface UpdateTeamCalendarMemberRequest {
+  membershipType: MembershipType;
+}
+
 export interface WorkLocationPreferenceResponse {
   id: string;
   workDate: string; // ISO date string (YYYY-MM-DD)

@@ -17,16 +17,17 @@ import {
   type CreateResumeSectionRequest,
   type UpdateResumeSectionRequest
 } from '../types/api';
+import { useAuthStore } from '../stores/authStore';
 
 export function ResumeDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { user } = useAuthStore();
   const [resume, setResume] = useState<ResumeProfile | null>(null);
   const [sections, setSections] = useState<ResumeSection[]>([]);
   const [versions, setVersions] = useState<ResumeVersion[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  // editMode removed - unused
   const [activeTab, setActiveTab] = useState<'overview' | 'sections' | 'versions'>('overview');
 
   // Form states
@@ -95,14 +96,16 @@ export function ResumeDetailPage() {
 
   const handleCreateVersion = async () => {
     if (!confirm('Create a new version snapshot of this resume?')) return;
+    if (!user?.id) {
+      setError('You must be logged in to create a version');
+      return;
+    }
 
     try {
-      // TODO: Get current user ID from auth context
-      const currentUserId = 'temp-user-id'; // Replace with actual user ID
       await createVersion(id!, {
         versionName: `Version ${new Date().toLocaleDateString()}`,
         description: `Version created on ${new Date().toLocaleDateString()}`,
-        createdByUserId: currentUserId
+        createdByUserId: user.id
       });
       await loadResumeData();
     } catch (err) {
@@ -113,13 +116,15 @@ export function ResumeDetailPage() {
 
   const handleRequestApproval = async () => {
     if (!confirm('Submit this resume for approval?')) return;
+    if (!user?.id) {
+      setError('You must be logged in to request approval');
+      return;
+    }
 
     try {
-      // TODO: Get current user ID from auth context
-      const currentUserId = 'temp-user-id'; // Replace with actual user ID
       await requestApproval({
         resumeProfileId: id!,
-        requestedByUserId: currentUserId,
+        requestedByUserId: user.id,
         requestNotes: 'Please review my resume'
       });
       await loadResumeData();

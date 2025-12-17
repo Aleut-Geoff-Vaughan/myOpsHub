@@ -122,7 +122,7 @@ Reference implementations:
 - Styling with Tailwind CSS utility classes
 
 ### Roles
-Employee, ViewOnly, TeamLead, ProjectManager, ResourceManager, OfficeManager, TenantAdmin, Executive, OverrideApprover, SysAdmin, Support, Auditor
+Employee, ViewOnly, TeamLead, ProjectManager, ResourceManager, OfficeManager, TenantAdmin, Executive, OverrideApprover, ResumeViewer, FinanceLead, SystemAdmin, Support, Auditor
 
 ## Forecast Module Features
 
@@ -164,22 +164,24 @@ john.doe@company.com,2025-01-01,125.50,2025-12-31,Annual rate
 
 ## Testing
 
-### Current State (Manual Only)
+### URLs
 - Health check: `http://localhost:5107/health`
 - Swagger: `http://localhost:5107/swagger`
 - Frontend: `http://localhost:5173`
 - Test account: `admin@admin.com`
 
-### Automated Testing (PLANNED)
+### Automated Testing
 
-#### Backend (xUnit)
-Test projects structure:
+#### Backend (xUnit) - 69 tests
+Test projects:
 ```
 backend/tests/
-  MyScheduling.Core.Tests/           # Domain model tests
-  MyScheduling.Infrastructure.Tests/  # Service tests
-  MyScheduling.Api.Tests/            # Controller unit tests
-  MyScheduling.Integration.Tests/    # API integration tests
+  MyScheduling.Core.Tests/              # Domain model tests
+  MyScheduling.Infrastructure.Tests/    # Service tests (WorkingDaysService - 13 tests)
+  MyScheduling.Api.Tests/               # Controller & auth tests
+    Auth/AuthControllerTests.cs         # 4 tests - login, token refresh, logout
+    Auth/RequiresPermissionAttributeTests.cs  # 20 tests - authorization attribute
+    MultiTenant/MultiTenantIsolationTests.cs  # 25 tests - tenant isolation
 ```
 
 Commands:
@@ -189,7 +191,18 @@ dotnet test                          # Run all tests
 dotnet test --collect:"XPlat Code Coverage"  # With coverage
 ```
 
-#### Frontend (Vitest)
+#### Frontend (Vitest) - 155 tests
+Test files:
+```
+frontend/src/
+  stores/authStore.test.ts           # 18 tests - auth state management
+  pages/LoginPage.test.tsx           # 28 tests - login page rendering
+  components/ui/Button.test.tsx      # 25 tests - button variants, states
+  components/ui/Modal.test.tsx       # 25 tests - modal behavior
+  hooks/useFiscalYear.test.ts        # 36 tests - fiscal year calculations
+  hooks/useWorkingDays.test.tsx      # 14 tests - working days hooks
+```
+
 ```bash
 cd frontend
 npm run test                         # Run unit tests
@@ -197,30 +210,48 @@ npm run test:coverage                # With coverage
 npm run test:ui                      # Interactive UI
 ```
 
-#### E2E (Playwright)
+#### E2E (Playwright) - 11 tests
+Test files:
+```
+frontend/e2e/
+  login.spec.ts                      # 11 tests - login page E2E
+```
+
 ```bash
 cd frontend
 npx playwright test                  # Run all E2E tests
 npx playwright test --ui             # Interactive mode
 npx playwright show-report           # View results
+npx playwright install               # Install browsers (first time)
 ```
 
-#### Coverage Targets
-- Month 1: 30%
-- Month 2: 50%
-- Month 3: 60%
-- Long-term: 70%+
+#### Current Coverage
+- **Total:** 224 tests (69 backend + 155 frontend) + 11 E2E
+- **CI/CD:** Tests run on every push via GitHub Actions
+
+## File Storage (Azure Blob)
+
+### Implementation
+- [AzureBlobStorageService.cs](backend/src/MyScheduling.Infrastructure/Services/AzureBlobStorageService.cs) - Azure Blob implementation
+- [LocalFileStorageService.cs](backend/src/MyScheduling.Infrastructure/Services/LocalFileStorageService.cs) - Local dev fallback
+- [FilesController.cs](backend/src/MyScheduling.Api/Controllers/FilesController.cs) - REST API (upload, list, download, delete)
+- [IFileStorageService.cs](backend/src/MyScheduling.Core/Interfaces/IFileStorageService.cs) - Interface with versioning, search, SAS URLs
+- Frontend: `fileStorageService.ts`, `useFileStorage.ts` hooks
+
+### Configuration
+- Environment variable: `AZURE_STORAGE_CONNECTION_STRING` (set in Azure App Service)
+- Container: `myscheduling-files`
+- Provider selection: `FileStorage:Provider` in appsettings.json ("AzureBlob" | "Local")
 
 ## Known Considerations
 
-- No automated test suites yet (xUnit/Vitest/Playwright planned - see Testing section)
-- Profile photo upload is stubbed (needs Azure Blob implementation)
+- Profile photo upload is stubbed (could use IFileStorageService)
 - Review N+1 queries when modifying data access code
 
-## Logging Configuration (PLANNED)
+## Logging Configuration
 
 ### Backend Logging (Serilog)
-Once implemented, the backend will use Serilog for structured logging:
+Backend uses Serilog for structured logging:
 
 ```json
 {
@@ -273,7 +304,7 @@ __mySchedulingLogger.getLogBuffer()
 - Backend returns correlation ID in response headers
 - Useful for tracing requests across frontend and backend logs
 
-## Help System (PLANNED)
+## Help System
 
 ### Backend Entity
 `HelpArticle` entity for storing configurable help content:
@@ -410,3 +441,88 @@ Automatic rollback on:
 | AKS (full Kubernetes) | ~$119 |
 
 **Recommendation:** Consider Azure Container Apps as middle ground before full AKS migration.
+
+## Recent Completions (December 2025)
+
+### Comprehensive Test Suite (December 2025)
+- **Backend Tests (69 total)**:
+  - `RequiresPermissionAttributeTests.cs` - 20 tests for authorization attribute
+  - `AuthControllerTests.cs` - 4 tests for login, token refresh, logout
+  - `MultiTenantIsolationTests.cs` - 25 tests for tenant data isolation
+  - Tests AuthorizedControllerBase helpers, X-Tenant-Id header handling, cross-tenant prevention
+- **Frontend Tests (155 total)**:
+  - `LoginPage.test.tsx` - 28 tests for login page rendering and behavior
+  - `Button.test.tsx` - 25 tests for button variants, sizes, states
+  - `Modal.test.tsx` - 25 tests for modal behavior, ConfirmDialog
+  - `useFiscalYear.test.ts` - 36 tests for fiscal year calculations (October federal FY)
+  - `useWorkingDays.test.tsx` - 14 tests for working days React Query hooks
+  - `authStore.test.ts` - 18 tests for Zustand auth state
+- **E2E Tests (Playwright)**:
+  - `login.spec.ts` - 11 tests for login page E2E flows
+  - Configured for Chromium, Firefox, WebKit browsers
+  - Auto-starts dev server for CI
+
+### Staffing Features (December 2025)
+- Approver group admin UI per project/WBS
+- Interactive timeline/Gantt for staffing requests
+- Bulk assignment operations from admin page
+- Direct booking option for staffing managers
+- Workflow notification emails via Azure Communication Services
+
+### Auth Hardening
+- **Refresh Tokens**: Added secure refresh token mechanism with rotation on use
+  - New `RefreshToken` entity with SHA256 hashing
+  - Endpoints: `POST /api/auth/refresh`, `POST /api/auth/revoke`, `POST /api/auth/revoke-all`
+  - 7-day expiration, automatic rotation, IP/user-agent tracking
+- **Token-Based Identity**: Removed all `X-User-Id` header overrides
+  - All identity now derived from JWT claims only
+  - Updated `AuthController.ChangePassword` and `ImpersonationController`
+
+### Code Cleanup
+- **UsersController.cs**: Implemented proper BCrypt password verification with validation
+- **UsersController.cs**: Implemented file deletion from storage when removing profile photos
+- **ResumeTemplatesController.cs**: Implemented template preview with placeholder replacement
+  - `RenderTemplate()` replaces `{{placeholder}}` tokens with sample data
+  - `ExtractPlaceholders()` lists all available placeholders
+- **AdminPage.tsx**: Connected security settings to tenant settings API
+- **ResumeDetailPage.tsx**: Updated to use auth context for user ID
+
+### WBS Improvements
+- Transaction support in bulk operations
+- N+1 query optimization
+- PaginatedResponse moved to Core layer
+- Database indexes for WBS queries
+- Date range validation
+- Pagination UI controls
+- Bulk selection UI
+- WBS Approval Queue page
+
+### Enhanced Logging & Error Diagnostics (December 2025)
+
+**Backend Correlation ID & Request Context:**
+- `CorrelationIdMiddleware` - Extracts/generates `X-Correlation-Id` for distributed tracing
+- `RequestLoggingMiddleware` - Pushes UserId, UserEmail, TenantId, ClientIp, RequestPath, RequestMethod to Serilog context for ALL logs
+- `ApiErrorResponse.cs` - Standardized error DTO with `{ message, correlationId, errorCode, details }`
+- `AuthorizedControllerBase` helpers: `CreateErrorResponse()`, `InternalServerError()`, `ForbiddenWithLog()`
+
+**Security Audit Logging:**
+- `TenantMembershipsController` - Full audit trail for create, update roles, update status, delete with before/after state
+- `UsersController` - Hard delete logging with before-state snapshot
+- `FilesController` - Authorization failure logging via `ForbiddenWithLog()`
+- `MagicLinkService` - Suspicious pattern detection (IP tracking, token reuse attempts, IP change warnings)
+
+**External Service Error Handling:**
+- `AzureEmailService` - Retry with exponential backoff, detailed failure logging with duration/attempts
+- `AzureBlobStorageService` - Azure SDK error handling
+- `WorkflowNotificationService` - Batch error aggregation (X of Y emails failed)
+
+**Frontend Service Layer Logging:**
+- `authService.ts`, `resumeService.ts`, `forecastService.ts` - Error context with ApiError details
+- `api-client.ts` - JSON parse error logging instead of swallowing
+- Consistent pattern: `logXxxError()` helper functions with operation context
+
+**Files Modified:**
+- `RequestLoggingMiddleware.cs` - Query string logging with sensitive param redaction
+- `TenantMembershipsController.cs` - AUDIT prefix logs for membership changes
+- `UsersController.cs` - Try-catch on GetUserLogins, enhanced error context
+- `FilesController.cs` - FileNotFoundException logging, ForbiddenWithLog usage

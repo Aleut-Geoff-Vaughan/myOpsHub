@@ -5,6 +5,7 @@ import type {
   UpdateTeamCalendarRequest,
   AddTeamCalendarMemberRequest,
   BulkAddMembersRequest,
+  UpdateTeamCalendarMemberRequest,
   TeamCalendarMemberResponse,
   TeamCalendarViewResponse,
   ManagerViewResponse,
@@ -127,6 +128,20 @@ export const teamCalendarService = {
 
     return api.delete<void>(
       `/teamcalendar/${calendarId}/members/${memberId}?${queryParams.toString()}`
+    );
+  },
+
+  /**
+   * Update a member's membership type
+   */
+  updateMember: async (
+    calendarId: string,
+    memberId: string,
+    request: UpdateTeamCalendarMemberRequest
+  ): Promise<TeamCalendarMemberResponse> => {
+    return api.patch<TeamCalendarMemberResponse>(
+      `/teamcalendar/${calendarId}/members/${memberId}`,
+      request
     );
   },
 

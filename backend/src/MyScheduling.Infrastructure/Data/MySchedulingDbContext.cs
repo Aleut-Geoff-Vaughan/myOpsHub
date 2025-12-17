@@ -137,9 +137,10 @@ public class MySchedulingDbContext : DbContext
     public DbSet<AuthorizationAuditLog> AuthorizationAuditLogs => Set<AuthorizationAuditLog>();
     public DbSet<LoginAudit> LoginAudits => Set<LoginAudit>();
 
-    // Authentication (Magic Link & Impersonation)
+    // Authentication (Magic Link, Impersonation & Refresh Tokens)
     public DbSet<MagicLinkToken> MagicLinkTokens => Set<MagicLinkToken>();
     public DbSet<ImpersonationSession> ImpersonationSessions => Set<ImpersonationSession>();
+    public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();
 
     // Dropdown Configuration
     public DbSet<TenantDropdownConfiguration> TenantDropdownConfigurations => Set<TenantDropdownConfiguration>();
@@ -154,6 +155,26 @@ public class MySchedulingDbContext : DbContext
     // Data Archive Management
     public DbSet<DataArchive> DataArchives => Set<DataArchive>();
     public DbSet<DataArchiveExport> DataArchiveExports => Set<DataArchiveExport>();
+
+    // mySalesOps - Opportunity Management
+    public DbSet<SalesStage> SalesStages => Set<SalesStage>();
+    public DbSet<LossReason> LossReasons => Set<LossReason>();
+    public DbSet<SalesAccount> SalesAccounts => Set<SalesAccount>();
+    public DbSet<SalesContact> SalesContacts => Set<SalesContact>();
+    public DbSet<BiddingEntity> BiddingEntities => Set<BiddingEntity>();
+    public DbSet<ContractVehicle> ContractVehicles => Set<ContractVehicle>();
+    public DbSet<SalesOpportunity> SalesOpportunities => Set<SalesOpportunity>();
+    public DbSet<OpportunityTeamMember> OpportunityTeamMembers => Set<OpportunityTeamMember>();
+    public DbSet<OpportunityContactRole> OpportunityContactRoles => Set<OpportunityContactRole>();
+    public DbSet<OpportunityCapability> OpportunityCapabilities => Set<OpportunityCapability>();
+    public DbSet<OpportunityNote> OpportunityNotes => Set<OpportunityNote>();
+    public DbSet<OpportunityFieldHistory> OpportunityFieldHistories => Set<OpportunityFieldHistory>();
+    public DbSet<SalesCustomFieldDefinition> SalesCustomFieldDefinitions => Set<SalesCustomFieldDefinition>();
+    public DbSet<SalesCustomFieldValue> SalesCustomFieldValues => Set<SalesCustomFieldValue>();
+    public DbSet<SalesForecastGroup> SalesForecastGroups => Set<SalesForecastGroup>();
+    public DbSet<SalesForecastTarget> SalesForecastTargets => Set<SalesForecastTarget>();
+    public DbSet<SalesPicklistDefinition> SalesPicklistDefinitions => Set<SalesPicklistDefinition>();
+    public DbSet<SalesPicklistValue> SalesPicklistValues => Set<SalesPicklistValue>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -177,6 +198,7 @@ public class MySchedulingDbContext : DbContext
         ConfigureAuthentication(modelBuilder);
         ConfigureFacilitiesPortal(modelBuilder);
         ConfigureAppLauncherAndFeedback(modelBuilder);
+        ConfigureSalesOps(modelBuilder);
 
         // Apply global query filters for soft deletes
         ApplySoftDeleteFilter(modelBuilder);
@@ -2490,6 +2512,370 @@ public class MySchedulingDbContext : DbContext
             // Ignore computed properties
             entity.Ignore(e => e.IsActive);
             entity.Ignore(e => e.Duration);
+        });
+
+        // RefreshToken
+        modelBuilder.Entity<RefreshToken>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TokenHash).IsRequired().HasMaxLength(64); // SHA256 hex
+            entity.Property(e => e.ExpiresAt).IsRequired();
+            entity.Property(e => e.CreatedAt).IsRequired();
+            entity.Property(e => e.CreatedByIp).HasMaxLength(45); // IPv6 max
+            entity.Property(e => e.UserAgent).HasMaxLength(500);
+            entity.Property(e => e.RevokedByIp).HasMaxLength(45);
+            entity.Property(e => e.RevokedReason).HasMaxLength(500);
+
+            entity.HasIndex(e => e.TokenHash).IsUnique();
+            entity.HasIndex(e => new { e.UserId, e.ExpiresAt });
+            entity.HasIndex(e => e.ExpiresAt); // For cleanup jobs
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.ReplacedByToken)
+                .WithMany()
+                .HasForeignKey(e => e.ReplacedByTokenId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Ignore computed properties
+            entity.Ignore(e => e.Token); // Plain token is not stored in DB
+            entity.Ignore(e => e.IsExpired);
+            entity.Ignore(e => e.IsRevoked);
+            entity.Ignore(e => e.IsActive);
+        });
+    }
+
+    private void ConfigureSalesOps(ModelBuilder modelBuilder)
+    {
+        // SalesStage - Pipeline stages
+        modelBuilder.Entity<SalesStage>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Color).HasMaxLength(20);
+            entity.HasIndex(e => new { e.TenantId, e.SortOrder });
+            entity.HasIndex(e => new { e.TenantId, e.Name }).IsUnique();
+        });
+
+        // LossReason - Configurable loss/no-bid reasons
+        modelBuilder.Entity<LossReason>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.HasIndex(e => new { e.TenantId, e.Name }).IsUnique();
+        });
+
+        // SalesAccount - Government agencies/accounts (hierarchical)
+        modelBuilder.Entity<SalesAccount>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(300);
+            entity.Property(e => e.Website).HasMaxLength(500);
+            entity.Property(e => e.Description).HasMaxLength(4000);
+            entity.HasIndex(e => new { e.TenantId, e.Name });
+            entity.HasIndex(e => new { e.TenantId, e.AccountType });
+
+            entity.HasOne(e => e.ParentAccount)
+                .WithMany(e => e.ChildAccounts)
+                .HasForeignKey(e => e.ParentAccountId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // SalesContact - Key personnel at agencies
+        modelBuilder.Entity<SalesContact>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.FirstName).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.LastName).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.Email).HasMaxLength(200);
+            entity.Property(e => e.Phone).HasMaxLength(50);
+            entity.Property(e => e.Title).HasMaxLength(200);
+            entity.Property(e => e.Department).HasMaxLength(200);
+            entity.HasIndex(e => new { e.TenantId, e.AccountId });
+            entity.HasIndex(e => new { e.TenantId, e.Email });
+
+            entity.HasOne(e => e.Account)
+                .WithMany(e => e.Contacts)
+                .HasForeignKey(e => e.AccountId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // BiddingEntity - 8(a) and certification tracking
+        modelBuilder.Entity<BiddingEntity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(300);
+            entity.Property(e => e.LegalName).HasMaxLength(500);
+            entity.Property(e => e.DunsNumber).HasMaxLength(20);
+            entity.Property(e => e.CageCode).HasMaxLength(10);
+            entity.Property(e => e.UeiNumber).HasMaxLength(20);
+            entity.HasIndex(e => new { e.TenantId, e.Name }).IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.Is8a });
+            entity.HasIndex(e => new { e.TenantId, e.SbaExpirationDate }); // For expiration alerts
+
+            // Ignore computed properties
+            entity.Ignore(e => e.IsSbaActive);
+            entity.Ignore(e => e.DaysUntilSbaExpiration);
+        });
+
+        // ContractVehicle - GWAC/IDIQ tracking
+        modelBuilder.Entity<ContractVehicle>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(300);
+            entity.Property(e => e.ContractNumber).HasMaxLength(100);
+            entity.Property(e => e.Description).HasMaxLength(4000);
+            entity.Property(e => e.CeilingValue).HasPrecision(18, 2);
+            entity.HasIndex(e => new { e.TenantId, e.Name });
+            entity.HasIndex(e => new { e.TenantId, e.ExpirationDate }); // For expiration alerts
+        });
+
+        // SalesOpportunity - Main opportunity entity
+        modelBuilder.Entity<SalesOpportunity>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.OpportunityNumber).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(500);
+            entity.Property(e => e.Description).HasMaxLength(4000);
+            entity.Property(e => e.Amount).HasPrecision(18, 2);
+            entity.Property(e => e.TotalContractValue).HasPrecision(18, 2);
+            entity.Property(e => e.TargetGrossMarginPercent).HasPrecision(5, 2);
+            entity.Property(e => e.TargetOperatingIncomePercent).HasPrecision(5, 2);
+            entity.Property(e => e.WinningPriceTcv).HasPrecision(18, 2);
+            entity.Property(e => e.CloseFiscalYear).HasMaxLength(10);
+            entity.Property(e => e.CloseFiscalQuarter).HasMaxLength(10);
+            entity.Property(e => e.OpportunityTerms).HasMaxLength(500);
+            entity.Property(e => e.RevenueStream).HasMaxLength(200);
+            entity.Property(e => e.SolicitationNumber).HasMaxLength(100);
+            entity.Property(e => e.PrimaryNaicsCode).HasMaxLength(20);
+            entity.Property(e => e.IncumbentContractNumber).HasMaxLength(100);
+            entity.Property(e => e.ProposalId).HasMaxLength(100);
+            entity.Property(e => e.CustomerFeedback).HasMaxLength(4000);
+            entity.Property(e => e.WinningCompetitor).HasMaxLength(300);
+
+            // Indexes for common queries
+            entity.HasIndex(e => new { e.TenantId, e.OpportunityNumber }).IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.StageId });
+            entity.HasIndex(e => new { e.TenantId, e.CloseDate });
+            entity.HasIndex(e => new { e.TenantId, e.OwnerId });
+            entity.HasIndex(e => new { e.TenantId, e.AccountId });
+            entity.HasIndex(e => new { e.TenantId, e.Result });
+
+            // Foreign key relationships
+            entity.HasOne(e => e.Account)
+                .WithMany(e => e.Opportunities)
+                .HasForeignKey(e => e.AccountId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.BiddingEntity)
+                .WithMany(e => e.Opportunities)
+                .HasForeignKey(e => e.BiddingEntityId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.PrimaryContact)
+                .WithMany()
+                .HasForeignKey(e => e.PrimaryContactId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.Stage)
+                .WithMany(e => e.Opportunities)
+                .HasForeignKey(e => e.StageId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.Owner)
+                .WithMany()
+                .HasForeignKey(e => e.OwnerId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.LossReason)
+                .WithMany(e => e.Opportunities)
+                .HasForeignKey(e => e.LossReasonId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            entity.HasOne(e => e.ContractVehicle)
+                .WithMany(e => e.Opportunities)
+                .HasForeignKey(e => e.ContractVehicleId)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            // Ignore computed properties
+            entity.Ignore(e => e.WeightedAmount);
+            entity.Ignore(e => e.WeightedTcv);
+        });
+
+        // OpportunityTeamMember - Team on opportunity
+        modelBuilder.Entity<OpportunityTeamMember>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Role).HasMaxLength(200);
+            entity.HasIndex(e => new { e.TenantId, e.OpportunityId, e.UserId }).IsUnique();
+
+            entity.HasOne(e => e.Opportunity)
+                .WithMany(e => e.TeamMembers)
+                .HasForeignKey(e => e.OpportunityId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.User)
+                .WithMany()
+                .HasForeignKey(e => e.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // OpportunityContactRole - Contact roles on opportunity
+        modelBuilder.Entity<OpportunityContactRole>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Role).IsRequired().HasMaxLength(100);
+            entity.HasIndex(e => new { e.TenantId, e.OpportunityId, e.ContactId });
+
+            entity.HasOne(e => e.Opportunity)
+                .WithMany(e => e.ContactRoles)
+                .HasForeignKey(e => e.OpportunityId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Contact)
+                .WithMany()
+                .HasForeignKey(e => e.ContactId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // OpportunityCapability - Capabilities/services for opportunity
+        modelBuilder.Entity<OpportunityCapability>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Capability).HasMaxLength(200);
+            entity.Property(e => e.CapabilityBusinessLine).HasMaxLength(200);
+            entity.Property(e => e.ParentCapability).HasMaxLength(200);
+            entity.Property(e => e.Percentage).HasPrecision(5, 2);
+            entity.Property(e => e.AllocatedAmount).HasPrecision(18, 2);
+            entity.Property(e => e.WeightedAmount).HasPrecision(18, 2);
+            entity.HasIndex(e => new { e.TenantId, e.OpportunityId });
+
+            entity.HasOne(e => e.Opportunity)
+                .WithMany(e => e.Capabilities)
+                .HasForeignKey(e => e.OpportunityId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // OpportunityNote - Notes/activity on opportunity
+        modelBuilder.Entity<OpportunityNote>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.NoteType).HasMaxLength(50);
+            entity.Property(e => e.Content).IsRequired();
+            entity.HasIndex(e => new { e.TenantId, e.OpportunityId });
+
+            entity.HasOne(e => e.Opportunity)
+                .WithMany(e => e.Notes)
+                .HasForeignKey(e => e.OpportunityId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // OpportunityFieldHistory - Field change tracking
+        modelBuilder.Entity<OpportunityFieldHistory>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.FieldName).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.OldValue).HasMaxLength(4000);
+            entity.Property(e => e.NewValue).HasMaxLength(4000);
+            entity.HasIndex(e => new { e.OpportunityId, e.ChangedAt });
+
+            entity.HasOne(e => e.Opportunity)
+                .WithMany(e => e.FieldHistory)
+                .HasForeignKey(e => e.OpportunityId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.ChangedByUser)
+                .WithMany()
+                .HasForeignKey(e => e.ChangedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // SalesCustomFieldDefinition - Admin-configurable custom fields
+        modelBuilder.Entity<SalesCustomFieldDefinition>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.EntityType).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.FieldName).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.DisplayLabel).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.PicklistOptions).HasMaxLength(4000); // JSON
+            entity.Property(e => e.DefaultValue).HasMaxLength(500);
+            entity.Property(e => e.Section).HasMaxLength(100);
+            entity.HasIndex(e => new { e.TenantId, e.EntityType, e.FieldName }).IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.EntityType, e.SortOrder });
+        });
+
+        // SalesCustomFieldValue - Custom field values per record
+        modelBuilder.Entity<SalesCustomFieldValue>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.EntityType).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.TextValue).HasMaxLength(4000);
+            entity.Property(e => e.NumberValue).HasPrecision(18, 4);
+            entity.Property(e => e.PicklistValue).HasMaxLength(4000); // JSON for multi-select
+            entity.HasIndex(e => new { e.TenantId, e.EntityType, e.EntityId });
+            entity.HasIndex(e => new { e.FieldDefinitionId, e.EntityId }).IsUnique();
+
+            entity.HasOne(e => e.FieldDefinition)
+                .WithMany()
+                .HasForeignKey(e => e.FieldDefinitionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // SalesForecastGroup - Forecast groupings (division, market, etc.)
+        modelBuilder.Entity<SalesForecastGroup>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Name).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.GroupType).IsRequired().HasMaxLength(100);
+            entity.HasIndex(e => new { e.TenantId, e.GroupType });
+            entity.HasIndex(e => new { e.TenantId, e.Name }).IsUnique();
+        });
+
+        // SalesForecastTarget - Forecast targets by group and period
+        modelBuilder.Entity<SalesForecastTarget>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.TargetValue).HasPrecision(18, 2);
+            entity.Property(e => e.ActualValue).HasPrecision(18, 2);
+            entity.HasIndex(e => new { e.TenantId, e.ForecastGroupId, e.FiscalYear, e.FiscalQuarter });
+
+            entity.HasOne(e => e.ForecastGroup)
+                .WithMany(e => e.Targets)
+                .HasForeignKey(e => e.ForecastGroupId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // SalesPicklistDefinition - Admin-configurable picklists per tenant
+        modelBuilder.Entity<SalesPicklistDefinition>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.PicklistName).IsRequired().HasMaxLength(100);
+            entity.Property(e => e.DisplayLabel).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.EntityType).HasMaxLength(50);
+            entity.Property(e => e.FieldName).HasMaxLength(100);
+            entity.HasIndex(e => new { e.TenantId, e.PicklistName }).IsUnique();
+            entity.HasIndex(e => new { e.TenantId, e.SortOrder });
+        });
+
+        // SalesPicklistValue - Values within a picklist
+        modelBuilder.Entity<SalesPicklistValue>(entity =>
+        {
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.Value).IsRequired().HasMaxLength(200);
+            entity.Property(e => e.Label).IsRequired().HasMaxLength(300);
+            entity.Property(e => e.Color).HasMaxLength(20);
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.HasIndex(e => new { e.TenantId, e.PicklistDefinitionId, e.Value }).IsUnique();
+            entity.HasIndex(e => new { e.PicklistDefinitionId, e.SortOrder });
+
+            entity.HasOne(e => e.PicklistDefinition)
+                .WithMany(e => e.Values)
+                .HasForeignKey(e => e.PicklistDefinitionId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 

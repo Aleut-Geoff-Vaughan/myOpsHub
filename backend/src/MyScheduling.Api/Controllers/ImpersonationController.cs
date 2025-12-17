@@ -316,7 +316,7 @@ public class ImpersonationController : ControllerBase
     {
         userId = Guid.Empty;
 
-        // Try to get from JWT claims
+        // Get user ID from JWT claims only (secure, token-based identity)
         var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
         if (!string.IsNullOrEmpty(userIdClaim) && Guid.TryParse(userIdClaim, out userId))
         {
@@ -326,12 +326,6 @@ public class ImpersonationController : ControllerBase
             {
                 userId = originalUserId;
             }
-            return true;
-        }
-
-        // Fallback to header (for development)
-        if (Request.Headers.TryGetValue("X-User-Id", out var header) && Guid.TryParse(header, out userId))
-        {
             return true;
         }
 

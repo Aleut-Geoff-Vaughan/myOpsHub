@@ -262,6 +262,26 @@ export interface Assignment {
   approvedByUserId?: string;
   createdAt: string;
   updatedAt: string;
+  // Navigation properties (included by backend)
+  user?: {
+    id: string;
+    displayName: string;
+    email: string;
+  };
+  wbsElement?: {
+    id: string;
+    code: string;
+    description: string;
+    project?: {
+      id: string;
+      name: string;
+      code: string;
+    };
+  };
+  projectRole?: {
+    id: string;
+    name: string;
+  };
 }
 
 export enum AssignmentRequestStatus {
@@ -358,10 +378,13 @@ export enum AppRole {
   TenantAdmin = 6,
   Executive = 7,
   OverrideApprover = 8,
+  ResumeViewer = 9,    // Can view and search all employee resumes within tenant
+  FinanceLead = 10,    // Can manage employee cost rates and view financial forecasts
+  BusinessDeveloper = 11, // Can access mySalesOps module for opportunity management
   // System-Level Roles
-  SystemAdmin = 9,
-  Support = 10,
-  Auditor = 11,
+  SystemAdmin = 12,
+  Support = 13,
+  Auditor = 14,
 }
 
 export interface TenantMembership {

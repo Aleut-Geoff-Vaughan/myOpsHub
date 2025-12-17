@@ -13,6 +13,7 @@ import type {
   UpdateTeamCalendarRequest,
   TeamCalendarType,
   MembershipType,
+  UpdateTeamCalendarMemberRequest,
 } from '../types/teamCalendar';
 
 interface UserOption {
@@ -253,6 +254,19 @@ export function AdminTeamCalendarsPage() {
     },
   });
 
+  const updateMemberMutation = useMutation({
+    mutationFn: async ({ calendarId, memberId, request }: { calendarId: string; memberId: string; request: UpdateTeamCalendarMemberRequest }) => {
+      return teamCalendarService.updateMember(calendarId, memberId, request);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin-team-calendars'] });
+      toast.success('Member updated successfully');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message || 'Failed to update member');
+    },
+  });
+
   const resetForm = () => {
     setFormData({
       name: '',
@@ -304,7 +318,8 @@ export function AdminTeamCalendarsPage() {
     }
   };
 
-  const getMembershipTypeLabel = (type: MembershipType): string => {
+  // Reserved for future UI display of membership types
+  const _getMembershipTypeLabel = (type: MembershipType): string => {
     switch (type) {
       case 0: return 'Opt-In';
       case 1: return 'Forced';
@@ -312,6 +327,7 @@ export function AdminTeamCalendarsPage() {
       default: return 'Unknown';
     }
   };
+  void _getMembershipTypeLabel;
 
   const getTenantName = (tenantId: string): string => {
     const tenant = tenants.find(t => t.id === tenantId);
@@ -483,10 +499,26 @@ export function AdminTeamCalendarsPage() {
                                 <p className="text-xs text-gray-600">{member.user.email}</p>
                               </div>
                               <div className="flex items-center gap-2">
-                                <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 rounded">
-                                  {getMembershipTypeLabel(member.membershipType)}
-                                </span>
+                                <select
+                                  title="Change membership type"
+                                  value={member.membershipType}
+                                  onChange={(e) => {
+                                    const newType = Number(e.target.value) as MembershipType;
+                                    updateMemberMutation.mutate({
+                                      calendarId: calendar.id,
+                                      memberId: member.id,
+                                      request: { membershipType: newType },
+                                    });
+                                  }}
+                                  className="text-xs border border-gray-300 rounded px-2 py-1 bg-white"
+                                  disabled={updateMemberMutation.isPending}
+                                >
+                                  <option value={0}>Opt-In</option>
+                                  <option value={1}>Forced</option>
+                                  <option value={2}>Automatic</option>
+                                </select>
                                 <button
+                                  type="button"
                                   onClick={() => handleRemoveMember(calendar.id, member.id)}
                                   className="text-red-600 hover:text-red-800 text-sm"
                                 >

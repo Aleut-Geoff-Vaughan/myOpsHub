@@ -11,6 +11,7 @@ interface SpaceModalProps {
   onClose: () => void;
   space?: Space | null;
   offices: Office[];
+  defaultOfficeId?: string;
 }
 
 const SPACE_TYPE_OPTIONS: { value: SpaceType; label: string }[] = [
@@ -40,7 +41,7 @@ interface SpaceFormData {
   features?: string;
 }
 
-export function SpaceModal({ isOpen, onClose, space, offices }: SpaceModalProps) {
+export function SpaceModal({ isOpen, onClose, space, offices, defaultOfficeId }: SpaceModalProps) {
   const { currentWorkspace } = useAuthStore();
   const queryClient = useQueryClient();
   const isEditing = !!space;
@@ -65,7 +66,7 @@ export function SpaceModal({ isOpen, onClose, space, offices }: SpaceModalProps)
       };
     } else {
       return {
-        officeId: offices[0]?.id || '',
+        officeId: defaultOfficeId || offices[0]?.id || '',
         name: '',
         type: SpaceType.HotDesk,
         capacity: 1,
@@ -77,7 +78,7 @@ export function SpaceModal({ isOpen, onClose, space, offices }: SpaceModalProps)
         features: '',
       };
     }
-  }, [space, offices]);
+  }, [space, offices, defaultOfficeId]);
 
   const [formData, setFormData] = useState<SpaceFormData>(getInitialFormData);
 

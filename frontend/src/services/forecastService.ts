@@ -1,4 +1,26 @@
-import { api } from '../lib/api-client';
+import { api, ApiError } from '../lib/api-client';
+import { logger } from './loggingService';
+
+const FORECAST_COMPONENT = 'forecastService';
+
+// Helper to log forecast service errors with context
+function logForecastError(operation: string, error: unknown, context?: Record<string, unknown>): void {
+  const errorDetails: Record<string, unknown> = {
+    operation,
+    ...context,
+  };
+
+  if (error instanceof ApiError) {
+    errorDetails.status = error.status;
+    errorDetails.statusText = error.statusText;
+    errorDetails.data = error.data;
+  } else if (error instanceof Error) {
+    errorDetails.errorMessage = error.message;
+    errorDetails.errorName = error.name;
+  }
+
+  logger.error(`Forecast ${operation} failed`, errorDetails, FORECAST_COMPONENT);
+}
 
 // Forecast Version Types
 export interface ForecastVersion {
@@ -297,27 +319,68 @@ export const forecastVersionsService = {
   },
 
   create: async (dto: CreateForecastVersionDto): Promise<ForecastVersion> => {
-    return api.post<ForecastVersion>('/forecastversions', dto);
+    try {
+      const result = await api.post<ForecastVersion>('/forecastversions', dto);
+      logger.info('Forecast version created', { versionId: result.id, name: result.name }, FORECAST_COMPONENT);
+      return result;
+    } catch (error) {
+      logForecastError('createVersion', error, { tenantId: dto.tenantId, name: dto.name });
+      throw error;
+    }
   },
 
   update: async (id: string, dto: UpdateForecastVersionDto): Promise<ForecastVersion> => {
-    return api.put<ForecastVersion>(`/forecastversions/${id}`, dto);
+    try {
+      const result = await api.put<ForecastVersion>(`/forecastversions/${id}`, dto);
+      logger.debug('Forecast version updated', { versionId: id }, FORECAST_COMPONENT);
+      return result;
+    } catch (error) {
+      logForecastError('updateVersion', error, { versionId: id });
+      throw error;
+    }
   },
 
   clone: async (id: string, dto: CloneVersionDto): Promise<ForecastVersion> => {
-    return api.post<ForecastVersion>(`/forecastversions/${id}/clone`, dto);
+    try {
+      const result = await api.post<ForecastVersion>(`/forecastversions/${id}/clone`, dto);
+      logger.info('Forecast version cloned', { sourceVersionId: id, newVersionId: result.id }, FORECAST_COMPONENT);
+      return result;
+    } catch (error) {
+      logForecastError('cloneVersion', error, { sourceVersionId: id });
+      throw error;
+    }
   },
 
   promote: async (id: string): Promise<ForecastVersion> => {
-    return api.post<ForecastVersion>(`/forecastversions/${id}/promote`, {});
+    try {
+      const result = await api.post<ForecastVersion>(`/forecastversions/${id}/promote`, {});
+      logger.info('Forecast version promoted', { versionId: id }, FORECAST_COMPONENT);
+      return result;
+    } catch (error) {
+      logForecastError('promoteVersion', error, { versionId: id });
+      throw error;
+    }
   },
 
   archive: async (id: string, reason?: string): Promise<ForecastVersion> => {
-    return api.post<ForecastVersion>(`/forecastversions/${id}/archive`, { reason });
+    try {
+      const result = await api.post<ForecastVersion>(`/forecastversions/${id}/archive`, { reason });
+      logger.info('Forecast version archived', { versionId: id, reason }, FORECAST_COMPONENT);
+      return result;
+    } catch (error) {
+      logForecastError('archiveVersion', error, { versionId: id });
+      throw error;
+    }
   },
 
   delete: async (id: string): Promise<void> => {
-    return api.delete<void>(`/forecastversions/${id}`);
+    try {
+      await api.delete<void>(`/forecastversions/${id}`);
+      logger.info('Forecast version deleted', { versionId: id }, FORECAST_COMPONENT);
+    } catch (error) {
+      logForecastError('deleteVersion', error, { versionId: id });
+      throw error;
+    }
   },
 
   compare: async (id1: string, id2: string): Promise<VersionCompareResponse> => {
@@ -401,11 +464,30 @@ export const forecastsService = {
   },
 
   create: async (dto: CreateForecastDto): Promise<Forecast> => {
-    return api.post<Forecast>('/forecasts', dto);
+    try {
+      const result = await api.post<Forecast>('/forecasts', dto);
+      logger.debug('Forecast created', { forecastId: result.id, assignmentId: dto.projectRoleAssignmentId }, FORECAST_COMPONENT);
+      return result;
+    } catch (error) {
+      logForecastError('createForecast', error, { assignmentId: dto.projectRoleAssignmentId, year: dto.year, month: dto.month });
+      throw error;
+    }
   },
 
   createBulk: async (dto: BulkCreateForecastDto): Promise<BulkForecastResponse> => {
-    return api.post<BulkForecastResponse>('/forecasts/bulk', dto);
+    try {
+      const result = await api.post<BulkForecastResponse>('/forecasts/bulk', dto);
+      logger.info('Bulk forecast created', {
+        totalRequested: result.totalRequested,
+        created: result.createdCount,
+        updated: result.updatedCount,
+        failed: result.failedCount,
+      }, FORECAST_COMPONENT);
+      return result;
+    } catch (error) {
+      logForecastError('createBulkForecasts', error, { count: dto.forecasts.length });
+      throw error;
+    }
   },
 
   update: async (id: string, dto: UpdateForecastDto): Promise<Forecast> => {
@@ -417,27 +499,77 @@ export const forecastsService = {
   },
 
   approve: async (id: string, notes?: string): Promise<Forecast> => {
-    return api.post<Forecast>(`/forecasts/${id}/approve`, { notes });
+    try {
+      const result = await api.post<Forecast>(`/forecasts/${id}/approve`, { notes });
+      logger.info('Forecast approved', { forecastId: id }, FORECAST_COMPONENT);
+      return result;
+    } catch (error) {
+      logForecastError('approveForecast', error, { forecastId: id });
+      throw error;
+    }
   },
 
   review: async (id: string, notes?: string): Promise<Forecast> => {
-    return api.post<Forecast>(`/forecasts/${id}/review`, { notes });
+    try {
+      const result = await api.post<Forecast>(`/forecasts/${id}/review`, { notes });
+      logger.debug('Forecast reviewed', { forecastId: id }, FORECAST_COMPONENT);
+      return result;
+    } catch (error) {
+      logForecastError('reviewForecast', error, { forecastId: id });
+      throw error;
+    }
   },
 
   reject: async (id: string, reason: string): Promise<Forecast> => {
-    return api.post<Forecast>(`/forecasts/${id}/reject`, { reason });
+    try {
+      const result = await api.post<Forecast>(`/forecasts/${id}/reject`, { reason });
+      logger.info('Forecast rejected', { forecastId: id, reason }, FORECAST_COMPONENT);
+      return result;
+    } catch (error) {
+      logForecastError('rejectForecast', error, { forecastId: id });
+      throw error;
+    }
   },
 
   override: async (id: string, dto: OverrideForecastDto): Promise<Forecast> => {
-    return api.post<Forecast>(`/forecasts/${id}/override`, dto);
+    try {
+      const result = await api.post<Forecast>(`/forecasts/${id}/override`, dto);
+      logger.warn('Forecast overridden', { forecastId: id, newHours: dto.newHours, reason: dto.reason }, FORECAST_COMPONENT);
+      return result;
+    } catch (error) {
+      logForecastError('overrideForecast', error, { forecastId: id });
+      throw error;
+    }
   },
 
   bulkApprove: async (dto: BulkApprovalDto): Promise<BulkApprovalResponse> => {
-    return api.post<BulkApprovalResponse>('/forecasts/bulk-approve', dto);
+    try {
+      const result = await api.post<BulkApprovalResponse>('/forecasts/bulk-approve', dto);
+      logger.info('Bulk forecast approval', {
+        totalRequested: result.totalRequested,
+        approved: result.approvedCount,
+        failed: result.failedCount,
+      }, FORECAST_COMPONENT);
+      return result;
+    } catch (error) {
+      logForecastError('bulkApproveForecast', error, { count: dto.forecastIds.length });
+      throw error;
+    }
   },
 
   lockMonth: async (dto: LockMonthDto): Promise<LockMonthResponse> => {
-    return api.post<LockMonthResponse>('/forecasts/lock-month', dto);
+    try {
+      const result = await api.post<LockMonthResponse>('/forecasts/lock-month', dto);
+      logger.info('Month locked', {
+        year: dto.year,
+        month: dto.month,
+        lockedCount: result.lockedCount,
+      }, FORECAST_COMPONENT);
+      return result;
+    } catch (error) {
+      logForecastError('lockMonth', error, { year: dto.year, month: dto.month });
+      throw error;
+    }
   },
 
   delete: async (id: string): Promise<void> => {

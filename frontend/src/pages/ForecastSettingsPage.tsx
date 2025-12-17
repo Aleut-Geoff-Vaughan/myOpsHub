@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import toast from 'react-hot-toast';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
 import {
   forecastsService,
@@ -55,6 +56,7 @@ export function ForecastSettingsPage() {
     sortOrder: 0,
   });
   const [showInactiveCostTypes, setShowInactiveCostTypes] = useState(false);
+  const [expandedCategories, setExpandedCategories] = useState<Set<NonLaborCostCategory>>(new Set());
 
   // Fetch current version
   const { data: currentVersion } = useQuery({
@@ -95,6 +97,56 @@ export function ForecastSettingsPage() {
   const createCostTypeMutation = useCreateCostType();
   const updateCostTypeMutation = useUpdateCostType();
   const deleteCostTypeMutation = useDeleteCostType();
+
+  // Group cost types by category
+  const costTypesByCategory = useMemo(() => {
+    const grouped = new Map<NonLaborCostCategory, NonLaborCostType[]>();
+
+    // Initialize all categories
+    const allCategories = [
+      NonLaborCostCategory.Travel,
+      NonLaborCostCategory.Meals,
+      NonLaborCostCategory.Equipment,
+      NonLaborCostCategory.Supplies,
+      NonLaborCostCategory.Subcontracts,
+      NonLaborCostCategory.Training,
+      NonLaborCostCategory.Communications,
+      NonLaborCostCategory.Facilities,
+      NonLaborCostCategory.Other,
+    ];
+
+    for (const category of allCategories) {
+      grouped.set(category, []);
+    }
+
+    // Group cost types by category
+    for (const costType of costTypes) {
+      const categoryList = grouped.get(costType.category) || [];
+      categoryList.push(costType);
+      grouped.set(costType.category, categoryList);
+    }
+
+    // Return only categories that have cost types (unless we want to show empty ones)
+    return Array.from(grouped.entries())
+      .filter(([, items]) => items.length > 0)
+      .map(([category, items]) => ({
+        category,
+        label: getCostCategoryLabel(category),
+        items: items.sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0)),
+      }));
+  }, [costTypes]);
+
+  const toggleCategory = (category: NonLaborCostCategory) => {
+    setExpandedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(category)) {
+        next.delete(category);
+      } else {
+        next.add(category);
+      }
+      return next;
+    });
+  };
 
   const handleOpenCostTypeModal = (costType?: NonLaborCostType) => {
     if (costType) {
@@ -405,7 +457,7 @@ export function ForecastSettingsPage() {
       </div>
 
       {/* Non-Labor Cost Types Section */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6 mt-8">
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">Non-Labor Cost Types</h2>
@@ -447,81 +499,96 @@ export function ForecastSettingsPage() {
             <p className="mt-1 text-sm text-gray-500">Get started by creating your first non-labor cost type.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Code</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {costTypes.map(costType => (
-                  <tr key={costType.id} className={`hover:bg-gray-50 ${!costType.isActive ? 'opacity-60' : ''}`}>
-                    <td className="px-4 py-3">
-                      <div className="text-sm font-medium text-gray-900">{costType.name}</div>
-                      {costType.description && (
-                        <div className="text-xs text-gray-500">{costType.description}</div>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{costType.code || '-'}</td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                        {getCostCategoryLabel(costType.category)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${costType.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
-                        {costType.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenCostTypeModal(costType)}
-                          className="text-gray-600 hover:text-emerald-600"
-                          title="Edit cost type"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                          </svg>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleToggleCostTypeActive(costType)}
-                          className={`${costType.isActive ? 'text-gray-600 hover:text-amber-600' : 'text-gray-600 hover:text-green-600'}`}
-                          title={costType.isActive ? 'Deactivate' : 'Activate'}
-                        >
-                          {costType.isActive ? (
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                            </svg>
-                          ) : (
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
+          <div className="space-y-3">
+            {costTypesByCategory.map(({ category, label, items }) => (
+              <div key={category} className="border border-gray-200 rounded-lg overflow-hidden">
+                {/* Category Header - Collapsible */}
+                <button
+                  type="button"
+                  onClick={() => toggleCategory(category)}
+                  className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    {expandedCategories.has(category) ? (
+                      <ChevronDown className="w-5 h-5 text-gray-500" />
+                    ) : (
+                      <ChevronRight className="w-5 h-5 text-gray-500" />
+                    )}
+                    <span className="font-medium text-gray-900">{label}</span>
+                    <span className="px-2 py-0.5 bg-gray-200 text-gray-600 text-xs rounded-full">
+                      {items.length}
+                    </span>
+                  </div>
+                </button>
+
+                {/* Category Items - Expanded Content */}
+                {expandedCategories.has(category) && (
+                  <div className="divide-y divide-gray-100">
+                    {items.map(costType => (
+                      <div
+                        key={costType.id}
+                        className={`px-4 py-3 flex items-center justify-between hover:bg-gray-50 ${!costType.isActive ? 'opacity-60' : ''}`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-3">
+                            <span className="text-sm font-medium text-gray-900">{costType.name}</span>
+                            {costType.code && (
+                              <span className="text-xs text-gray-500 font-mono bg-gray-100 px-1.5 py-0.5 rounded">
+                                {costType.code}
+                              </span>
+                            )}
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${costType.isActive ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
+                              {costType.isActive ? 'Active' : 'Inactive'}
+                            </span>
+                          </div>
+                          {costType.description && (
+                            <p className="text-xs text-gray-500 mt-0.5 truncate">{costType.description}</p>
                           )}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteCostType(costType)}
-                          className="text-gray-600 hover:text-red-600"
-                          title="Delete cost type"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
+                        </div>
+                        <div className="flex items-center gap-2 ml-4">
+                          <button
+                            type="button"
+                            onClick={() => handleOpenCostTypeModal(costType)}
+                            className="p-1.5 text-gray-500 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors"
+                            title="Edit cost type"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleCostTypeActive(costType)}
+                            className={`p-1.5 rounded-lg transition-colors ${costType.isActive ? 'text-gray-500 hover:text-amber-600 hover:bg-amber-50' : 'text-gray-500 hover:text-green-600 hover:bg-green-50'}`}
+                            title={costType.isActive ? 'Deactivate' : 'Activate'}
+                          >
+                            {costType.isActive ? (
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                              </svg>
+                            ) : (
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                              </svg>
+                            )}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCostType(costType)}
+                            className="p-1.5 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                            title="Delete cost type"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                          </button>
+                        </div>
                       </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>

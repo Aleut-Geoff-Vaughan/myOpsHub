@@ -79,10 +79,12 @@ export default function ManagementStaffingPage() {
   }, [teamAssignments]);
 
   const exportCsv = () => {
-    const headers = ['Id', 'UserId', 'ProjectRoleId', 'Allocation', 'StartDate', 'EndDate', 'Status'];
+    const headers = ['Id', 'User', 'UserId', 'Role', 'ProjectRoleId', 'Allocation', 'StartDate', 'EndDate', 'Status'];
     const rows = teamAssignments.map((a) => [
       a.id,
+      a.user?.displayName ?? '',
       a.userId,
+      a.projectRole?.name ?? '',
       a.projectRoleId ?? '',
       a.allocation,
       a.startDate,
@@ -124,7 +126,7 @@ export default function ManagementStaffingPage() {
             {timeline.slice(0, 50).map((item) => (
               <div key={item.id}>
                 <div className="text-sm text-gray-700 mb-1">
-                  User {item.userId.substring(0, 8)} • Role {item.projectRoleId ? item.projectRoleId.substring(0, 8) : '—'}
+                  {item.user?.displayName || item.userId.substring(0, 8)} • {item.projectRole?.name || (item.projectRoleId ? item.projectRoleId.substring(0, 8) : '—')}
                 </div>
                 <div className="h-4 bg-gray-100 rounded relative overflow-hidden">
                   <div
@@ -156,8 +158,8 @@ export default function ManagementStaffingPage() {
               <tbody>
                 {teamAssignments.map((a) => (
                   <tr key={a.id} className="border-b last:border-0">
-                    <td className="px-3 py-2">{a.userId.substring(0, 8)}...</td>
-                    <td className="px-3 py-2">{a.projectRoleId ? `${a.projectRoleId.substring(0, 8)}...` : '—'}</td>
+                    <td className="px-3 py-2">{a.user?.displayName || `${a.userId.substring(0, 8)}...`}</td>
+                    <td className="px-3 py-2">{a.projectRole?.name || (a.projectRoleId ? `${a.projectRoleId.substring(0, 8)}...` : '—')}</td>
                     <td className="px-3 py-2">{a.allocation}%</td>
                     <td className="px-3 py-2">
                       {a.startDate ? new Date(a.startDate).toLocaleDateString() : '—'} -{' '}
@@ -194,13 +196,13 @@ export default function ManagementStaffingPage() {
                 {grouped.map((g) =>
                   Array.from(g.wbsMap.entries()).map(([wbsId, assigns]) => (
                     <tr key={`${g.projectRoleId}-${wbsId}`} className="border-b last:border-0">
-                      <td className="px-3 py-2">{g.projectRoleId.substring(0, 8)}...</td>
-                      <td className="px-3 py-2">{wbsId && wbsId !== 'none' ? `${wbsId.substring(0, 8)}...` : '—'}</td>
+                      <td className="px-3 py-2">{assigns[0]?.projectRole?.name || (g.projectRoleId !== 'unknown' ? g.projectRoleId.substring(0, 8) + '...' : '—')}</td>
+                      <td className="px-3 py-2">{assigns[0]?.wbsElement?.code || (wbsId && wbsId !== 'none' ? `${wbsId.substring(0, 8)}...` : '—')}</td>
                       <td className="px-3 py-2">{assigns.length}</td>
                       <td className="px-3 py-2">
                         {assigns
                           .slice(0, 3)
-                          .map((a) => a.userId.substring(0, 8))
+                          .map((a) => a.user?.displayName || a.userId.substring(0, 8))
                           .join(', ')}
                         {assigns.length > 3 && ` (+${assigns.length - 3})`}
                       </td>
