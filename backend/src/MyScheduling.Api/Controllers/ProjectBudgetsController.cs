@@ -751,12 +751,35 @@ public class ProjectBudgetsController : AuthorizedControllerBase
                 fiscalYearStartMonth = 1;
             var currentFY = GetCurrentFiscalYear(tenantId.Value, fiscalYearStartMonth);
 
+            // Calculate fiscal year start and end dates
+            var fyStartYear = fiscalYearStartMonth > DateTime.Now.Month ? currentFY - 1 : currentFY;
+            var fyEndYear = fiscalYearStartMonth > 1 ? currentFY : currentFY + 1;
+            var fyEndMonth = fiscalYearStartMonth == 1 ? 12 : fiscalYearStartMonth - 1;
+
+            var fyStart = new DateOnly(fyStartYear, fiscalYearStartMonth, 1);
+            var fyEnd = new DateOnly(fyEndYear, fyEndMonth, 1).AddMonths(1).AddDays(-1);
+
+            // Generate the months array
+            var months = new List<FiscalMonthInfo>();
+            var currentDate = fyStart;
+            while (currentDate <= fyEnd)
+            {
+                months.Add(new FiscalMonthInfo
+                {
+                    Year = currentDate.Year,
+                    Month = currentDate.Month,
+                    Label = currentDate.ToString("MMM yyyy")
+                });
+                currentDate = currentDate.AddMonths(1);
+            }
+
             return Ok(new FiscalYearInfo
             {
-                CurrentFiscalYear = currentFY,
-                FiscalYearStartMonth = fiscalYearStartMonth,
-                FiscalYearStart = new DateOnly(fiscalYearStartMonth > DateTime.Now.Month ? currentFY - 1 : currentFY, fiscalYearStartMonth, 1),
-                FiscalYearEnd = new DateOnly(fiscalYearStartMonth > 1 ? currentFY : currentFY + 1, fiscalYearStartMonth == 1 ? 12 : fiscalYearStartMonth - 1, 1).AddMonths(1).AddDays(-1)
+                FiscalYear = currentFY,
+                StartMonth = fiscalYearStartMonth,
+                StartDate = fyStart.ToString("yyyy-MM-dd"),
+                EndDate = fyEnd.ToString("yyyy-MM-dd"),
+                Months = months
             });
         }
         catch (Exception ex)
@@ -967,8 +990,16 @@ public class ApprovalRequest
 
 public class FiscalYearInfo
 {
-    public int CurrentFiscalYear { get; set; }
-    public int FiscalYearStartMonth { get; set; }
-    public DateOnly FiscalYearStart { get; set; }
-    public DateOnly FiscalYearEnd { get; set; }
+    public int FiscalYear { get; set; }
+    public int StartMonth { get; set; }
+    public string StartDate { get; set; } = string.Empty;
+    public string EndDate { get; set; } = string.Empty;
+    public List<FiscalMonthInfo> Months { get; set; } = new();
+}
+
+public class FiscalMonthInfo
+{
+    public int Year { get; set; }
+    public int Month { get; set; }
+    public string Label { get; set; } = string.Empty;
 }
