@@ -167,7 +167,8 @@ export function TeamCalendarPage() {
 
     // Get the visible date range
     const monday = getMondayOfWeek(referenceDate);
-    const weeksToShow = getWeeksToShow();
+    // Inline getWeeksToShow logic to avoid dependency warning
+    const weeksToShow: 1 | 2 = selectedView === 'current-week' ? 1 : 2;
     const visibleDays = getWeekdays(monday, weeksToShow);
     const visibleDates = new Set(visibleDays.map(d => d.toISOString().split('T')[0]));
 

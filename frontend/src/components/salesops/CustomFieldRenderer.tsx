@@ -400,20 +400,25 @@ export function CustomFieldDisplay({ definition, value }: FieldDisplayProps) {
       return <span>{format(new Date(value as string), 'MMM d, yyyy h:mm a')}</span>;
 
     case CustomFieldType.MultiPicklist: {
+      // Parse the JSON outside of JSX to avoid try/catch around JSX
+      let parsedValues: string[] | null = null;
       try {
-        const values = JSON.parse(value as string) as string[];
+        parsedValues = JSON.parse(value as string) as string[];
+      } catch {
+        // Invalid JSON, fall through to render as plain string
+      }
+      if (parsedValues && Array.isArray(parsedValues)) {
         return (
           <div className="flex flex-wrap gap-1">
-            {values.map((v) => (
+            {parsedValues.map((v) => (
               <span key={v} className="px-2 py-0.5 bg-gray-100 text-gray-800 rounded text-sm">
                 {v}
               </span>
             ))}
           </div>
         );
-      } catch {
-        return <span>{value as string}</span>;
       }
+      return <span>{value as string}</span>;
     }
 
     case CustomFieldType.Url:
@@ -596,6 +601,7 @@ export function CustomFieldsSection({
 }
 
 // Hook for using custom fields in forms
+// eslint-disable-next-line react-refresh/only-export-components
 export function useCustomFieldsForm(entityType: string, entityId: string) {
   const { data: definitions } = useCustomFieldDefinitions({ entityType, includeInactive: false });
   const { data: values, isLoading } = useCustomFieldValues(entityType, entityId);
@@ -613,6 +619,7 @@ export function useCustomFieldsForm(entityType: string, entityId: string) {
       const val = values.find((v) => v.fieldDefinitionId === def.id);
       initial[def.fieldName] = getFieldValue(val, def.fieldType);
     }
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFormValues(initial);
   }, [values, definitions]);
 

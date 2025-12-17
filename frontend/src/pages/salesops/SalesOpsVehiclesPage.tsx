@@ -8,6 +8,16 @@ import toast from 'react-hot-toast';
 type SortField = 'name' | 'contractNumber' | 'vehicleType' | 'expirationDate';
 type SortDirection = 'asc' | 'desc';
 
+// Sort icon component - defined outside to avoid recreating on each render
+function SortIcon({ field, sortField, sortDirection }: { field: SortField; sortField: SortField; sortDirection: SortDirection }) {
+  if (sortField !== field) return null;
+  return sortDirection === 'asc' ? (
+    <ChevronUp className="h-4 w-4" />
+  ) : (
+    <ChevronDown className="h-4 w-4" />
+  );
+}
+
 // Format date
 function formatDate(dateString: string | undefined | null): string {
   if (!dateString) return '-';
@@ -127,15 +137,6 @@ export function SalesOpsVehiclesPage() {
     } catch {
       toast.error('Failed to delete contract vehicle');
     }
-  };
-
-  const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) return null;
-    return sortDirection === 'asc' ? (
-      <ChevronUp className="h-4 w-4" />
-    ) : (
-      <ChevronDown className="h-4 w-4" />
-    );
   };
 
   // Calculate summary stats
@@ -277,7 +278,7 @@ export function SalesOpsVehiclesPage() {
                 >
                   <div className="flex items-center space-x-1">
                     <span>Name</span>
-                    <SortIcon field="name" />
+                    <SortIcon field="name" sortField={sortField} sortDirection={sortDirection} />
                   </div>
                 </th>
                 <th
@@ -286,7 +287,7 @@ export function SalesOpsVehiclesPage() {
                 >
                   <div className="flex items-center space-x-1">
                     <span>Contract #</span>
-                    <SortIcon field="contractNumber" />
+                    <SortIcon field="contractNumber" sortField={sortField} sortDirection={sortDirection} />
                   </div>
                 </th>
                 <th
@@ -295,7 +296,7 @@ export function SalesOpsVehiclesPage() {
                 >
                   <div className="flex items-center space-x-1">
                     <span>Type</span>
-                    <SortIcon field="vehicleType" />
+                    <SortIcon field="vehicleType" sortField={sortField} sortDirection={sortDirection} />
                   </div>
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -310,7 +311,7 @@ export function SalesOpsVehiclesPage() {
                 >
                   <div className="flex items-center space-x-1">
                     <span>Expiration</span>
-                    <SortIcon field="expirationDate" />
+                    <SortIcon field="expirationDate" sortField={sortField} sortDirection={sortDirection} />
                   </div>
                 </th>
                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">

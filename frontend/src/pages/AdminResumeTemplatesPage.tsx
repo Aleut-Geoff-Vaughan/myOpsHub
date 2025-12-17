@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { FileText, Plus, Copy, Star, Edit2, Trash2, X, AlertCircle } from 'lucide-react';
 import {
   getTemplates,
@@ -61,13 +61,7 @@ export function AdminResumeTemplatesPage() {
   const [filterType, setFilterType] = useState<ResumeTemplateType | 'all'>('all');
   const [filterActive, setFilterActive] = useState<boolean | 'all'>('all');
 
-  useEffect(() => {
-    if (tenantId) {
-      loadTemplates();
-    }
-  }, [tenantId]);
-
-  const loadTemplates = async () => {
+  const loadTemplates = useCallback(async () => {
     if (!tenantId) return;
 
     try {
@@ -81,7 +75,13 @@ export function AdminResumeTemplatesPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [tenantId]);
+
+  useEffect(() => {
+    if (tenantId) {
+      loadTemplates();
+    }
+  }, [tenantId, loadTemplates]);
 
   const handleOpenModal = (template?: ResumeTemplate) => {
     if (template) {

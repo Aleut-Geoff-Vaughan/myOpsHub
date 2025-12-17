@@ -8,6 +8,16 @@ import toast from 'react-hot-toast';
 type SortField = 'name' | 'acronym' | 'accountType' | 'federalDepartment';
 type SortDirection = 'asc' | 'desc';
 
+// Sort icon component - defined outside to avoid recreating on each render
+function SortIcon({ field, sortField, sortDirection }: { field: SortField; sortField: SortField; sortDirection: SortDirection }) {
+  if (sortField !== field) return null;
+  return sortDirection === 'asc' ? (
+    <ChevronUp className="h-4 w-4 inline ml-1" />
+  ) : (
+    <ChevronDown className="h-4 w-4 inline ml-1" />
+  );
+}
+
 export function SalesOpsAccountsPage() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
@@ -75,15 +85,6 @@ export function SalesOpsAccountsPage() {
     } catch {
       toast.error('Failed to delete account. It may have associated opportunities.');
     }
-  };
-
-  const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) return null;
-    return sortDirection === 'asc' ? (
-      <ChevronUp className="h-4 w-4 inline ml-1" />
-    ) : (
-      <ChevronDown className="h-4 w-4 inline ml-1" />
-    );
   };
 
   // Get unique account types for filter
@@ -203,25 +204,25 @@ export function SalesOpsAccountsPage() {
                   className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('name')}
                 >
-                  Account Name <SortIcon field="name" />
+                  Account Name <SortIcon field="name" sortField={sortField} sortDirection={sortDirection} />
                 </th>
                 <th
                   className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('acronym')}
                 >
-                  Acronym <SortIcon field="acronym" />
+                  Acronym <SortIcon field="acronym" sortField={sortField} sortDirection={sortDirection} />
                 </th>
                 <th
                   className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('accountType')}
                 >
-                  Type <SortIcon field="accountType" />
+                  Type <SortIcon field="accountType" sortField={sortField} sortDirection={sortDirection} />
                 </th>
                 <th
                   className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                   onClick={() => handleSort('federalDepartment')}
                 >
-                  Department <SortIcon field="federalDepartment" />
+                  Department <SortIcon field="federalDepartment" sortField={sortField} sortDirection={sortDirection} />
                 </th>
                 <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Status

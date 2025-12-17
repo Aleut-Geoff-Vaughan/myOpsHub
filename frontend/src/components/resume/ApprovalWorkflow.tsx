@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { CheckCircle, XCircle, Clock, AlertCircle, MessageSquare, User } from 'lucide-react';
 import {
   getApprovals,
@@ -25,11 +25,7 @@ export function ApprovalWorkflow({ resumeId, onApprovalChange }: ApprovalWorkflo
   const [showActionModal, setShowActionModal] = useState(false);
   const [actionType, setActionType] = useState<'approve' | 'reject' | 'changes'>('approve');
 
-  useEffect(() => {
-    loadApprovals();
-  }, [resumeId]);
-
-  const loadApprovals = async () => {
+  const loadApprovals = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -44,7 +40,11 @@ export function ApprovalWorkflow({ resumeId, onApprovalChange }: ApprovalWorkflo
     } finally {
       setLoading(false);
     }
-  };
+  }, [resumeId]);
+
+  useEffect(() => {
+    loadApprovals();
+  }, [loadApprovals]);
 
   const handleApprove = async (approvalId: string, reviewNotes: string) => {
     if (!user?.id) {

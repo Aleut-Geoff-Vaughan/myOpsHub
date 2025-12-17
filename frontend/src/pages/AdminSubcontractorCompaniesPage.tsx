@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuthStore } from '../stores/authStore';
 import {
   subcontractorCompaniesService,
@@ -90,7 +90,7 @@ export function AdminSubcontractorCompaniesPage() {
     status: SubcontractorStatus.Active,
   });
 
-  const loadCompanies = async () => {
+  const loadCompanies = useCallback(async () => {
     if (!tenantId) return;
 
     setIsLoading(true);
@@ -106,9 +106,9 @@ export function AdminSubcontractorCompaniesPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [tenantId, filterStatus, search]);
 
-  const loadCareerFamilies = async () => {
+  const loadCareerFamilies = useCallback(async () => {
     if (!tenantId) return;
     try {
       const data = await careerJobFamiliesService.getAll({ tenantId, isActive: true });
@@ -116,7 +116,7 @@ export function AdminSubcontractorCompaniesPage() {
     } catch {
       // Silent fail
     }
-  };
+  }, [tenantId]);
 
   const loadSubcontractors = async (companyId: string) => {
     setIsLoadingSubs(true);
@@ -133,7 +133,7 @@ export function AdminSubcontractorCompaniesPage() {
   useEffect(() => {
     loadCompanies();
     loadCareerFamilies();
-  }, [tenantId, filterStatus, search]);
+  }, [loadCompanies, loadCareerFamilies]);
 
   useEffect(() => {
     if (selectedCompany) {

@@ -22,6 +22,16 @@ import {
 type SortField = 'name' | 'accountName' | 'amount' | 'closeDate' | 'probabilityPercent' | 'stageName';
 type SortDirection = 'asc' | 'desc';
 
+// Sort icon component - defined outside to avoid recreating on each render
+function SortIcon({ field, sortField, sortDirection }: { field: SortField; sortField: SortField; sortDirection: SortDirection }) {
+  if (sortField !== field) return null;
+  return sortDirection === 'asc' ? (
+    <ChevronUp className="h-4 w-4 inline ml-1" />
+  ) : (
+    <ChevronDown className="h-4 w-4 inline ml-1" />
+  );
+}
+
 const opportunityTypeLabels: Record<OpportunityType, string> = {
   [OpportunityType.NewBusiness]: 'New Business',
   [OpportunityType.Recompete]: 'Recompete',
@@ -80,7 +90,7 @@ export function SalesOpsOpportunitiesPage() {
   const { data: stages } = useStages();
   const { data: accounts } = useAccounts();
 
-  const opportunities = opportunitiesData?.items || [];
+  const opportunities = useMemo(() => opportunitiesData?.items || [], [opportunitiesData?.items]);
   const totalCount = opportunitiesData?.total || 0;
   const totalPages = Math.ceil(totalCount / pageSize);
 
@@ -144,15 +154,6 @@ export function SalesOpsOpportunitiesPage() {
   };
 
   const hasActiveFilters = searchQuery || stageFilter || accountFilter || resultFilter;
-
-  const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) return null;
-    return sortDirection === 'asc' ? (
-      <ChevronUp className="h-4 w-4 inline ml-1" />
-    ) : (
-      <ChevronDown className="h-4 w-4 inline ml-1" />
-    );
-  };
 
   const getResultBadgeClasses = (result?: OpportunityResult) => {
     switch (result) {
@@ -369,37 +370,37 @@ export function SalesOpsOpportunitiesPage() {
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                     onClick={() => handleSort('name')}
                   >
-                    Opportunity <SortIcon field="name" />
+                    Opportunity <SortIcon field="name" sortField={sortField} sortDirection={sortDirection} />
                   </th>
                   <th
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                     onClick={() => handleSort('accountName')}
                   >
-                    Account <SortIcon field="accountName" />
+                    Account <SortIcon field="accountName" sortField={sortField} sortDirection={sortDirection} />
                   </th>
                   <th
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                     onClick={() => handleSort('stageName')}
                   >
-                    Stage <SortIcon field="stageName" />
+                    Stage <SortIcon field="stageName" sortField={sortField} sortDirection={sortDirection} />
                   </th>
                   <th
                     className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                     onClick={() => handleSort('amount')}
                   >
-                    Amount <SortIcon field="amount" />
+                    Amount <SortIcon field="amount" sortField={sortField} sortDirection={sortDirection} />
                   </th>
                   <th
                     className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                     onClick={() => handleSort('probabilityPercent')}
                   >
-                    Prob. <SortIcon field="probabilityPercent" />
+                    Prob. <SortIcon field="probabilityPercent" sortField={sortField} sortDirection={sortDirection} />
                   </th>
                   <th
                     className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
                     onClick={() => handleSort('closeDate')}
                   >
-                    Close Date <SortIcon field="closeDate" />
+                    Close Date <SortIcon field="closeDate" sortField={sortField} sortDirection={sortDirection} />
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Owner

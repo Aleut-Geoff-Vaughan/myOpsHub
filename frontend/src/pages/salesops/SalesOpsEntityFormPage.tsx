@@ -202,6 +202,7 @@ export function SalesOpsEntityFormPage() {
   // Populate form when editing
   useEffect(() => {
     if (isEditMode && entity) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData({
         name: entity.name,
         legalName: entity.legalName || '',

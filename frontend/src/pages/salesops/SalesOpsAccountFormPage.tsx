@@ -236,6 +236,7 @@ export function SalesOpsAccountFormPage() {
   // Populate form when editing
   useEffect(() => {
     if (isEditMode && account) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData({
         name: account.name,
         acronym: account.acronym || '',

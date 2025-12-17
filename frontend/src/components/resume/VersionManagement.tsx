@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Clock, GitBranch, Eye, Tag, GitCompare, ArrowRight, Plus, Minus, RefreshCw } from 'lucide-react';
 import {
   getVersions,
@@ -35,11 +35,7 @@ export function VersionManagement({
     right: null
   });
 
-  useEffect(() => {
-    loadVersions();
-  }, [resumeId]);
-
-  const loadVersions = async () => {
+  const loadVersions = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -51,7 +47,11 @@ export function VersionManagement({
     } finally {
       setLoading(false);
     }
-  };
+  }, [resumeId]);
+
+  useEffect(() => {
+    loadVersions();
+  }, [loadVersions]);
 
   const handleCreateVersion = async (versionNotes: string) => {
     if (!user?.id) {

@@ -69,6 +69,7 @@ export function SalesOpsContactFormPage() {
   // Populate form when contact loads
   useEffect(() => {
     if (contact) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData({
         firstName: contact.firstName || '',
         lastName: contact.lastName || '',

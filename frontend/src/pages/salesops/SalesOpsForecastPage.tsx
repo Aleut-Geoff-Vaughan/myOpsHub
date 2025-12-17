@@ -68,7 +68,7 @@ export function SalesOpsForecastPage() {
   const { data: opportunitiesResponse, isLoading } = useOpportunities();
   const { data: stages } = useStages();
 
-  const opportunities = opportunitiesResponse?.items || [];
+  const opportunities = useMemo(() => opportunitiesResponse?.items || [], [opportunitiesResponse?.items]);
 
   // Filter and group opportunities
   const forecastData = useMemo(() => {

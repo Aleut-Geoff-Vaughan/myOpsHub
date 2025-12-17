@@ -318,6 +318,7 @@ export function SalesOpsOpportunityFormPage() {
   // Populate form when editing or when stages load
   useEffect(() => {
     if (isEditMode && opportunity) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData({
         name: opportunity.name,
         description: opportunity.description || '',

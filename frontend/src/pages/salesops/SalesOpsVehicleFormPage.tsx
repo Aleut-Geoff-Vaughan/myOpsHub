@@ -82,6 +82,7 @@ export function SalesOpsVehicleFormPage() {
   // Populate form when vehicle loads
   useEffect(() => {
     if (vehicle) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData({
         name: vehicle.name || '',
         contractNumber: vehicle.contractNumber || '',

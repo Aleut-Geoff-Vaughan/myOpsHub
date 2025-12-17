@@ -397,6 +397,7 @@ export function SalesOpsStagesPage() {
   // Update local state when stages change
   useEffect(() => {
     if (stages) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setOrderedStages([...stages].sort((a, b) => a.sortOrder - b.sortOrder));
     }
   }, [stages]);

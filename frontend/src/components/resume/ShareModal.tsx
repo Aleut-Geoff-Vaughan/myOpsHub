@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { X, Link2, Copy, Check, Eye, Trash2, Loader2, Lock, Calendar, Globe } from 'lucide-react';
 import { api } from '../../lib/api-client';
 
@@ -41,13 +41,7 @@ export function ShareModal({ resumeId, isOpen, onClose }: ShareModalProps) {
   const [password, setPassword] = useState('');
   const [hideContactInfo, setHideContactInfo] = useState(false);
 
-  useEffect(() => {
-    if (isOpen) {
-      loadShareLinks();
-    }
-  }, [isOpen, resumeId]);
-
-  const loadShareLinks = async () => {
+  const loadShareLinks = useCallback(async () => {
     setLoading(true);
     try {
       const links = await api.get<ShareLink[]>(`/resumes/${resumeId}/shares`);
@@ -57,7 +51,13 @@ export function ShareModal({ resumeId, isOpen, onClose }: ShareModalProps) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [resumeId]);
+
+  useEffect(() => {
+    if (isOpen) {
+      loadShareLinks();
+    }
+  }, [isOpen, loadShareLinks]);
 
   const createShareLink = async () => {
     setCreating(true);

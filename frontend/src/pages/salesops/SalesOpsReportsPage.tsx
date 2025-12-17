@@ -64,7 +64,7 @@ export function SalesOpsReportsPage() {
 
   const { data: opportunitiesResponse, isLoading: oppsLoading } = useOpportunities();
 
-  const opportunities = opportunitiesResponse?.items || [];
+  const opportunities = useMemo(() => opportunitiesResponse?.items || [], [opportunitiesResponse?.items]);
 
   // Calculate date range filter based on close date (since createdAt isn't available in list dto)
   const dateFilteredOpps = useMemo(() => {

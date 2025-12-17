@@ -8,6 +8,16 @@ import toast from 'react-hot-toast';
 type SortField = 'fullName' | 'title' | 'accountName' | 'email';
 type SortDirection = 'asc' | 'desc';
 
+// Sort icon component - defined outside to avoid recreating on each render
+function SortIcon({ field, sortField, sortDirection }: { field: SortField; sortField: SortField; sortDirection: SortDirection }) {
+  if (sortField !== field) return null;
+  return sortDirection === 'asc' ? (
+    <ChevronUp className="h-4 w-4" />
+  ) : (
+    <ChevronDown className="h-4 w-4" />
+  );
+}
+
 export function SalesOpsContactsPage() {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
@@ -80,15 +90,6 @@ export function SalesOpsContactsPage() {
     } catch {
       toast.error('Failed to delete contact');
     }
-  };
-
-  const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) return null;
-    return sortDirection === 'asc' ? (
-      <ChevronUp className="h-4 w-4" />
-    ) : (
-      <ChevronDown className="h-4 w-4" />
-    );
   };
 
   if (error) {
@@ -197,7 +198,7 @@ export function SalesOpsContactsPage() {
                 >
                   <div className="flex items-center space-x-1">
                     <span>Name</span>
-                    <SortIcon field="fullName" />
+                    <SortIcon field="fullName" sortField={sortField} sortDirection={sortDirection} />
                   </div>
                 </th>
                 <th
@@ -206,7 +207,7 @@ export function SalesOpsContactsPage() {
                 >
                   <div className="flex items-center space-x-1">
                     <span>Title</span>
-                    <SortIcon field="title" />
+                    <SortIcon field="title" sortField={sortField} sortDirection={sortDirection} />
                   </div>
                 </th>
                 <th
@@ -215,7 +216,7 @@ export function SalesOpsContactsPage() {
                 >
                   <div className="flex items-center space-x-1">
                     <span>Account</span>
-                    <SortIcon field="accountName" />
+                    <SortIcon field="accountName" sortField={sortField} sortDirection={sortDirection} />
                   </div>
                 </th>
                 <th
@@ -224,7 +225,7 @@ export function SalesOpsContactsPage() {
                 >
                   <div className="flex items-center space-x-1">
                     <span>Email</span>
-                    <SortIcon field="email" />
+                    <SortIcon field="email" sortField={sortField} sortDirection={sortDirection} />
                   </div>
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">

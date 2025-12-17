@@ -156,7 +156,7 @@ export function SalesOpsPipelinePage() {
   const { data: pipelineSummary } = usePipelineSummary();
   const seedMutation = useSeedDefaultStages();
 
-  const opportunities = opportunitiesData?.items || [];
+  const opportunities = useMemo(() => opportunitiesData?.items || [], [opportunitiesData?.items]);
 
   // Group opportunities by stage
   const opportunitiesByStage = useMemo(() => {

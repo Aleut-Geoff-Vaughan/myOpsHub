@@ -75,6 +75,7 @@ export function AdminPage({ viewOverride }: AdminPageProps = {}) {
   // Update local settings when tenant settings load
   useEffect(() => {
     if (tenantSettings) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSettings({
         emailNotifications: tenantSettings.emailNotificationsEnabled ?? true,
         require2FA: tenantSettings.require2FA ?? false,

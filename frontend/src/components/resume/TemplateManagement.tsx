@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { FileText, Plus, Edit2, Trash2, Copy, Star, Eye } from 'lucide-react';
 import {
   getTemplates,
@@ -46,11 +46,7 @@ export function TemplateManagement({ tenantId, onTemplateSelect }: TemplateManag
   const [filterType, setFilterType] = useState<ResumeTemplateType | undefined>();
   const [showActiveOnly, setShowActiveOnly] = useState(true);
 
-  useEffect(() => {
-    loadTemplates();
-  }, [tenantId, filterType, showActiveOnly]);
-
-  const loadTemplates = async () => {
+  const loadTemplates = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -66,7 +62,11 @@ export function TemplateManagement({ tenantId, onTemplateSelect }: TemplateManag
     } finally {
       setLoading(false);
     }
-  };
+  }, [tenantId, filterType, showActiveOnly]);
+
+  useEffect(() => {
+    loadTemplates();
+  }, [loadTemplates]);
 
   const handleCreateTemplate = async (templateData: CreateTemplateData) => {
     try {
